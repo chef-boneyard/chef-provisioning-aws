@@ -2,7 +2,7 @@ require 'chef/resource/aws_resource'
 require 'chef_metal_aws'
 
 class Chef::Resource::AwsSnsTopic < Chef::Resource::AwsResource
-  self.resource_name = 'aws_sns_topic'
+  self.resource_name = 'sns_topic'
 
   actions :create, :delete, :nothing
   default_action :create

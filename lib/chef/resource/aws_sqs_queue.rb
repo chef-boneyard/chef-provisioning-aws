@@ -2,7 +2,7 @@ require 'chef/resource/aws_resource'
 require 'chef_metal_aws'
 
 class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
-  self.resource_name = 'sqs_queue'
+  self.resource_name = 'aws_sqs_queue'
 
   actions :create, :delete, :nothing
   default_action :create

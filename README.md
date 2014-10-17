@@ -7,3 +7,6 @@ balancers (needs a non-production branch of metal at the moment)
 
 This is not quite ready for public consumption and is under active
 development.
+
+This requires the latest from chef-metal's load_balancer branch for some 
+features like region support (until it gets merged into master, which should be soon)

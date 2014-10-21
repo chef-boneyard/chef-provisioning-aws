@@ -57,37 +57,33 @@ class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
     end
   end
 
-  # AWS objects we might need - TODO: clean this up
+  # AWS objects we might need
   def ec2
-    credentials = @credentials.default
-    region = new_resource.region_name || credentials[:region]
-    # Pivot region
-    AWS.config(:region => region)
-    @ec2 ||= AWS::EC2.new
+    @ec2 ||= aws_init { AWS::EC2.new }
   end
 
   def sns
-    credentials = @credentials.default
-    region = new_resource.region_name || credentials[:region]
-    # Pivot region
-    AWS.config(:region => region)
-    @sns ||= AWS::SNS.new
+    @sns ||= aws_init { AWS::SNS.new }
   end
 
   def sqs
-    credentials = @credentials.default
-    region = new_resource.region_name || credentials[:region]
-    # Pivot region
-    AWS.config(:region => region)
-    @sqs ||= AWS::SQS.new
+    @sqs ||= aws_init { AWS::SQS.new }
   end
 
   def s3
+    @s3 ||= aws_init { AWS::S3.new }
+  end
+
+  def auto_scaling
+    @auto_scaling ||= aws_init { AWS::AutoScaling.new }
+  end
+
+  private
+  def aws_init
     credentials = @credentials.default
     region = new_resource.region_name || credentials[:region]
     # Pivot region
     AWS.config(:region => region)
-    @s3 ||= AWS::S3.new
+    yield
   end
-
 end

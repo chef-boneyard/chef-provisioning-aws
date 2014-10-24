@@ -9,7 +9,7 @@ It will also create an SNS topic and SQS queue in us-west-1.
 require 'chef_metal_aws'
 with_driver 'aws'
 
-with_datacenter 'eu-west-1' do
+with_data_center 'eu-west-1' do
   aws_sqs_queue "mariopipes"
 
   machine 'bowser' do
@@ -35,4 +35,3 @@ with_datacenter 'us-west-1' do
   aws_sns_topic 'us_west_topic'
 end
 ```
-

@@ -8,7 +8,7 @@ class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
       converge_by "Creating new SQS queue #{fqn} in #{new_resource.region_name}" do
         loop do
           begin
-            sqs.queues.create(fqqn)
+            sqs.queues.create(fqn)
             break
           rescue AWS::SQS::Errors::QueueDeletedRecently
             sleep 5

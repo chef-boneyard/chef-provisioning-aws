@@ -6,7 +6,7 @@ class Chef::Resource::AwsResource < Chef::Resource::ChefDataBagResource
 
   def initialize(*args)
     super
-    @region_name = run_context.chef_metal.current_datacenter
+    @region_name = run_context.chef_metal.current_data_center
   end
 
 end

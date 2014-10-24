@@ -9,6 +9,7 @@ class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
 
   attribute :name, :kind_of => String, :name_attribute => true
   attribute :queue_name, :kind_of => String
+  stored_attribute :created_at
 
   def initialize(*args)
     super

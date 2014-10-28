@@ -1,6 +1,6 @@
 require 'chef/provider/lwrp_base'
 require 'chef_metal_aws/aws_driver'
-require 'aws-sdk'
+require 'aws-sdk-v1'
 
 
 class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase

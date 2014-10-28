@@ -12,7 +12,7 @@ require 'chef_metal_aws/version'
 require 'chef_metal_aws/credentials'
 
 require 'yaml'
-require 'aws-sdk'
+require 'aws-sdk-v1'
 
 
 module ChefMetalAWS

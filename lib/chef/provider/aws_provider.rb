@@ -1,5 +1,5 @@
 require 'chef/provider/lwrp_base'
-require 'chef_metal_aws/credentials'
+require 'chef/provisioning/aws_driver/credentials'
 
 class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
   use_inline_resources
@@ -38,7 +38,7 @@ class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
   def initialize(*args)
     super
     # TODO - temporary, needs to be better
-    @credentials = ChefMetalAWS::Credentials.new
+    @credentials = Chef::Provisioning::AWSDriver::Credentials.new
     @credentials.load_default
     credentials = @credentials.default
     AWS.config(:access_key_id => credentials[:aws_access_key_id],

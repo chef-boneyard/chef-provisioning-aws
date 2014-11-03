@@ -1,7 +1,9 @@
 require 'inifile'
 require 'csv'
 
-module ChefMetalAWS
+class Chef
+module Provisioning
+module AWSDriver
   # Reads in a credentials file in Amazon's download format and presents the credentials to you
   class Credentials
     def initialize
@@ -77,4 +79,6 @@ module ChefMetalAWS
       @aws_credentials ||= Credentials.new
     end
   end
+end
+end
 end

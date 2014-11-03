@@ -1,5 +1,5 @@
 require 'chef/resource/aws_resource'
-require 'chef_metal_aws'
+require 'chef/provisioning/aws_driver'
 
 class Chef::Resource::AwsAutoScalingGroup < Chef::Resource::AwsResource
   self.resource_name = 'aws_auto_scaling_group'

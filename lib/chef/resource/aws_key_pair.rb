@@ -1,11 +1,11 @@
-require 'chef_metal'
+require 'chef/provisioning'
 
 class Chef::Resource::FogKeyPair < Chef::Resource::LWRPBase
   self.resource_name = 'fog_key_pair'
 
   def initialize(*args)
     super
-    @driver = run_context.chef_metal.current_driver
+    @driver = run_context.chef_provisioning.current_driver
   end
 
   actions :create, :delete, :nothing

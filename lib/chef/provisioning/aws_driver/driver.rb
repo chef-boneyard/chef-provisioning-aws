@@ -55,16 +55,27 @@ module AWSDriver
       if !existing_elb.exists?
         lb_spec.location = {
             'driver_url' => driver_url,
-            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+            'driver_version' => ChefMetalAWS::VERSION,
             'allocated_at' => Time.now.utc.to_s,
             'host_node' => action_handler.host_node,
         }
+
+        security_group_name = lb_options[:security_group_name] || 'default'
+        security_group_id = lb_options[:security_group_id]
+
+        default_sg = ec2.security_groups.filter('group-name', 'default')
+        security_group = if security_group_id.nil?
+                           ec2.security_groups.filter('group-name', security_group_name).first
+                         else
+                           ec2.security_groups[security_group_id]
+                         end
 
         availability_zones = lb_options[:availability_zones]
         listeners = lb_options[:listeners]
         elb.load_balancers.create(lb_spec.name,
                 :availability_zones => availability_zones,
-                :listeners => listeners)
+                :listeners => listeners,
+                :security_groups => [security_group])
       end
     end
 
@@ -74,31 +85,43 @@ module AWSDriver
     def destroy_load_balancer(action_handler, lb_spec, lb_options)
     end
 
+    # TODO update listeners and zones, and other bits
     def update_load_balancer(action_handler, lb_spec, lb_options, opts = {})
       existing_elb = load_balancer_for(lb_spec)
-      # TODO update listeners and zones?
-      if existing_elb.exists?
-        machines = opts[:machines]
-        existing_instance_ids = existing_elb.instances.collect { |i| i.instance_id }
-        new_instance_ids = machines.keys.collect do |machine_name|
-          machine_spec = machines[machine_name]
-          machine_spec.location['instance_id']
-        end
 
-        instance_ids_to_add = new_instance_ids - existing_instance_ids
-        instance_ids_to_remove = existing_instance_ids - new_instance_ids
+      # Try to recreate it if it doesn't exist in AWS
+      action_handler.report_progress "Checking for ELB named #{lb_spec.name}..."
+      allocate_load_balancer(action_handler, lb_spec, lb_options) unless existing_elb.exists?
 
-        if instance_ids_to_add && instance_ids_to_add.size > 0
+      # Try to find it again -- if we can't, consider it fatal
+      existing_elb = load_balancer_for(lb_spec)
+      fail "Unable to find specified ELB instance. Already tried to recreate it!" if !existing_elb.exists?
+
+      action_handler.report_progress "Updating ELB named #{lb_spec.name}..."
+
+      machines = opts[:machines]
+      existing_instance_ids = existing_elb.instances.collect { |i| i.instance_id }
+
+      new_instance_ids = machines.keys.collect do |machine_name|
+        machine_spec = machines[machine_name]
+        machine_spec.location['instance_id']
+      end
+
+      instance_ids_to_add = new_instance_ids - existing_instance_ids
+      instance_ids_to_remove = existing_instance_ids - new_instance_ids
+
+      if instance_ids_to_add && instance_ids_to_add.size > 0
+        action_handler.perform_action "Adding instances: #{instance_ids_to_add}" do
           existing_elb.instances.add(instance_ids_to_add)
         end
+      end
 
-        if instance_ids_to_remove && instance_ids_to_remove.size > 0
+      if instance_ids_to_remove && instance_ids_to_remove.size > 0
+        action_handler.perform_action "Removing instances: #{instance_ids_to_remove}" do
           existing_elb.instances.remove(instance_ids_to_remove)
         end
-
       end
     end
-
 
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec)

@@ -4,7 +4,7 @@
 #
 # It will also create an SNS topic and SQS queue in us-west-1.
 
-require 'chef_metal_aws'
+require 'chef/provisioning/aws_driver'
 with_driver 'aws'
 
 with_data_center 'eu-west-1' do

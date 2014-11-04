@@ -1,5 +1,5 @@
 require 'chef/resource/aws_resource'
-require 'chef_metal_aws'
+require 'chef/provisioning/aws_driver'
 
 class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
   self.resource_name = 'aws_s3_bucket'

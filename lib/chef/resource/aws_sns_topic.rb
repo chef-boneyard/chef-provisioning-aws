@@ -1,5 +1,5 @@
 require 'chef/resource/aws_resource'
-require 'chef_metal_aws'
+require 'chef/provisioning/aws_driver'
 
 class Chef::Resource::AwsSnsTopic < Chef::Resource::AwsResource
   self.resource_name = 'aws_sns_topic'

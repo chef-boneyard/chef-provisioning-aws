@@ -1,23 +1,25 @@
 require 'chef/mixin/shell_out'
-require 'chef_metal/driver'
-require 'chef_metal/convergence_strategy/install_cached'
-require 'chef_metal/convergence_strategy/install_sh'
-require 'chef_metal/convergence_strategy/no_converge'
-require 'chef_metal/transport/ssh'
-require 'chef_metal/machine/windows_machine'
-require 'chef_metal/machine/unix_machine'
-require 'chef_metal/machine_spec'
+require 'chef/provisioning/driver'
+require 'chef/provisioning/convergence_strategy/install_cached'
+require 'chef/provisioning/convergence_strategy/install_sh'
+require 'chef/provisioning/convergence_strategy/no_converge'
+require 'chef/provisioning/transport/ssh'
+require 'chef/provisioning/machine/windows_machine'
+require 'chef/provisioning/machine/unix_machine'
+require 'chef/provisioning/machine_spec'
 
-require 'chef_metal_aws/version'
-require 'chef_metal_aws/credentials'
+require 'chef/provisioning/aws_driver/version'
+require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
 
 
-module ChefMetalAWS
+class Chef
+module Provisioning
+module AWSDriver
   # Provisions machines using the AWS SDK
-  class AWSDriver < ChefMetal::Driver
+  class Driver < Chef::Provisioning::Driver
 
     include Chef::Mixin::ShellOut
 
@@ -28,7 +30,7 @@ module ChefMetalAWS
     # TODO: migration path from fog:AWS - parse that URL
     # canonical URL calls realpath on <path>
     def self.from_url(driver_url, config)
-      AWSDriver.new(driver_url, config)
+      Driver.new(driver_url, config)
     end
 
     def initialize(driver_url, config)
@@ -53,7 +55,7 @@ module ChefMetalAWS
       if !existing_elb.exists?
         lb_spec.location = {
             'driver_url' => driver_url,
-            'driver_version' => ChefMetalAWS::VERSION,
+            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
             'host_node' => action_handler.host_node,
         }
@@ -115,7 +117,7 @@ module ChefMetalAWS
 
         machine_spec.location = {
             'driver_url' => driver_url,
-            'driver_version' => ChefMetalAWS::VERSION,
+            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
             'host_node' => action_handler.host_node,
             'image_id' => machine_options[:image_id]
@@ -171,9 +173,9 @@ module ChefMetalAWS
       end
 
       if machine_spec.location['is_windows']
-        ChefMetal::Machine::WindowsMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
+        Chef::Provisioning::Machine::WindowsMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       else
-        ChefMetal::Machine::UnixMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
+        Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       end
     end
 
@@ -274,7 +276,7 @@ module ChefMetalAWS
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
       username = machine_spec.location['ssh_username'] || default_ssh_username
       if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.location['ssh_username']
-        Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.location['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.location['ssh_username']}.  Please edit the node and change the metal.location.ssh_username attribute if you want to change it.")
+        Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.location['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.location['ssh_username']}.  Please edit the node and change the chef_provisioning.location.ssh_username attribute if you want to change it.")
       end
       options = {}
       if machine_spec.location[:sudo] || (!machine_spec.location.has_key?(:sudo) && username != 'root')
@@ -298,7 +300,7 @@ module ChefMetalAWS
       options[:ssh_pty_enable] = true
       options[:ssh_gateway] = machine_spec.location['ssh_gateway'] if machine_spec.location.has_key?('ssh_gateway')
 
-      ChefMetal::Transport::SSH.new(remote_host, username, ssh_options, options, config)
+      Chef::Provisioning::Transport::SSH.new(remote_host, username, ssh_options, options, config)
     end
 
     def ssh_options_for(machine_spec, machine_options, instance)
@@ -338,15 +340,15 @@ module ChefMetalAWS
     def convergence_strategy_for(machine_spec, machine_options)
       # Defaults
       if !machine_spec.location
-        return ChefMetal::ConvergenceStrategy::NoConverge.new(machine_options[:convergence_options], config)
+        return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(machine_options[:convergence_options], config)
       end
 
       if machine_spec.location['is_windows']
-        ChefMetal::ConvergenceStrategy::InstallMsi.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(machine_options[:convergence_options], config)
       elsif machine_options[:cached_installer] == true
-        ChefMetal::ConvergenceStrategy::InstallCached.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options[:convergence_options], config)
       else
-        ChefMetal::ConvergenceStrategy::InstallSh.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallSh.new(machine_options[:convergence_options], config)
       end
     end
 
@@ -389,4 +391,6 @@ module ChefMetalAWS
     end
 
   end
+end
+end
 end

@@ -1,5 +1,5 @@
 require 'chef/provider/lwrp_base'
-require 'chef_metal_aws/aws_driver'
+require 'chef/provisioning/aws_driver/aws_driver'
 require 'aws-sdk-v1'
 
 
@@ -97,7 +97,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
   end
 
   def new_driver
-    run_context.chef_metal.driver_for(new_resource.driver)
+    run_context.chef_provisioning.driver_for(new_resource.driver)
   end
 
   def ensure_keys(action)

@@ -1,9 +1,9 @@
 GIT
-  remote: https://github.com/opscode/chef-metal.git
+  remote: https://github.com/opscode/chef-provisioning.git
   revision: 6c61986604c1f83e9a3b97dfca8a98f7cbad1bb7
   branch: master
   specs:
-    chef-metal (0.14.2)
+    chef-provisioning (0.14.2)
       chef
       cheffish (~> 0.8)
       inifile (~> 2.0)
@@ -15,10 +15,10 @@ GIT
 PATH
   remote: .
   specs:
-    chef-metal-aws (0.1)
+    chef-provisioning-aws (0.1)
       aws-sdk
       chef
-      chef-metal (~> 0.9)
+      chef-provisioning (~> 0.9)
 
 GEM
   remote: https://rubygems.org/
@@ -163,7 +163,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  chef-metal!
-  chef-metal-aws!
+  chef-provisioning!
+  chef-provisioning-aws!
   rake
   rspec

@@ -55,7 +55,7 @@ module AWSDriver
       if !existing_elb.exists?
         lb_spec.location = {
             'driver_url' => driver_url,
-            'driver_version' => ChefMetalAWS::VERSION,
+            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
             'host_node' => action_handler.host_node,
         }

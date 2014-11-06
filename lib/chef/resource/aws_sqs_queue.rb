@@ -7,9 +7,8 @@ class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
   actions :create, :delete, :nothing
   default_action :create
 
-  attribute :name, String, :name_attribute => true
+  attribute :name, :kind_of => String, :name_attribute => true
   attribute :queue_name, String
-  stored_attribute :created_at, DateTime
   attribute :name, :kind_of => String, :name_attribute => true
   attribute :queue_name, :kind_of => String
   stored_attribute :created_at

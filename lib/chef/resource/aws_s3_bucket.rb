@@ -10,6 +10,8 @@ class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
 
   attribute :name, :kind_of => String, :name_attribute => true
   attribute :bucket_name, :kind_of => String
+  attribute :enable_website_hosting, :kind_of => [TrueClass, FalseClass], :default => false
+  attribute :website_options, :kind_of => Hash
 
   def initialize(*args)
     super

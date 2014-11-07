@@ -90,14 +90,14 @@ module AWSDriver
       existing_elb = load_balancer_for(lb_spec)
 
       # Try to recreate it if it doesn't exist in AWS
-      action_handler.report_progress "Checking for ELB named #{lb_spec.name}..."
+      action_handler.report_progress "Checking for ELB named #{lb_spec.name} ..."
       allocate_load_balancer(action_handler, lb_spec, lb_options) unless existing_elb.exists?
 
       # Try to find it again -- if we can't, consider it fatal
       existing_elb = load_balancer_for(lb_spec)
       fail "Unable to find specified ELB instance. Already tried to recreate it!" if !existing_elb.exists?
 
-      action_handler.report_progress "Updating ELB named #{lb_spec.name}..."
+      action_handler.report_progress "Updating ELB named #{lb_spec.name} ..."
 
       machines = opts[:machines]
       existing_instance_ids = existing_elb.instances.collect { |i| i.instance_id }
@@ -137,24 +137,25 @@ module AWSDriver
     def allocate_machine(action_handler, machine_spec, machine_options)
       existing_instance = instance_for(machine_spec)
       if existing_instance == nil || !existing_instance.exists?
-
-        machine_spec.location = {
-            'driver_url' => driver_url,
-            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
-            'allocated_at' => Time.now.utc.to_s,
-            'host_node' => action_handler.host_node,
-            'image_id' => machine_options[:image_id]
-        }
-
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
-        action_handler.report_progress "Creating #{machine_spec.name} with AMI #{image_id} in #{@region}..."
         bootstrap_options = machine_options[:bootstrap_options] || {}
         bootstrap_options[:image_id] = image_id
         Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
-        instance = ec2.instances.create(bootstrap_options)
-        instance.tags['Name'] = machine_spec.name
-        machine_spec.location['instance_id'] = instance.id
-        action_handler.report_progress "Created #{instance.id} in #{@region}..."
+
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
+          Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
+          instance = ec2.instances.create(bootstrap_options)
+          # TODO add other tags identifying user / node url (same as fog)
+          instance.tags['Name'] = machine_spec.name
+          machine_spec.location = {
+              'driver_url' => driver_url,
+              'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+              'allocated_at' => Time.now.utc.to_s,
+              'host_node' => action_handler.host_node,
+              'image_id' => machine_options[:image_id],
+              'instance_id' => instance.id
+          }
+        end
       end
     end
 
@@ -166,11 +167,14 @@ module AWSDriver
       end
 
       if instance.status != :running
-        action_handler.report_progress "Starting #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region}..."
-        wait_until_ready(action_handler, machine_spec)
+        wait_until(action_handler, machine_spec, instance) { instance.status != :stopping }
+        if instance.status == :stopped
+          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
+            instance.start
+          end
+        end
+        wait_until_ready(action_handler, machine_spec, instance)
         wait_for_transport(action_handler, machine_spec, machine_options)
-      else
-        action_handler.report_progress "#{machine_spec.name} (#{machine_spec.location['instance_id']}) already running in #{@region}..."
       end
 
       machine_for(machine_spec, machine_options, instance)
@@ -180,14 +184,15 @@ module AWSDriver
     def destroy_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
       if instance
-        instance.terminate
+        # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
+        action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
+          instance.terminate
+        end
       end
     end
 
-
-
-
     private
+
     def machine_for(machine_spec, machine_options, instance = nil)
       instance ||= instance_for(machine_spec)
 
@@ -375,15 +380,19 @@ module AWSDriver
       end
     end
 
-    def wait_until_ready(action_handler, machine_spec)
-      instance = instance_for(machine_spec)
+    def wait_until_ready(action_handler, machine_spec, instance=nil)
+      wait_until(action_handler, machine_spec, instance) { instance.status == :running }
+    end
+
+    def wait_until(action_handler, machine_spec, instance=nil, &block)
+      instance ||= instance_for(machine_spec)
       time_elapsed = 0
       sleep_time = 10
       max_wait_time = 120
-      unless instance.status == :running
+      if !yield(instance)
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
-          while time_elapsed < 120 && instance.status != :running
+          while time_elapsed < 120 && !yield(instance)
             action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
             sleep(sleep_time)
             time_elapsed += sleep_time

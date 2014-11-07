@@ -50,77 +50,140 @@ module AWSDriver
 
 
     # Load balancer methods
-    def allocate_load_balancer(action_handler, lb_spec, lb_options)
-      existing_elb = load_balancer_for(lb_spec)
-      if !existing_elb.exists?
-        lb_spec.location = {
+    def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
+      security_group_name = lb_options[:security_group_name] || 'default'
+      security_group_id = lb_options[:security_group_id]
+
+      # TODO confused: this variable doesn't appear to be used?
+#        default_sg = ec2.security_groups.filter('group-name', 'default')
+      security_group = if security_group_id.nil?
+                         ec2.security_groups.filter('group-name', security_group_name).first
+                       else
+                         ec2.security_groups[security_group_id]
+                       end
+      availability_zones = lb_options[:availability_zones]
+      listeners = lb_options[:listeners]
+
+      actual_elb = load_balancer_for(lb_spec)
+      if !actual_elb.exists?
+        perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
+
+        updates = [ "Create load balancer #{lb_spec.name} in #{@region}" ]
+        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
+        updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
+        updates << "  with security group #{security_group.name}" if security_group
+
+        action_handler.perform_action updates do
+          actual_elb = elb.load_balancers.create(lb_spec.name,
+            availability_zones: availability_zones,
+            listeners:          listeners,
+            security_groups:    [security_group])
+
+          lb_spec.location = {
             'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
-            'host_node' => action_handler.host_node,
-        }
+          }
+        end
+      else
+        # Header gets printed the first time we make an update
+        perform_action = proc do |desc, &block|
+          perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
+          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{@region}", desc ].flatten, &block
+        end
 
-        security_group_name = lb_options[:security_group_name] || 'default'
-        security_group_id = lb_options[:security_group_id]
+        # Update availability zones
+        enable_zones = (availability_zones || []).dup
+        disable_zones = []
+        actual_elb.availability_zones.each do |availability_zone|
+          if !enable_zones.delete(availability_zone.name)
+            disable_zones << availability_zone.name
+          end
+        end
+        if enable_zones.size > 0
+          perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
+            actual_elb.availability_zones.enable(*enable_zones)
+          end
+        end
+        if disable_zones.size > 0
+          perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
+            actual_elb.availability_zones.disable(*disable_zones)
+          end
+        end
 
-        default_sg = ec2.security_groups.filter('group-name', 'default')
-        security_group = if security_group_id.nil?
-                           ec2.security_groups.filter('group-name', security_group_name).first
-                         else
-                           ec2.security_groups[security_group_id]
-                         end
+        # Update listeners
+        perform_listener_action = proc do |desc, &block|
+          perform_listener_action = proc { |desc, &block| perform_action(desc, &block) }
+          perform_action([ "  update listener #{listener.port}", desc ], &block)
+        end
+        add_listeners = {}
+        listeners.each { |l| add_listeners[l[:port]] = l } if listeners
+        actual_elb.listeners.each do |listener|
+          desired_listener = add_listeners.delete(listener.port)
+          if desired_listener
+            if listener.protocol != desired_listener[:protocol]
+              perform_listener_action.call("    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}'") do
+                listener.protocol = desired_listener[:protocol]
+              end
+            end
+            if listener.instance_port != desired_listener[:instance_port]
+              perform_listener_action.call("    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}'") do
+                listener.instance_port = desired_listener[:instance_port]
+              end
+            end
+            if listener.instance_protocol != desired_listener[:instance_protocol]
+              perform_listener_action.call("    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}'") do
+                listener.instance_protocol = desired_listener[:instance_protocol]
+              end
+            end
+            if listener.server_certificate != desired_listener[:server_certificate]
+              perform_listener_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}'") do
+                listener.server_certificate = desired_listener[:server_certificate]
+              end
+            end
+          else
+            perform_action.call("  remove listener #{listener.port}") do
+              listener.delete
+            end
+          end
+        end
+        add_listeners.each do |listener|
+          updates = [ "  add listener #{listener[:port]}" ]
+          updates << "    set protocol to #{listener[:protocol].inspect}"
+          updates << "    set instance port to #{listener[:instance_port].inspect}"
+          updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
+          updates << "    set server certificate to #{listener[:server_certificate]}" if listener[:server_certificate]
+          perform_action.call(updates) do
+            actual_elb.listeners.create(listener)
+          end
+        end
+      end
 
-        availability_zones = lb_options[:availability_zones]
-        listeners = lb_options[:listeners]
-        elb.load_balancers.create(lb_spec.name,
-                :availability_zones => availability_zones,
-                :listeners => listeners,
-                :security_groups => [security_group])
+      # Update instance list
+      actual_instance_ids = Set.new(actual_elb.instances.map { |i| i.instance_id })
+
+      instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
+      instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
+
+      if instances_to_add.size > 0
+        perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
+          instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
+          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{@region}")
+          actual_elb.instances.add(instance_ids_to_add)
+        end
+      end
+
+      if instance_ids_to_remove.size > 0
+        perform_action.call("  remove instances #{instance_ids_to_remove}") do
+          actual_elb.instances.remove(instance_ids_to_remove)
+        end
       end
     end
 
-    def ready_load_balancer(action_handler, lb_spec, lb_options)
+    def ready_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
     end
 
     def destroy_load_balancer(action_handler, lb_spec, lb_options)
-    end
-
-    # TODO update listeners and zones, and other bits
-    def update_load_balancer(action_handler, lb_spec, lb_options, opts = {})
-      existing_elb = load_balancer_for(lb_spec)
-
-      # Try to recreate it if it doesn't exist in AWS
-      action_handler.report_progress "Checking for ELB named #{lb_spec.name} ..."
-      allocate_load_balancer(action_handler, lb_spec, lb_options) unless existing_elb.exists?
-
-      # Try to find it again -- if we can't, consider it fatal
-      existing_elb = load_balancer_for(lb_spec)
-      fail "Unable to find specified ELB instance. Already tried to recreate it!" if !existing_elb.exists?
-
-      action_handler.report_progress "Updating ELB named #{lb_spec.name} ..."
-
-      machines = opts[:machines]
-      existing_instance_ids = existing_elb.instances.collect { |i| i.instance_id }
-
-      new_instance_ids = machines.keys.collect do |machine_name|
-        machine_spec = machines[machine_name]
-        machine_spec.location['instance_id']
-      end
-
-      instance_ids_to_add = new_instance_ids - existing_instance_ids
-      instance_ids_to_remove = existing_instance_ids - new_instance_ids
-
-      if instance_ids_to_add && instance_ids_to_add.size > 0
-        action_handler.perform_action "Adding instances: #{instance_ids_to_add}" do
-          existing_elb.instances.add(instance_ids_to_add)
-        end
-      end
-
-      if instance_ids_to_remove && instance_ids_to_remove.size > 0
-        action_handler.perform_action "Removing instances: #{instance_ids_to_remove}" do
-          existing_elb.instances.remove(instance_ids_to_remove)
-        end
-      end
     end
 
     # Image methods
@@ -135,8 +198,8 @@ module AWSDriver
 
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
-      existing_instance = instance_for(machine_spec)
-      if existing_instance == nil || !existing_instance.exists?
+      actual_instance = instance_for(machine_spec)
+      if actual_instance == nil || !actual_instance.exists?
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options = machine_options[:bootstrap_options] || {}
         bootstrap_options[:image_id] = image_id
@@ -225,11 +288,11 @@ module AWSDriver
     def keypair_for(bootstrap_options)
       if bootstrap_options[:key_name]
         keypair_name = bootstrap_options[:key_name]
-        existing_key_pair = ec2.key_pairs[keypair_name]
-        if !existing_key_pair.exists?
+        actual_key_pair = ec2.key_pairs[keypair_name]
+        if !actual_key_pair.exists?
           ec2.key_pairs.create(keypair_name)
         end
-        existing_key_pair
+        actual_key_pair
       end
     end
 

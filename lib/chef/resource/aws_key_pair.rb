@@ -1,7 +1,7 @@
 require 'chef/provisioning'
 
-class Chef::Resource::FogKeyPair < Chef::Resource::LWRPBase
-  self.resource_name = 'fog_key_pair'
+class Chef::Resource::AwsKeyPair < Chef::Resource::LWRPBase
+  self.resource_name = 'aws_key_pair'
 
   def initialize(*args)
     super

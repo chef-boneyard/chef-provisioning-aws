@@ -1,6 +1,7 @@
 require 'chef/provisioning'
+require 'chef/resource/aws_resource'
 
-class Chef::Resource::AwsKeyPair < Chef::Resource::LWRPBase
+class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
   self.resource_name = 'aws_key_pair'
 
   def initialize(*args)

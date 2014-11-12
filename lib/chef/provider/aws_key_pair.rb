@@ -1,9 +1,10 @@
 require 'chef/provider/lwrp_base'
-require 'chef/provisioning/aws_driver/aws_driver'
+require 'chef/provisioning/aws_driver'
+require 'chef/provider/aws_provider'
 require 'aws-sdk-v1'
 
 
-class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
+class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
   use_inline_resources
 
@@ -17,7 +18,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
 
   action :delete do
     if current_resource_exists?
-      compute.key_pairs.delete(new_resource.name)
+      ec2.key_pairs[new_resource.name].delete
     end
   end
 
@@ -78,8 +79,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            ec2.key.key_pairs.get(new_resource.name).destroy
-            compute.import_key_pair(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            ec2.key_pairs[new_resource.name].destroy
+            ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -91,7 +92,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        compute.import_key_pair(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
@@ -133,6 +134,14 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
     end
   end
 
+  def existing_keypair
+    @existing_keypair ||= begin
+      ec2.key_pairs[fqn]
+    rescue
+      nil
+    end
+  end
+
   def current_resource_exists?
     @current_resource.action != [ :delete ]
   end
@@ -141,10 +150,6 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
     c = @current_fingerprint.split[0,2].join(' ')
     n = new.split[0,2].join(' ')
     c == n
-  end
-
-  def compute
-    new_driver.compute
   end
 
   def current_public_key
@@ -170,7 +175,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::LWRPBase
   def load_current_resource
     @current_resource = Chef::Resource::AwsKeyPair.new(new_resource.name, run_context)
 
-    current_key_pair = compute.key_pairs.get(new_resource.name)
+    current_key_pair = ec2.key_pairs[new_resource.name]
     if current_key_pair
       @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
     else

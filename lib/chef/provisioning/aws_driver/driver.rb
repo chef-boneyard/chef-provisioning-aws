@@ -8,6 +8,8 @@ require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
+require 'chef/provider/aws_key_pair'
+require 'chef/resource/aws_key_pair'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
 
@@ -203,6 +205,10 @@ module AWSDriver
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options = machine_options[:bootstrap_options] || {}
         bootstrap_options[:image_id] = image_id
+        if !bootstrap_options[:key_name]
+          Chef::Log.debug('No key specified, generating a default one...')
+          bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
+        end
         Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
 
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
@@ -250,11 +256,20 @@ module AWSDriver
         # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
         action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
           instance.terminate
+          machine_spec.location = nil
         end
+      else
+        Chef::Log.warn "Unable to find and destroy instance for #{machine_spec.inspect}"
       end
+
+      strategy = convergence_strategy_for(machine_spec, machine_options)
+      strategy.cleanup_convergence(action_handler, machine_spec)
     end
 
     private
+
+    # For creating things like AWS keypairs exclusively
+    @@chef_default_lock = Mutex.new
 
     def machine_for(machine_spec, machine_options, instance = nil)
       instance ||= instance_for(machine_spec)
@@ -483,6 +498,36 @@ module AWSDriver
           action_handler.report_progress "#{machine_spec.name} is now connectable"
         end
       end
+    end
+
+    def default_aws_keypair_name(machine_spec)
+      if machine_spec.location &&
+          Gem::Version.new(machine_spec.location['driver_version']) < Gem::Version.new('0.10')
+        'metal_default'
+      else
+        'chef_default'
+      end
+    end
+
+    def default_aws_keypair(action_handler, machine_spec)
+      driver = self
+      default_key_name = default_aws_keypair_name(machine_spec)
+      _region = region
+      updated = @@chef_default_lock.synchronize do
+        Provisioning.inline_resource(action_handler) do
+          aws_key_pair default_key_name do
+            driver driver
+            allow_overwrite true
+            region_name _region
+          end
+        end
+      end
+
+      # Only warn the first time
+      default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the fog_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
+      Chef::Log.warn(default_warning) if updated
+
+      default_key_name
     end
 
   end

@@ -1,5 +1,6 @@
 require 'inifile'
 require 'csv'
+require 'chef/mixin/deep_merge'
 
 class Chef
 module Provisioning
@@ -12,6 +13,7 @@ module AWSDriver
     end
 
     include Enumerable
+    include Chef::Mixin::DeepMerge
 
     def default
       if @credentials.size == 0
@@ -34,9 +36,9 @@ module AWSDriver
 
     def load_inis(config_ini_file, credentials_ini_file = nil)
       @credentials = load_config_ini(config_ini_file)
-      if credentials_ini_file
-        @credentials.merge!(load_credentials_ini(credentials_ini_file))
-      end
+      @credentials = deep_merge!(@credentials,
+                                 load_credentials_ini(credentials_ini_file)
+                                ) if credentials_ini_file
     end
 
     def load_config_ini(config_ini_file)

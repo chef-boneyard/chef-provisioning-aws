@@ -8,7 +8,7 @@ class Chef::Provider::AwsSnsTopic < Chef::Provider::AwsProvider
       converge_by "Creating new SNS topic #{fqn} in #{new_resource.region_name}" do
         sns.topics.create(fqn)
 
-        new_resource.created_at DataTime.now.to_s
+        new_resource.created_at DateTime.now.to_s
         new_resource.save
       end
     end

@@ -10,3 +10,17 @@ development.
 
 This requires the latest from chef-provisioning's load_balancer branch for some 
 features like region support (until it gets merged into master, which should be soon)
+
+
+List of resources (these may not have 100% of SDK functionality mapped but can be provisioned): 
+
+* SQS Queues
+* SNS Topics
+* Elastic Load Balancers
+* VPCs
+* Security Groups
+* Instances
+* Images
+* Autoscaling Groups
+* SSH Key pairs
+* Launch configs

@@ -79,7 +79,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            ec2.key_pairs[new_resource.name].destroy
+            ec2.key_pairs[new_resource.name].delete
             ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else

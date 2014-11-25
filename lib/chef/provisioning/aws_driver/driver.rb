@@ -444,6 +444,10 @@ module AWSDriver
     end
 
     def convergence_strategy_for(machine_spec, machine_options)
+      # Tell Ohai that this is an EC2 instance so that it runs the EC2 plugin
+      machine_options[:convergence_options] ||= {}
+      machine_options[:convergence_options][:ohai_hints] = { 'ec2' => ''}
+
       # Defaults
       if !machine_spec.location
         return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(machine_options[:convergence_options], config)

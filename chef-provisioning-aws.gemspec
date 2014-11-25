@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.email = 'jewart@getchef.com'
   s.homepage = 'https://github.com/opscode/chef-provisioning-aws'
 
-  s.add_dependency 'chef', '~> 11.16.4'
+  s.add_dependency 'chef', '>= 11.16.4'
   s.add_dependency 'chef-provisioning', '~> 0.9'
   s.add_dependency 'aws-sdk-v1'
 

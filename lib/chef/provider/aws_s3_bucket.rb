@@ -7,23 +7,21 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
       converge_by "Creating new S3 bucket #{fqn}" do
         bucket = s3.buckets.create(fqn)
         bucket.tags['Name'] = new_resource.name
-        if new_resource.enable_website_hosting
-          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
-            new_resource.website_options)
-        end
       end
-    elsif requires_modification?
-      converge_by "Modifying S3 Bucket #{fqn}" do
-        if existing_bucket.website_configuration == nil && new_resource.enable_website_hosting || 
-          existing_bucket.website_configuration != nil && new_resource.enable_website_hosting
+    end
+    
+    if modifies_website_configuration?
+      if new_resource.enable_website_hosting
+        converge_by "Setting website configuration for bucket #{fqn}" do
           existing_bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
-        else
-          existing_bucket.remove_website_configuration
+        end
+      else
+        converge_by "Disabling website configuration for bucket #{fqn}" do
+          existing_bucket.website_configuration = nil
         end
       end
     end
-
     new_resource.save
   end
 
@@ -43,10 +41,15 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
     @existing_bucket ||= s3.buckets[fqn] if s3.buckets[fqn].exists?
   end
 
-  def requires_modification?
+  def modifies_website_configuration?
     if existing_bucket.website_configuration == nil
+      # If the current bucket does not have a website configuration,
+      # check to see if one needs to be created
       new_resource.enable_website_hosting
     else
+      # There exists a website configuration. Modification is required
+      # if website hosting needs to be disabled or the configurations
+      # differ
       !new_resource.enable_website_hosting ||
         !compare_website_configuration
     end

@@ -22,6 +22,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
         end
       end
     end
+    new_resource.endpoint "#{fqn}.s3-website-#{s3_website_endpoint_region}.amazonaws.com"
     new_resource.save
   end
 
@@ -34,7 +35,6 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
 
     new_resource.delete
   end
-
 
   def existing_bucket
     Chef::Log.debug("Checking for S3 bucket #{fqn}")
@@ -65,6 +65,18 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
     current_web_config[:index_document] == new_web_config.fetch(:index_document, {}) &&
       current_web_config[:error_document] == new_web_config.fetch(:error_document, {}) &&
       current_web_config[:routing_rules] == new_web_config.fetch(:routing_rules, [])
+  end
+
+  def s3_website_endpoint_region
+    # ¯\_(ツ)_/¯
+    case existing_bucket.location_constraint
+    when nil, 'US'
+      'us-east-1'
+    when 'EU'
+      'eu-west-1'
+    else
+      existing_bucket.location_constraint
+    end
   end
 
   # Fully qualified bucket name (i.e resource_region unless otherwise specified)

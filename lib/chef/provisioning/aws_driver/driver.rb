@@ -201,7 +201,7 @@ module AWSDriver
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
       actual_instance = instance_for(machine_spec)
-      if actual_instance == nil || !actual_instance.exists?
+      if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options = machine_options[:bootstrap_options] || {}
         bootstrap_options[:image_id] = image_id

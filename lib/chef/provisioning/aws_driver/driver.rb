@@ -240,6 +240,15 @@ module AWSDriver
       end
     end
 
+    def allocate_machines(action_handler, specs_and_options, parallelizer)
+      #Chef::Log.warn("#{specs_and_options}")
+      create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, server|
+    #Chef::Log.warn("#{machine_spec}")
+        yield machine_spec
+      end
+      specs_and_options.keys
+    end
+
     def ready_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
 
@@ -338,6 +347,20 @@ module AWSDriver
       else
         nil
       end
+    end
+
+    def instances_for(machine_specs)
+      result = {}
+      machine_specs.each do |machine_spec|
+        if machine_spec.location && machine_spec.location['instance_id']
+          if machine_spec.location['driver_url'] != driver_url
+            raise "Switching a machine's driver from #{machine_spec.location['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+          end
+          #returns nil if not found
+          result[machine_spec] = ec2.instances[machine_spec.location['instance_id']]
+        end
+      end
+      result
     end
 
     def transport_for(machine_spec, machine_options, instance)
@@ -547,6 +570,82 @@ module AWSDriver
       Chef::Log.warn(default_warning) if updated
 
       default_key_name
+    end
+
+    def create_servers(action_handler, specs_and_options, parallelizer, &block)
+      specs_and_servers = instances_for(specs_and_options.keys)
+
+      by_bootstrap_options = {}
+      specs_and_options.each do |machine_spec, machine_options|
+        actual_instance = specs_and_servers[machine_spec]
+        if actual_instance
+          if actual_instance.status == :terminated
+            Chef::Log.warn "Machine #{machine_spec.name} (#{actual_instance.id}) is terminated.  Recreating ..."
+          else
+            yield machine_spec, actual_instance if block_given?
+            next
+          end
+        elsif machine_spec.location
+          Chef::Log.warn "Machine #{machine_spec.name} (#{machine_spec.location['instance_id']} on #{driver_url}) no longer exists.  Recreating ..."
+        end
+
+        bootstrap_options = machine_options[:bootstrap_options] || {}
+        by_bootstrap_options[bootstrap_options] ||= []
+        by_bootstrap_options[bootstrap_options] << machine_spec
+      end
+
+      # Create the servers in parallel
+      parallelizer.parallelize(by_bootstrap_options) do |bootstrap_options, machine_specs|
+        machine_description = if machine_specs.size == 1
+          "machine #{machine_specs.first.name}"
+        else
+          "machines #{machine_specs.map { |s| s.name }.join(", ")}"
+        end
+        description = [ "creating #{machine_description} on #{driver_url}" ]
+        bootstrap_options.each_pair { |key,value| description << "  #{key}: #{value.inspect}" }
+        action_handler.report_progress description
+        if action_handler.should_perform_actions
+          # Actually create the servers
+          create_many_instances(machine_specs.size, bootstrap_options, parallelizer) do |instance|
+
+            # Assign each one to a machine spec
+            machine_spec = machine_specs.pop
+            machine_options = specs_and_options[machine_spec]
+            machine_spec.location = {
+              'driver_url' => driver_url,
+              'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+              'allocated_at' => Time.now.utc.to_s,
+              'host_node' => action_handler.host_node,
+              'image_id' => bootstrap_options[:image_id],
+              'instance_id' => instance.id
+            }
+            instance.tags['Name'] = machine_spec.name
+            machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+            %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+              machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+            end
+            action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
+
+            yield machine_spec, instance if block_given?
+          end
+
+          if machine_specs.size > 0
+            raise "Not all machines were created by create_servers"
+          end
+        end
+      end.to_a
+    end
+
+    def create_many_instances(num_servers, bootstrap_options, parallelizer)
+      parallelizer.parallelize(1.upto(num_servers)) do |i|
+        clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
+        #using the singleton ec2 variable creates a threading issue.
+        #have each thread create its own instance of ec2
+        instance = AWS.ec2.instances.create(clean_bootstrap_options)
+
+        yield instance if block_given?
+        instance
+      end.to_a
     end
 
   end

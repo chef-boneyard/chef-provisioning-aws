@@ -262,14 +262,14 @@ module AWSDriver
 
     def destroy_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
-      if instance
+      if instance && instance.exists?
         # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
         action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
           instance.terminate
           machine_spec.location = nil
         end
       else
-        Chef::Log.warn "Unable to find and destroy instance for #{machine_spec.inspect}"
+        Chef::Log.warn "Instance #{machine_spec.location['instance_id']} doesn't exist for #{machine_spec.name}"
       end
 
       strategy = convergence_strategy_for(machine_spec, machine_options)

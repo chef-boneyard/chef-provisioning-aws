@@ -56,8 +56,6 @@ module AWSDriver
       security_group_name = lb_options[:security_group_name] || 'default'
       security_group_id = lb_options[:security_group_id]
 
-      # TODO confused: this variable doesn't appear to be used?
-#        default_sg = ec2.security_groups.filter('group-name', 'default')
       security_group = if security_group_id.nil?
                          ec2.security_groups.filter('group-name', security_group_name).first
                        else
@@ -186,6 +184,18 @@ module AWSDriver
     end
 
     def destroy_load_balancer(action_handler, lb_spec, lb_options)
+      return if lb_spec == nil
+
+      actual_elb = load_balancer_for(lb_spec)
+      if actual_elb && actual_elb.exists?
+        # Remove ELB from AWS
+        action_handler.perform_action "Deleting EC2 ELB #{lb_spec.id}" do
+          actual_elb.delete
+        end
+      end
+
+      # Remove LB spec from databag
+      lb_spec.delete(action_handler)
     end
 
     # Image methods
@@ -365,6 +375,8 @@ module AWSDriver
           'ami-996706a3'
         when 'eu-west-1'
           'ami-4ab46b3d'
+        when 'eu-central-1'
+          'ami-7c3c0a61'
         when 'sa-east-1'
           'ami-6770d87a'
         when 'us-east-1'

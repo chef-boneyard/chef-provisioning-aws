@@ -176,7 +176,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
     @current_resource = Chef::Resource::AwsKeyPair.new(new_resource.name, run_context)
 
     current_key_pair = ec2.key_pairs[new_resource.name]
-    if current_key_pair
+    if current_key_pair && current_key_pair.exists?
       @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
     else
       current_resource.action :delete

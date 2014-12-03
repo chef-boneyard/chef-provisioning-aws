@@ -15,7 +15,8 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
-
+# loads the entire aws-sdk
+AWS.eager_autoload!
 
 class Chef
 module Provisioning
@@ -620,9 +621,7 @@ module AWSDriver
     def create_many_instances(num_servers, bootstrap_options, parallelizer)
       parallelizer.parallelize(1.upto(num_servers)) do |i|
         clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
-        #using the singleton ec2 variable creates a threading issue.
-        #have each thread create its own instance of ec2
-        instance = AWS.ec2.instances.create(clean_bootstrap_options)
+        instance = ec2.instances.create(clean_bootstrap_options)
 
         yield instance if block_given?
         instance

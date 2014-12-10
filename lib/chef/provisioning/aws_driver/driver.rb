@@ -392,7 +392,7 @@ module AWSDriver
 
     def create_ssh_transport(machine_spec, machine_options, instance)
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
-      username = machine_spec.location['ssh_username'] || default_ssh_username
+      username = machine_spec.location['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
       if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.location['ssh_username']
         Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.location['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.location['ssh_username']}.  Please edit the node and change the chef_provisioning.location.ssh_username attribute if you want to change it.")
       end

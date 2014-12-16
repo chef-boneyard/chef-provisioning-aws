@@ -212,16 +212,15 @@ module AWSDriver
     def allocate_machine(action_handler, machine_spec, machine_options)
       actual_instance = instance_for(machine_spec)
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
-        image_id = machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options = machine_options[:bootstrap_options] || {}
-        bootstrap_options[:image_id] = image_id
+        bootstrap_options[:image_id] = default_ami_for_region(@region) if bootstrap_options[:image_id].nil?
         if !bootstrap_options[:key_name]
           Chef::Log.debug('No key specified, generating a default one...')
           bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
         end
         Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
 
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{@region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
           instance = ec2.instances.create(bootstrap_options)
           # TODO add other tags identifying user / node url (same as fog)
@@ -231,7 +230,7 @@ module AWSDriver
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
-              'image_id' => machine_options[:image_id],
+              'image_id' => bootstrap_options[:image_id],
               'instance_id' => instance.id
           }
         end

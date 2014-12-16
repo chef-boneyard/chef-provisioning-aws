@@ -232,6 +232,7 @@ module AWSDriver
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
               'image_id' => machine_options[:image_id],
+              'ssh_username' => machine_options[:ssh_username],
               'instance_id' => instance.id
           }
         end

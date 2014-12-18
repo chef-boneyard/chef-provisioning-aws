@@ -201,12 +201,53 @@ module AWSDriver
 
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec)
+      actual_image = image_for(image_spec)
+      if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
+        action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
+          image_options[:name] ||= image_spec.name
+          image_options[:instance_id] ||= machine_spec.location['instance_id']
+          image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
+          Chef::Log.debug "AWS Image options: #{image_options.inspect}"
+          image = ec2.images.create(image_options)
+          image_spec.location = {
+            'driver_url' => driver_url,
+            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+            'image_id' => image.id,
+            'allocated_at' => Time.now.to_i
+          }
+          image_spec.machine_options ||= {}
+          image_spec.machine_options.merge!({
+            :bootstrap_options => {
+                :image_id => image.id
+            }
+          })
+        end
+      end
     end
 
     def ready_image(action_handler, image_spec, image_options)
+      actual_image = image_for(image_spec)
+      if actual_image.nil? || !actual_image.exists?
+        raise 'Cannot ready an image that does not exist'
+      else
+        if actual_image.state != :available
+          action_handler.report_progress 'Waiting for image to be ready ...'
+          wait_until_ready_image(action_handler, image_spec, actual_image)
+        else
+          action_handler.report_progress "Image #{image_spec.name} is ready!"
+        end
+      end
     end
 
     def destroy_image(action_handler, image_spec, image_options)
+      actual_image = image_for(image_spec)
+      if actual_image.nil? || !actual_image.exists?
+        Chef::Log.warn "Image #{image_spec.name} doesn't exist"
+      else
+        action_handler.perform_action "De-registering image #{image_spec.name}" do
+          actual_image.deregister
+        end
+      end
     end
 
     # Machine methods
@@ -258,16 +299,15 @@ module AWSDriver
       end
 
       if instance.status != :running
-        wait_until(action_handler, machine_spec, instance) { instance.status != :stopping }
+        wait_until_machine(action_handler, machine_spec, instance) { instance.status != :stopping }
         if instance.status == :stopped
           action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
             instance.start
           end
         end
+        wait_until_ready_machine(action_handler, machine_spec, instance)
+        wait_for_transport(action_handler, machine_spec, machine_options)
       end
-
-      wait_until_ready(action_handler, machine_spec, instance)
-      wait_for_transport(action_handler, machine_spec, machine_options)
 
       machine_for(machine_spec, machine_options, instance)
 
@@ -345,8 +385,12 @@ module AWSDriver
     def instance_for(machine_spec)
       if machine_spec.location && machine_spec.location['instance_id']
         ec2.instances[machine_spec.location['instance_id']]
-      else
-        nil
+      end
+    end
+
+    def image_for(image_spec)
+      if image_spec.location && image_spec.location['image_id']
+        ec2.images[image_spec.location['image_id']]
       end
     end
 
@@ -501,11 +545,31 @@ module AWSDriver
       end
     end
 
-    def wait_until_ready(action_handler, machine_spec, instance=nil)
-      wait_until(action_handler, machine_spec, instance) { instance.status == :running }
+    def wait_until_ready_image(action_handler, image_spec, image=nil)
+      wait_until_image(action_handler, image_spec, image) { image.state == :available }
     end
 
-    def wait_until(action_handler, machine_spec, instance=nil, &block)
+    def wait_until_image(action_handler, image_spec, image=nil, &block)
+      image ||= image_for(image_spec)
+      time_elapsed = 0
+      sleep_time = 10
+      max_wait_time = 120
+      if !yield(image)
+        action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
+        while time_elapsed < 120 && !yield(image)
+          action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
+          sleep(sleep_time)
+          time_elapsed += sleep_time
+        end
+        action_handler.report_progress "Image #{image_spec.name} is now ready"
+      end
+    end
+
+    def wait_until_ready_machine(action_handler, machine_spec, instance=nil)
+      wait_until_machine(action_handler, machine_spec, instance) { instance.status == :running }
+    end
+
+    def wait_until_machine(action_handler, machine_spec, instance=nil, &block)
       instance ||= instance_for(machine_spec)
       time_elapsed = 0
       sleep_time = 10

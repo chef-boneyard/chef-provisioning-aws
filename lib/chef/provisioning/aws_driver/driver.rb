@@ -241,11 +241,19 @@ module AWSDriver
 
     def destroy_image(action_handler, image_spec, image_options)
       actual_image = image_for(image_spec)
+      snapshots = snapshots_for(image_spec)
       if actual_image.nil? || !actual_image.exists?
         Chef::Log.warn "Image #{image_spec.name} doesn't exist"
       else
         action_handler.perform_action "De-registering image #{image_spec.name}" do
           actual_image.deregister
+        end
+        unless snapshots.any?
+          action_handler.perform_action "Deleting image #{image_spec.name} snapshots" do
+            snapshots.each do |snap|
+              snap.delete
+            end
+          end
         end
       end
     end
@@ -388,12 +396,6 @@ module AWSDriver
       end
     end
 
-    def image_for(image_spec)
-      if image_spec.location && image_spec.location['image_id']
-        ec2.images[image_spec.location['image_id']]
-      end
-    end
-
     def instances_for(machine_specs)
       result = {}
       machine_specs.each do |machine_spec|
@@ -406,6 +408,23 @@ module AWSDriver
         end
       end
       result
+    end
+
+    def image_for(image_spec)
+      if image_spec.location && image_spec.location['image_id']
+        ec2.images[image_spec.location['image_id']]
+      end
+    end
+
+    def snapshots_for(image_spec)
+      if image_spec.location && image_spec.location['image_id']
+        actual_image = image_for(image_spec)
+        snapshots = []
+        actual_image.block_device_mappings.each do |dev, opts|
+            snapshots << ec2.snapshots[opts[:snapshot_id]]
+        end
+        snapshots
+      end
     end
 
     def transport_for(machine_spec, machine_options, instance)

@@ -224,6 +224,8 @@ module AWSDriver
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
           instance = ec2.instances.create(bootstrap_options)
+          # Make sure the instance is ready to be tagged
+          sleep 5 while instance.status == :pending
           # TODO add other tags identifying user / node url (same as fog)
           instance.tags['Name'] = machine_spec.name
           machine_spec.location = {
@@ -252,9 +254,10 @@ module AWSDriver
             instance.start
           end
         end
-        wait_until_ready(action_handler, machine_spec, instance)
-        wait_for_transport(action_handler, machine_spec, machine_options)
       end
+
+      wait_until_ready(action_handler, machine_spec, instance)
+      wait_for_transport(action_handler, machine_spec, machine_options)
 
       machine_for(machine_spec, machine_options, instance)
 

@@ -253,9 +253,9 @@ module AWSDriver
           end
         end
         wait_until_ready(action_handler, machine_spec, instance)
-        wait_for_transport(action_handler, machine_spec, machine_options)
       end
 
+      wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
 
     end
@@ -392,10 +392,7 @@ module AWSDriver
 
     def create_ssh_transport(machine_spec, machine_options, instance)
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
-      username = machine_spec.location['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
-      if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.location['ssh_username']
-        Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.location['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.location['ssh_username']}.  Please edit the node and change the chef_provisioning.location.ssh_username attribute if you want to change it.")
-      end
+      username = machine_options[:ssh_username] || machine_spec.location['ssh_username'] || default_ssh_username
       options = {}
       if machine_spec.location[:sudo] || (!machine_spec.location.has_key?(:sudo) && username != 'root')
         options[:prefix] = 'sudo '
@@ -502,7 +499,7 @@ module AWSDriver
       sleep_time = 10
       max_wait_time = 120
       transport = transport_for(machine_spec, machine_options, instance)
-      unless transport.available?
+      if !transport.available?
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
           while time_elapsed < 120 && !transport.available?
@@ -511,9 +508,15 @@ module AWSDriver
             time_elapsed += sleep_time
           end
 
-          action_handler.report_progress "#{machine_spec.name} is now connectable"
+          if !transport.available?
+            raise "#{machine_spec.name} is not connectable after #{time_elapsed} seconds"
+          else
+            action_handler.report_progress "#{machine_spec.name} is now connectable"
+          end
         end
       end
+      machine_spec.location['ssh_username'] = machine_options[:ssh_username] if machine_options[:ssh_username]
+      Chef::Log.debug("#{machine_spec.name} is connectable")
     end
 
     def default_aws_keypair_name(machine_spec)

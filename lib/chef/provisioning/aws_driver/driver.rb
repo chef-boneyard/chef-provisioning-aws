@@ -263,6 +263,11 @@ module AWSDriver
 
     end
 
+    # Connect to machine without acquiring it
+    def connect_to_machine(machine_spec, machine_options)
+      machine_for(machine_spec, machine_options)
+    end
+
     def destroy_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
       if instance && instance.exists?

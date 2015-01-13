@@ -28,7 +28,7 @@ module AWSDriver
     attr_reader :region
 
     # URL scheme:
-    # aws:account_id:region
+    # aws:profilename:region
     # TODO: migration path from fog:AWS - parse that URL
     # canonical URL calls realpath on <path>
     def self.from_url(driver_url, config)
@@ -37,8 +37,14 @@ module AWSDriver
 
     def initialize(driver_url, config)
       super
-      credentials = aws_credentials.default
-      @region = credentials[:region]
+
+      scheme, profile_name, region = driver_url.split(':')
+      puts "driver_url #{driver_url}.  #{driver_url.split(':').inspect}"
+      profile_name = nil if profile_name && profile_name.empty?
+      region = nil if region && region.empty?
+
+      credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
+      @region = region || credentials[:region]
       # TODO: fix credentials here
       AWS.config(:access_key_id => credentials[:aws_access_key_id],
                  :secret_access_key => credentials[:aws_secret_access_key],
@@ -46,8 +52,7 @@ module AWSDriver
     end
 
     def self.canonicalize_url(driver_url, config)
-      url = driver_url.split(":")[0]
-      [ "aws:#{url}", config ]
+      [ driver_url, config ]
     end
 
 
@@ -543,7 +548,7 @@ module AWSDriver
       end
 
       # Only warn the first time
-      default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the fog_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
+      default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the aws_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
       Chef::Log.warn(default_warning) if updated
 
       default_key_name

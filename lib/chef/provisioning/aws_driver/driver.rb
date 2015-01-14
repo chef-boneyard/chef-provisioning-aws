@@ -39,8 +39,7 @@ module AWSDriver
     def initialize(driver_url, config)
       super
 
-      scheme, profile_name, region = driver_url.split(':')
-      puts "driver_url #{driver_url}.  #{driver_url.split(':').inspect}"
+      _, profile_name, region = driver_url.split(':')
       profile_name = nil if profile_name && profile_name.empty?
       region = nil if region && region.empty?
 
@@ -268,7 +267,7 @@ module AWSDriver
       actual_instance = instance_for(machine_spec)
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
-        bootstrap_options = machine_options[:bootstrap_options] || {}
+        bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
         bootstrap_options[:image_id] = image_id
         if !bootstrap_options[:key_name]
           Chef::Log.debug('No key specified, generating a default one...')
@@ -291,6 +290,10 @@ module AWSDriver
               'image_id' => machine_options[:image_id],
               'instance_id' => instance.id
           }
+          machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+          %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+            machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+          end
         end
       end
     end
@@ -323,7 +326,6 @@ module AWSDriver
       end
 
       machine_for(machine_spec, machine_options, instance)
-
     end
 
     def destroy_machine(action_handler, machine_spec, machine_options)
@@ -552,8 +554,9 @@ module AWSDriver
 
     def convergence_strategy_for(machine_spec, machine_options)
       # Tell Ohai that this is an EC2 instance so that it runs the EC2 plugin
-      machine_options[:convergence_options] ||= {}
-      machine_options[:convergence_options][:ohai_hints] = { 'ec2' => ''}
+      convergence_options = Cheffish::MergedConfig.new(
+        machine_options[:convergence_options] || {},
+        ohai_hints: { 'ec2' => '' })
 
       # Defaults
       if !machine_spec.location

@@ -48,7 +48,7 @@ module AWSDriver
       # TODO: fix credentials here
       AWS.config(:access_key_id => credentials[:aws_access_key_id],
                  :secret_access_key => credentials[:aws_secret_access_key],
-                 :region => credentials[:region])
+                 :region => @region)
     end
 
     def self.canonicalize_url(driver_url, config)
@@ -328,6 +328,16 @@ module AWSDriver
       machine_for(machine_spec, machine_options, instance)
     end
 
+    def connect_to_machine(name, chef_server = nil)
+      if name.is_a?(MachineSpec)
+        machine_spec = name
+      else
+        machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
+      end
+
+      machine_for(machine_spec, machine_spec.location)
+    end
+
     def destroy_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
       if instance && instance.exists?
@@ -560,15 +570,15 @@ module AWSDriver
 
       # Defaults
       if !machine_spec.location
-        return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(machine_options[:convergence_options], config)
+        return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(convergence_options, config)
       end
 
       if machine_spec.location['is_windows']
-        Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(convergence_options, config)
       elsif machine_options[:cached_installer] == true
-        Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallCached.new(convergence_options, config)
       else
-        Chef::Provisioning::ConvergenceStrategy::InstallSh.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallSh.new(convergence_options, config)
       end
     end
 

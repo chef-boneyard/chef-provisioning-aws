@@ -73,7 +73,7 @@ module AWSDriver
       lb_optionals = {}
       lb_optionals[:security_groups] = [security_group] if security_group
       lb_optionals[:availability_zones] = availability_zones if availability_zones
-      lb_optionals[:listeners] = listeners
+      lb_optionals[:listeners] = listeners if listeners
 
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
@@ -533,12 +533,12 @@ module AWSDriver
 
     def ssh_options_for(machine_spec, machine_options, instance)
       result = {
-# TODO create a user known hosts file
-#          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
-#          :paranoid => true,
-:auth_methods => [ 'publickey' ],
-:keys_only => true,
-:host_key_alias => "#{instance.id}.AWS"
+        # TODO create a user known hosts file
+        #          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
+        #          :paranoid => true,
+        :auth_methods => [ 'publickey' ],
+        :keys_only => true,
+        :host_key_alias => "#{instance.id}.AWS"
       }.merge(machine_options[:ssh_options] || {})
       if instance.respond_to?(:private_key) && instance.private_key
         result[:key_data] = [ instance.private_key ]

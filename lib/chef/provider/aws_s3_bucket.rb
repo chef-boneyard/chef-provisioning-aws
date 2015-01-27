@@ -7,23 +7,22 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
       converge_by "Creating new S3 bucket #{fqn}" do
         bucket = s3.buckets.create(fqn)
         bucket.tags['Name'] = new_resource.name
-        if new_resource.enable_website_hosting
-          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
-            new_resource.website_options)
-        end
       end
-    elsif requires_modification?
-      converge_by "Modifying S3 Bucket #{fqn}" do
-        if existing_bucket.website_configuration == nil && new_resource.enable_website_hosting || 
-          existing_bucket.website_configuration != nil && new_resource.enable_website_hosting
+    end
+    
+    if modifies_website_configuration?
+      if new_resource.enable_website_hosting
+        converge_by "Setting website configuration for bucket #{fqn}" do
           existing_bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
-        else
-          existing_bucket.remove_website_configuration
+        end
+      else
+        converge_by "Disabling website configuration for bucket #{fqn}" do
+          existing_bucket.website_configuration = nil
         end
       end
     end
-
+    new_resource.endpoint "#{fqn}.s3-website-#{s3_website_endpoint_region}.amazonaws.com"
     new_resource.save
   end
 
@@ -37,31 +36,42 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
     new_resource.delete
   end
 
-
   def existing_bucket
     Chef::Log.debug("Checking for S3 bucket #{fqn}")
     @existing_bucket ||= s3.buckets[fqn] if s3.buckets[fqn].exists?
   end
 
-  def requires_modification?
-    if existing_bucket.website_configuration == nil
-      new_resource.enable_website_hosting
-    else
-      !new_resource.enable_website_hosting ||
-        !compare_website_configuration
-    end
-  end
-
-  def compare_website_configuration
+  def modifies_website_configuration?
     # This is incomplete, routing rules have many optional values, so its
     # possible aws will put in default values for those which won't be in
     # the requested config.
     new_web_config = new_resource.website_options
-    current_web_config = existing_bucket.website_configuration.to_hash
+    current_web_config = current_website_configuration
 
-    current_web_config[:index_document] == new_web_config.fetch(:index_document, {}) &&
-      current_web_config[:error_document] == new_web_config.fetch(:error_document, {}) &&
-      current_web_config[:routing_rules] == new_web_config.fetch(:routing_rules, [])
+    !!existing_bucket.website_configuration != new_resource.enable_website_hosting || 
+      (current_web_config[:index_document] != new_web_config.fetch(:index_document, {}) ||
+      current_web_config[:error_document] != new_web_config.fetch(:error_document, {}) ||
+      current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, []))
+  end
+
+  def current_website_configuration
+    if existing_bucket.website_configuration
+      existing_bucket.website_configuration.to_hash
+    else
+      {}
+    end
+  end
+
+  def s3_website_endpoint_region
+    # ¯\_(ツ)_/¯
+    case existing_bucket.location_constraint
+    when nil, 'US'
+      'us-east-1'
+    when 'EU'
+      'eu-west-1'
+    else
+      existing_bucket.location_constraint
+    end
   end
 
   # Fully qualified bucket name (i.e resource_region unless otherwise specified)

@@ -66,7 +66,7 @@ module AWSDriver
       lb_optionals = {}
       lb_optionals[:security_groups] = [security_group] if security_group
       lb_optionals[:availability_zones] = availability_zones if availability_zones
-      lb_optionals[:listeners] = listeners
+      lb_optionals[:listeners] = listeners if listeners
 
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
@@ -543,11 +543,17 @@ module AWSDriver
         end
       end
 
+
+
       # Only warn the first time
       default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the fog_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
       Chef::Log.warn(default_warning) if updated
 
       default_key_name
+    end
+
+    def image_for(image_spec)
+      compute.images.get(image_spec.location['image_id'])
     end
 
   end

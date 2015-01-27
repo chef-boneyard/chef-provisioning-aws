@@ -15,6 +15,7 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
+
 # loads the entire aws-sdk
 AWS.eager_autoload!
 
@@ -58,16 +59,21 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      security_group_name = lb_options[:security_group_name] || 'default'
+      security_group_name = lb_options[:security_group_name]
       security_group_id = lb_options[:security_group_id]
 
-      security_group = if security_group_id.nil?
+      security_group = if security_group_id.nil? && !security_group_name.nil?
                          ec2.security_groups.filter('group-name', security_group_name).first
-                       else
+                       elsif !security_group_id.nil?
                          ec2.security_groups[security_group_id]
                        end
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
+
+      lb_optionals = {}
+      lb_optionals[:security_groups] = [security_group] if security_group
+      lb_optionals[:availability_zones] = availability_zones if availability_zones
+      lb_optionals[:listeners] = listeners if listeners
 
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
@@ -79,10 +85,7 @@ module AWSDriver
         updates << "  with security group #{security_group.name}" if security_group
 
         action_handler.perform_action updates do
-          actual_elb = elb.load_balancers.create(lb_spec.name,
-            availability_zones: availability_zones,
-            listeners:          listeners,
-            security_groups:    [security_group])
+          actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
 
           lb_spec.location = {
             'driver_url' => driver_url,
@@ -666,6 +669,8 @@ module AWSDriver
           end
         end
       end
+
+
 
       # Only warn the first time
       default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the aws_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'

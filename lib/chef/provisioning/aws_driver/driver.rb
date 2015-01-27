@@ -321,9 +321,9 @@ module AWSDriver
             instance.start
           end
         end
+        wait_until_ready_machine(action_handler, machine_spec, instance)
       end
 
-      wait_until_ready_machine(action_handler, machine_spec, instance)
       wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
     end

@@ -59,14 +59,12 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      security_group_name = lb_options[:security_group_name]
-      security_group_id = lb_options[:security_group_id]
+      if lb_options[:security_group_id]
+        security_group = ec2.security_groups[:security_group_id]
+      elsif lb_options[:security_group_name]
+        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
+      end
 
-      security_group = if security_group_id.nil? && !security_group_name.nil?
-                         ec2.security_groups.filter('group-name', security_group_name).first
-                       elsif !security_group_id.nil?
-                         ec2.security_groups[security_group_id]
-                       end
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
 

@@ -15,6 +15,7 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
+
 # loads the entire aws-sdk
 AWS.eager_autoload!
 
@@ -58,16 +59,19 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      security_group_name = lb_options[:security_group_name] || 'default'
-      security_group_id = lb_options[:security_group_id]
+      if lb_options[:security_group_id]
+        security_group = ec2.security_groups[:security_group_id]
+      elsif lb_options[:security_group_name]
+        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
+      end
 
-      security_group = if security_group_id.nil?
-                         ec2.security_groups.filter('group-name', security_group_name).first
-                       else
-                         ec2.security_groups[security_group_id]
-                       end
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
+
+      lb_optionals = {}
+      lb_optionals[:security_groups] = [security_group] if security_group
+      lb_optionals[:availability_zones] = availability_zones if availability_zones
+      lb_optionals[:listeners] = listeners if listeners
 
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
@@ -79,10 +83,7 @@ module AWSDriver
         updates << "  with security group #{security_group.name}" if security_group
 
         action_handler.perform_action updates do
-          actual_elb = elb.load_balancers.create(lb_spec.name,
-            availability_zones: availability_zones,
-            listeners:          listeners,
-            security_groups:    [security_group])
+          actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
 
           lb_spec.location = {
             'driver_url' => driver_url,
@@ -530,12 +531,12 @@ module AWSDriver
 
     def ssh_options_for(machine_spec, machine_options, instance)
       result = {
-# TODO create a user known hosts file
-#          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
-#          :paranoid => true,
-:auth_methods => [ 'publickey' ],
-:keys_only => true,
-:host_key_alias => "#{instance.id}.AWS"
+        # TODO create a user known hosts file
+        #          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
+        #          :paranoid => true,
+        :auth_methods => [ 'publickey' ],
+        :keys_only => true,
+        :host_key_alias => "#{instance.id}.AWS"
       }.merge(machine_options[:ssh_options] || {})
       if instance.respond_to?(:private_key) && instance.private_key
         result[:key_data] = [ instance.private_key ]

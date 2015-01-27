@@ -42,29 +42,24 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
   end
 
   def modifies_website_configuration?
-    if existing_bucket.website_configuration == nil
-      # If the current bucket does not have a website configuration,
-      # check to see if one needs to be created
-      new_resource.enable_website_hosting
-    else
-      # There exists a website configuration. Modification is required
-      # if website hosting needs to be disabled or the configurations
-      # differ
-      !new_resource.enable_website_hosting ||
-        !compare_website_configuration
-    end
-  end
-
-  def compare_website_configuration
     # This is incomplete, routing rules have many optional values, so its
     # possible aws will put in default values for those which won't be in
     # the requested config.
     new_web_config = new_resource.website_options
-    current_web_config = existing_bucket.website_configuration.to_hash
+    current_web_config = current_website_configuration
 
-    current_web_config[:index_document] == new_web_config.fetch(:index_document, {}) &&
-      current_web_config[:error_document] == new_web_config.fetch(:error_document, {}) &&
-      current_web_config[:routing_rules] == new_web_config.fetch(:routing_rules, [])
+    !!existing_bucket.website_configuration != new_resource.enable_website_hosting || 
+      (current_web_config[:index_document] != new_web_config.fetch(:index_document, {}) ||
+      current_web_config[:error_document] != new_web_config.fetch(:error_document, {}) ||
+      current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, []))
+  end
+
+  def current_website_configuration
+    if existing_bucket.website_configuration
+      existing_bucket.website_configuration.to_hash
+    else
+      {}
+    end
   end
 
   def s3_website_endpoint_region

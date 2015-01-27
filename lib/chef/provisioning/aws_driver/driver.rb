@@ -444,6 +444,20 @@ module AWSDriver
       end
     end
 
+    def instances_for(machine_specs)
+      result = {}
+      machine_specs.each do |machine_spec|
+        if machine_spec.location && machine_spec.location['instance_id']
+          if machine_spec.location['driver_url'] != driver_url
+            raise "Switching a machine's driver from #{machine_spec.location['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+          end
+          #returns nil if not found
+          result[machine_spec] = ec2.instances[machine_spec.location['instance_id']]
+        end
+      end
+      result
+    end
+
     def transport_for(machine_spec, machine_options, instance)
       # TODO winrm
       create_ssh_transport(machine_spec, machine_options, instance)

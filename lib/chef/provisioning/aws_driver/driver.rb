@@ -16,6 +16,9 @@ require 'chef/provisioning/aws_driver/credentials'
 require 'yaml'
 require 'aws-sdk-v1'
 
+# loads the entire aws-sdk
+AWS.eager_autoload!
+
 class Chef
 module Provisioning
 module AWSDriver
@@ -27,7 +30,7 @@ module AWSDriver
     attr_reader :region
 
     # URL scheme:
-    # aws:account_id:region
+    # aws:profilename:region
     # TODO: migration path from fog:AWS - parse that URL
     # canonical URL calls realpath on <path>
     def self.from_url(driver_url, config)
@@ -36,17 +39,21 @@ module AWSDriver
 
     def initialize(driver_url, config)
       super
-      credentials = aws_credentials.default
-      @region = credentials[:region]
+
+      _, profile_name, region = driver_url.split(':')
+      profile_name = nil if profile_name && profile_name.empty?
+      region = nil if region && region.empty?
+
+      credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
+      @region = region || credentials[:region]
       # TODO: fix credentials here
       AWS.config(:access_key_id => credentials[:aws_access_key_id],
                  :secret_access_key => credentials[:aws_secret_access_key],
-                 :region => credentials[:region])
+                 :region => @region)
     end
 
     def self.canonicalize_url(driver_url, config)
-      url = driver_url.split(":")[0]
-      [ "aws:#{url}", config ]
+      [ driver_url, config ]
     end
 
 
@@ -201,12 +208,61 @@ module AWSDriver
 
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec)
+      actual_image = image_for(image_spec)
+      if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
+        action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
+          image_options[:name] ||= image_spec.name
+          image_options[:instance_id] ||= machine_spec.location['instance_id']
+          image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
+          Chef::Log.debug "AWS Image options: #{image_options.inspect}"
+          image = ec2.images.create(image_options)
+          image_spec.location = {
+            'driver_url' => driver_url,
+            'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+            'image_id' => image.id,
+            'allocated_at' => Time.now.to_i
+          }
+          image_spec.machine_options ||= {}
+          image_spec.machine_options.merge!({
+            :bootstrap_options => {
+                :image_id => image.id
+            }
+          })
+        end
+      end
     end
 
     def ready_image(action_handler, image_spec, image_options)
+      actual_image = image_for(image_spec)
+      if actual_image.nil? || !actual_image.exists?
+        raise 'Cannot ready an image that does not exist'
+      else
+        if actual_image.state != :available
+          action_handler.report_progress 'Waiting for image to be ready ...'
+          wait_until_ready_image(action_handler, image_spec, actual_image)
+        else
+          action_handler.report_progress "Image #{image_spec.name} is ready!"
+        end
+      end
     end
 
     def destroy_image(action_handler, image_spec, image_options)
+      actual_image = image_for(image_spec)
+      snapshots = snapshots_for(image_spec)
+      if actual_image.nil? || !actual_image.exists?
+        Chef::Log.warn "Image #{image_spec.name} doesn't exist"
+      else
+        action_handler.perform_action "De-registering image #{image_spec.name}" do
+          actual_image.deregister
+        end
+        unless snapshots.any?
+          action_handler.perform_action "Deleting image #{image_spec.name} snapshots" do
+            snapshots.each do |snap|
+              snap.delete
+            end
+          end
+        end
+      end
     end
 
     # Machine methods
@@ -214,7 +270,7 @@ module AWSDriver
       actual_instance = instance_for(machine_spec)
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
         image_id = machine_options[:image_id] || default_ami_for_region(@region)
-        bootstrap_options = machine_options[:bootstrap_options] || {}
+        bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
         bootstrap_options[:image_id] = image_id
         if !bootstrap_options[:key_name]
           Chef::Log.debug('No key specified, generating a default one...')
@@ -237,8 +293,21 @@ module AWSDriver
               'image_id' => machine_options[:image_id],
               'instance_id' => instance.id
           }
+          machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+          %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+            machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+          end
         end
       end
+    end
+
+    def allocate_machines(action_handler, specs_and_options, parallelizer)
+      #Chef::Log.warn("#{specs_and_options}")
+      create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, server|
+    #Chef::Log.warn("#{machine_spec}")
+        yield machine_spec
+      end
+      specs_and_options.keys
     end
 
     def ready_machine(action_handler, machine_spec, machine_options)
@@ -249,19 +318,27 @@ module AWSDriver
       end
 
       if instance.status != :running
-        wait_until(action_handler, machine_spec, instance) { instance.status != :stopping }
+        wait_until_machine(action_handler, machine_spec, instance) { instance.status != :stopping }
         if instance.status == :stopped
           action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
             instance.start
           end
         end
+        wait_until_ready_machine(action_handler, machine_spec, instance)
+        wait_for_transport(action_handler, machine_spec, machine_options)
       end
 
-      wait_until_ready(action_handler, machine_spec, instance)
-      wait_for_transport(action_handler, machine_spec, machine_options)
-
       machine_for(machine_spec, machine_options, instance)
+    end
 
+    def connect_to_machine(name, chef_server = nil)
+      if name.is_a?(MachineSpec)
+        machine_spec = name
+      else
+        machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
+      end
+
+      machine_for(machine_spec, machine_spec.location)
     end
 
     def destroy_machine(action_handler, machine_spec, machine_options)
@@ -336,8 +413,37 @@ module AWSDriver
     def instance_for(machine_spec)
       if machine_spec.location && machine_spec.location['instance_id']
         ec2.instances[machine_spec.location['instance_id']]
-      else
-        nil
+      end
+    end
+
+    def instances_for(machine_specs)
+      result = {}
+      machine_specs.each do |machine_spec|
+        if machine_spec.location && machine_spec.location['instance_id']
+          if machine_spec.location['driver_url'] != driver_url
+            raise "Switching a machine's driver from #{machine_spec.location['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+          end
+          #returns nil if not found
+          result[machine_spec] = ec2.instances[machine_spec.location['instance_id']]
+        end
+      end
+      result
+    end
+
+    def image_for(image_spec)
+      if image_spec.location && image_spec.location['image_id']
+        ec2.images[image_spec.location['image_id']]
+      end
+    end
+
+    def snapshots_for(image_spec)
+      if image_spec.location && image_spec.location['image_id']
+        actual_image = image_for(image_spec)
+        snapshots = []
+        actual_image.block_device_mappings.each do |dev, opts|
+            snapshots << ec2.snapshots[opts[:snapshot_id]]
+        end
+        snapshots
       end
     end
 
@@ -461,28 +567,49 @@ module AWSDriver
 
     def convergence_strategy_for(machine_spec, machine_options)
       # Tell Ohai that this is an EC2 instance so that it runs the EC2 plugin
-      machine_options[:convergence_options] ||= {}
-      machine_options[:convergence_options][:ohai_hints] = { 'ec2' => ''}
+      convergence_options = Cheffish::MergedConfig.new(
+        machine_options[:convergence_options] || {},
+        ohai_hints: { 'ec2' => '' })
 
       # Defaults
       if !machine_spec.location
-        return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(machine_options[:convergence_options], config)
+        return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(convergence_options, config)
       end
 
       if machine_spec.location['is_windows']
-        Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(convergence_options, config)
       elsif machine_options[:cached_installer] == true
-        Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallCached.new(convergence_options, config)
       else
-        Chef::Provisioning::ConvergenceStrategy::InstallSh.new(machine_options[:convergence_options], config)
+        Chef::Provisioning::ConvergenceStrategy::InstallSh.new(convergence_options, config)
       end
     end
 
-    def wait_until_ready(action_handler, machine_spec, instance=nil)
-      wait_until(action_handler, machine_spec, instance) { instance.status == :running }
+    def wait_until_ready_image(action_handler, image_spec, image=nil)
+      wait_until_image(action_handler, image_spec, image) { image.state == :available }
     end
 
-    def wait_until(action_handler, machine_spec, instance=nil, &block)
+    def wait_until_image(action_handler, image_spec, image=nil, &block)
+      image ||= image_for(image_spec)
+      time_elapsed = 0
+      sleep_time = 10
+      max_wait_time = 120
+      if !yield(image)
+        action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
+        while time_elapsed < 120 && !yield(image)
+          action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
+          sleep(sleep_time)
+          time_elapsed += sleep_time
+        end
+        action_handler.report_progress "Image #{image_spec.name} is now ready"
+      end
+    end
+
+    def wait_until_ready_machine(action_handler, machine_spec, instance=nil)
+      wait_until_machine(action_handler, machine_spec, instance) { instance.status == :running }
+    end
+
+    def wait_until_machine(action_handler, machine_spec, instance=nil, &block)
       instance ||= instance_for(machine_spec)
       time_elapsed = 0
       sleep_time = 10
@@ -546,14 +673,84 @@ module AWSDriver
 
 
       # Only warn the first time
-      default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the fog_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
+      default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the aws_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
       Chef::Log.warn(default_warning) if updated
 
       default_key_name
     end
 
-    def image_for(image_spec)
-      compute.images.get(image_spec.location['image_id'])
+    def create_servers(action_handler, specs_and_options, parallelizer, &block)
+      specs_and_servers = instances_for(specs_and_options.keys)
+
+      by_bootstrap_options = {}
+      specs_and_options.each do |machine_spec, machine_options|
+        actual_instance = specs_and_servers[machine_spec]
+        if actual_instance
+          if actual_instance.status == :terminated
+            Chef::Log.warn "Machine #{machine_spec.name} (#{actual_instance.id}) is terminated.  Recreating ..."
+          else
+            yield machine_spec, actual_instance if block_given?
+            next
+          end
+        elsif machine_spec.location
+          Chef::Log.warn "Machine #{machine_spec.name} (#{machine_spec.location['instance_id']} on #{driver_url}) no longer exists.  Recreating ..."
+        end
+
+        bootstrap_options = machine_options[:bootstrap_options] || {}
+        by_bootstrap_options[bootstrap_options] ||= []
+        by_bootstrap_options[bootstrap_options] << machine_spec
+      end
+
+      # Create the servers in parallel
+      parallelizer.parallelize(by_bootstrap_options) do |bootstrap_options, machine_specs|
+        machine_description = if machine_specs.size == 1
+          "machine #{machine_specs.first.name}"
+        else
+          "machines #{machine_specs.map { |s| s.name }.join(", ")}"
+        end
+        description = [ "creating #{machine_description} on #{driver_url}" ]
+        bootstrap_options.each_pair { |key,value| description << "  #{key}: #{value.inspect}" }
+        action_handler.report_progress description
+        if action_handler.should_perform_actions
+          # Actually create the servers
+          create_many_instances(machine_specs.size, bootstrap_options, parallelizer) do |instance|
+
+            # Assign each one to a machine spec
+            machine_spec = machine_specs.pop
+            machine_options = specs_and_options[machine_spec]
+            machine_spec.location = {
+              'driver_url' => driver_url,
+              'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+              'allocated_at' => Time.now.utc.to_s,
+              'host_node' => action_handler.host_node,
+              'image_id' => bootstrap_options[:image_id],
+              'instance_id' => instance.id
+            }
+            instance.tags['Name'] = machine_spec.name
+            machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+            %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+              machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+            end
+            action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
+
+            yield machine_spec, instance if block_given?
+          end
+
+          if machine_specs.size > 0
+            raise "Not all machines were created by create_servers"
+          end
+        end
+      end.to_a
+    end
+
+    def create_many_instances(num_servers, bootstrap_options, parallelizer)
+      parallelizer.parallelize(1.upto(num_servers)) do |i|
+        clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
+        instance = ec2.instances.create(clean_bootstrap_options)
+
+        yield instance if block_given?
+        instance
+      end.to_a
     end
 
   end

@@ -13,6 +13,8 @@ class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
   attribute :enable_website_hosting, :kind_of => [TrueClass, FalseClass], :default => false
   attribute :website_options, :kind_of => Hash
 
+  stored_attribute :endpoint
+
   def initialize(*args)
     super
   end

@@ -213,7 +213,7 @@ module AWSDriver
           image_options[:instance_id] ||= machine_spec.location['instance_id']
           image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
           Chef::Log.debug "AWS Image options: #{image_options.inspect}"
-          image = ec2.images.create(image_options)
+          image = ec2.images.create(image_options.to_hash)
           image_spec.location = {
             'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -278,7 +278,7 @@ module AWSDriver
 
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
-          instance = ec2.instances.create(bootstrap_options)
+          instance = ec2.instances.create(bootstrap_options.to_hash)
           # Make sure the instance is ready to be tagged
           sleep 5 while instance.status == :pending
           # TODO add other tags identifying user / node url (same as fog)
@@ -742,7 +742,7 @@ module AWSDriver
     def create_many_instances(num_servers, bootstrap_options, parallelizer)
       parallelizer.parallelize(1.upto(num_servers)) do |i|
         clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
-        instance = ec2.instances.create(clean_bootstrap_options)
+        instance = ec2.instances.create(clean_bootstrap_options.to_hash)
 
         yield instance if block_given?
         instance

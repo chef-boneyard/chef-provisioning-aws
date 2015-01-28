@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 (1/27/2015)
+
+- Fix issue with not waiting for ssh transport to be up (@afiune)
+- Don't require lb_options when defaults will do (@bbbco)
+
 ## 0.2 (1/27/2015)
 
 - `aws_subnet` support (@meekmichael)

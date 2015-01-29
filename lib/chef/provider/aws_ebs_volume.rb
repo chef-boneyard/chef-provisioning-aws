@@ -2,7 +2,7 @@ require 'chef/provider/aws_provider'
 require 'cheffish'
 require 'date'
 
-class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
+class Chef::Provider::AwsEbsVol < Chef::Provider::AwsProvider
 
   action :create do
     if existing_volume == nil

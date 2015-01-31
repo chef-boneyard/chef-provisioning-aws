@@ -32,7 +32,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
   end
 
   action :delete do
-    if existing_vpc
+    if existing_sg
       converge_by "Deleting SG #{new_resource.name} in #{new_resource.region_name}" do
         existing_sg.delete
       end

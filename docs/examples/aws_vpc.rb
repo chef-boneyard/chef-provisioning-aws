@@ -6,7 +6,7 @@ with_data_center 'eu-west-1' do
     cidr_block "10.0.1.0/24"
   end
 
-  subnet "provisioning-vpc-subnet-a" do
+  aws_subnet "provisioning-vpc-subnet-a" do
     cidr_block "10.0.1.0/26"
     vpc "provisioning-vpc"
     availability_zone "eu-west-1a"

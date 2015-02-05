@@ -2,8 +2,10 @@ require 'chef/mixin/shell_out'
 require 'chef/provisioning/driver'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/convergence_strategy/install_sh'
+require 'chef/provisioning/convergence_strategy/install_msi'
 require 'chef/provisioning/convergence_strategy/no_converge'
 require 'chef/provisioning/transport/ssh'
+require 'chef/provisioning/transport/winrm'
 require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
@@ -263,6 +265,26 @@ module AWSDriver
       end
     end
 
+    def user_data
+      # TODO: Make this use HTTPS at some point.
+      <<EOD
+<powershell>
+winrm quickconfig -q
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
+winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+winrm set winrm/config/service/auth '@{Basic="true"}'
+
+netsh advfirewall firewall add rule name="WinRM 5985" protocol=TCP dir=in localport=5985 action=allow
+netsh advfirewall firewall add rule name="WinRM 5986" protocol=TCP dir=in localport=5986 action=allow
+
+net stop winrm
+sc config winrm start=auto
+net start winrm
+</powershell>
+EOD
+    end
+
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
       actual_instance = instance_for(machine_spec)
@@ -274,11 +296,23 @@ module AWSDriver
           Chef::Log.debug('No key specified, generating a default one...')
           bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
         end
+
+        puts "#{machine_options.inspect}"
+
+        if machine_options[:is_windows]
+          Chef::Log.info "Setting winRM userdata..."
+          bootstrap_options[:user_data] = user_data
+        else
+          Chef::Log.info "Non-windows, not setting userdata"
+        end
+
         Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
 
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
+
           instance = ec2.instances.create(bootstrap_options.to_hash)
+
           # Make sure the instance is ready to be tagged
           sleep 5 while instance.status == :pending
           # TODO add other tags identifying user / node url (same as fog)
@@ -446,8 +480,11 @@ module AWSDriver
     end
 
     def transport_for(machine_spec, machine_options, instance)
-      # TODO winrm
-      create_ssh_transport(machine_spec, machine_options, instance)
+      if machine_spec.location['is_windows']
+        create_winrm_transport(machine_spec, machine_options, instance)
+      else
+        create_ssh_transport(machine_spec, machine_options, instance)
+      end
     end
 
     def compute_options
@@ -498,6 +535,53 @@ module AWSDriver
       end
     end
 
+    def create_winrm_transport(machine_spec, machine_options, instance)
+      remote_host = determine_remote_host(machine_spec, instance)
+      puts "remote host: #{remote_host}"
+      port = machine_spec.location['winrm_port'] || 5985
+      endpoint = "http://#{remote_host}:#{port}/wsman"
+      type = :plaintext
+      pem_bytes = get_private_key(instance.key_name)
+      encrypted_admin_password = wait_for_admin_password(machine_spec)
+
+      decoded = Base64.decode64(encrypted_admin_password)
+      private_key = OpenSSL::PKey::RSA.new(pem_bytes)
+      decrypted_password = private_key.private_decrypt decoded
+
+      winrm_options = {
+        :user => machine_spec.location['winrm_username'] || 'Administrator',
+        :pass => decrypted_password,
+        :disable_sspi => true,
+        :basic_auth_only => true
+      }
+
+      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+    end
+
+    def wait_for_admin_password(machine_spec)
+      time_elapsed = 0
+      sleep_time = 10
+      max_wait_time = 900 # 15 minutes
+      encrypted_admin_password = nil
+      instance_id = machine_spec.location['instance_id']
+
+      Chef::Log.info "waiting for #{machine_spec.name}'s admin password to be available..."
+      while time_elapsed < max_wait_time && encrypted_admin_password.nil?
+        response = ec2.client.get_password_data({ :instance_id => instance_id })
+        encrypted_admin_password = response['password_data'.to_sym]
+
+        if encrypted_admin_password.nil?
+          Chef::Log.info "#{time_elapsed}/#{max_wait_time}s elapsed -- sleeping #{sleep_time} for #{machine_spec.name}'s admin password."
+          sleep(sleep_time)
+          time_elapsed += sleep_time
+        end
+      end
+
+      Chef::Log.info "#{machine_spec.name}'s admin password is available!"
+
+      encrypted_admin_password
+    end
+
     def create_ssh_transport(machine_spec, machine_options, instance)
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
       username = machine_spec.location['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
@@ -509,24 +593,26 @@ module AWSDriver
         options[:prefix] = 'sudo '
       end
 
-      remote_host = nil
-
-      if machine_spec.location['use_private_ip_for_ssh']
-        remote_host = instance.private_ip_address
-      elsif !instance.public_ip_address
-        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set driver option 'use_private_ip_for_ssh' => true if this will always be the case ...")
-        remote_host = instance.private_ip_address
-      elsif instance.public_ip_address
-        remote_host = instance.public_ip_address
-      else
-        raise "Server #{instance.id} has no private or public IP address!"
-      end
+      remote_host = determine_remote_host(machine_spec, instance)
 
       #Enable pty by default
       options[:ssh_pty_enable] = true
       options[:ssh_gateway] = machine_spec.location['ssh_gateway'] if machine_spec.location.has_key?('ssh_gateway')
 
       Chef::Provisioning::Transport::SSH.new(remote_host, username, ssh_options, options, config)
+    end
+
+    def determine_remote_host(machine_spec, instance)
+      if machine_spec.location['use_private_ip_for_ssh']
+        instance.private_ip_address
+      elsif !instance.public_ip_address
+        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set driver option 'use_private_ip_for_ssh' => true if this will always be the case ...")
+        instance.private_ip_address
+      elsif instance.public_ip_address
+        instance.public_ip_address
+      else
+        raise "Server #{instance.id} has no private or public IP address!"
+      end
     end
 
     def ssh_options_for(machine_spec, machine_options, instance)

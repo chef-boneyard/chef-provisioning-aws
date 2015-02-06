@@ -267,8 +267,8 @@ module AWSDriver
     def allocate_machine(action_handler, machine_spec, machine_options)
       actual_instance = instance_for(machine_spec)
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
-        image_id = machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+        image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(@region)
         bootstrap_options[:image_id] = image_id
         if !bootstrap_options[:key_name]
           Chef::Log.debug('No key specified, generating a default one...')
@@ -288,7 +288,7 @@ module AWSDriver
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
-              'image_id' => machine_options[:image_id],
+              'image_id' => image_id,
               'instance_id' => instance.id
           }
           machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]

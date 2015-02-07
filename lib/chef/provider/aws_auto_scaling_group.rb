@@ -7,6 +7,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
         @existing_group = auto_scaling.groups.create(
           new_resource.name,
           :launch_configuration => new_resource.launch_config,
+          :desired_capacity => new_resource.desired_capacity,
           :min_size => new_resource.min_size,
           :max_size => new_resource.max_size,
           :availability_zones => availability_zones

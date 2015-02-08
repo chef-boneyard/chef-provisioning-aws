@@ -13,4 +13,5 @@ class Chef::Resource::AwsAutoScalingGroup < Chef::Resource::AwsResource
   attribute :launch_config, :kind_of => String
   attribute :min_size, :kind_of => Integer, :default => 1
   attribute :max_size, :kind_of => Integer, :default => 4
+  attribute :load_balancers, :kind_of => Array
 end

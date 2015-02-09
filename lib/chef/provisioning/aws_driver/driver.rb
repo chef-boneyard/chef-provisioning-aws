@@ -297,13 +297,11 @@ EOD
           bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
         end
 
-        puts "#{machine_options.inspect}"
-
         if machine_options[:is_windows]
-          Chef::Log.info "Setting winRM userdata..."
+          Chef::Log.debug "Setting winRM userdata..."
           bootstrap_options[:user_data] = user_data
         else
-          Chef::Log.info "Non-windows, not setting userdata"
+          Chef::Log.debug "Non-windows, not setting userdata"
         end
 
         Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
@@ -537,7 +535,7 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
-      puts "remote host: #{remote_host}"
+
       port = machine_spec.location['winrm_port'] || 5985
       endpoint = "http://#{remote_host}:#{port}/wsman"
       type = :plaintext

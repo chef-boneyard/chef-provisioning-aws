@@ -69,6 +69,8 @@ module AWSDriver
 
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
+      subnets = lb_options[:subnets]
+      scheme = lb_options[:scheme]
 
       validate_listeners(listeners)
 
@@ -76,6 +78,8 @@ module AWSDriver
       lb_optionals[:security_groups] = [security_group] if security_group
       lb_optionals[:availability_zones] = availability_zones if availability_zones
       lb_optionals[:listeners] = listeners if listeners
+      lb_optionals[:subnets] = subnets if subnets
+      lb_optionals[:scheme] = scheme if scheme
 
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?

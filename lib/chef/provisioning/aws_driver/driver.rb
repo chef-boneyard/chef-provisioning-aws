@@ -253,7 +253,7 @@ module AWSDriver
         action_handler.perform_action "De-registering image #{image_spec.name}" do
           actual_image.deregister
         end
-        unless snapshots.any?
+        if snapshots.any?
           action_handler.perform_action "Deleting image #{image_spec.name} snapshots" do
             snapshots.each do |snap|
               snap.delete

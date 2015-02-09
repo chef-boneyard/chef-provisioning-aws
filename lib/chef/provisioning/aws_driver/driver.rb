@@ -64,7 +64,7 @@ module AWSDriver
       if lb_options[:security_group_id]
         security_group = ec2.security_groups[:security_group_id]
       elsif lb_options[:security_group_name]
-        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
+        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name]).first
       end
 
       availability_zones = lb_options[:availability_zones]

@@ -3,13 +3,20 @@ require 'chef/provider/aws_provider'
 class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
   action :create do
     if existing_group.nil?
-      converge_by "Creating new Auto Scaling group #{id} in #{new_resource.region_name}" do
+      auto_scaling_opts = {
+        :launch_configuration => new_resource.launch_config,
+        :min_size => new_resource.min_size,
+        :max_size => new_resource.max_size,
+        :availability_zones => availability_zones
+      }
+      
+      auto_scaling_opts[:desired_capacity] = new_resource.desired_capacity if new_resource.desired_capacity
+      auto_scaling_opts[:load_balancers] = new_resource.load_balancers if new_resource.load_balancers
+       
+      converge_by "Creating new Auto Scaling group #{new_resource.name} in #{new_resource.region_name}" do
         @existing_group = auto_scaling.groups.create(
           new_resource.name,
-          :launch_configuration => new_resource.launch_config,
-          :min_size => new_resource.min_size,
-          :max_size => new_resource.max_size,
-          :availability_zones => availability_zones
+          auto_scaling_opts
         )
 
         new_resource.save
@@ -19,7 +26,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_group
-      converge_by "Deleting Auto Scaling group #{id} in #{new_resource.region_name}" do
+      converge_by "Deleting Auto Scaling group #{new_resource.name} in #{new_resource.region_name}" do
         existing_group.delete!
       end
     end

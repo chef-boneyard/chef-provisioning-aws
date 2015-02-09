@@ -12,12 +12,14 @@ class Chef::Resource::AwsEbsVolume < Chef::Resource::AwsResource
   stored_attribute :created_at
 
   attribute :name, :kind_of => String, :name_attribute => true
-  attribute :volume_name, :kind_of => String
-
-  attribute :size
-  attribute :mount_point
-  attribute :availability_zone
-
+  attribute :size, :kind_of => Integer
+  attribute :snapshot_id, :kind_of => String
+  attribute :availability_zone, :kind_of => String
+  attribute :volume_type, :kind_of => String, :equal_to => [:gp2, :io1, :standard], :default => :gp2
+  attribute :iops, :kind_of => Integer
+  attribute :encrypted, :kind_of => [TrueClass, FalseClass], :default => false
+  attribute :instance_id, :kind_of => String
+  attribute :device, :kind_of => String
 
   def initialize(*args)
     super

@@ -35,7 +35,6 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
     new_resource.delete
   end
 
-
   def existing_volume
     @existing_volume ||=  new_resource.volume_id == nil ? nil : begin
       Chef::Log.debug("Loading volume #{new_resource.volume_id}")
@@ -51,9 +50,4 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
       nil
     end
   end
-
-  def id
-    new_resource.volume_name
-  end
-
 end

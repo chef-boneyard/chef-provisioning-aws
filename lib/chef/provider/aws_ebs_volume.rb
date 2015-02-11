@@ -52,6 +52,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
           new_resource.attached_to_device new_resource.device
         end
       rescue AWS::EC2::Errors::VolumeInUse => e
+        # todo: add additional checking to make sure volume is attached to expected instance
         Chef::Log.debug(e.message)
       end
     end
@@ -73,6 +74,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
             new_resource.attached_to_device ''
         end
       rescue AWS::EC2::Errors::IncorrectState => e
+        # todo: add additional checking to make sure volume is attached to expected instance
         Chef::Log.debug(e.message)
       end
     end

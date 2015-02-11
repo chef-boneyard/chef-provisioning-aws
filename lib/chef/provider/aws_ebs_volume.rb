@@ -18,11 +18,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
             :encrypted => new_resource.encrypted
         )
         ebs.tags['Name'] = fqn
-        # todo wait for availability?
 
         new_resource.created_at DateTime.now.to_s
         new_resource.volume_id ebs.id
-
       end
     else
       new_resource.volume_id existing_volume.id
@@ -32,59 +30,55 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
   end
 
   action :delete do
-    if existing_volume
+    if existing_volume.exists?
       converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
         existing_volume.delete
-        # todo wait termination?
       end
     end
 
     new_resource.delete
   end
 
-  # todo check if already attached
   action :attach do
     if existing_volume.exists?
-      converge_by "Attaching EBS volume #{fqn} in #{new_resource.region_name} to instance #{new_resource.instance_id}" do
+      begin
+        converge_by "Attaching EBS volume #{fqn} in #{new_resource.region_name} to instance #{new_resource.instance_id}" do
 
-        existing_volume.attach_to(
-          ec2.instances[new_resource.instance_id],
-          new_resource.device
-        )
-        # todo wait for in_use?
-
-        new_resource.attached_to_instance new_resource.instance_id
-        new_resource.attached_to_device new_resource.device
+          existing_volume.attach_to(
+            ec2.instances[new_resource.instance_id],
+            new_resource.device
+          )
+          new_resource.attached_to_instance new_resource.instance_id
+          new_resource.attached_to_device new_resource.device
+        end
+      rescue AWS::EC2::Errors::VolumeInUse => e
+        Chef::Log.debug(e.message)
       end
-    else
-      #
     end
 
     new_resource.save
   end
 
-  # todo check if already available
   action :detach do
-    if existing_volume
-      converge_by "Detaching EBS volume #{fqn} in #{new_resource.region_name} from instance #{new_resource.instance_id}" do
-
-        existing_volume.detach_from(
-          ec2.instances[new_resource.attached_to_instance],
-          new_resource.attached_to_device,
-          :force => true
-        )
-        # todo wait for available?
-
-        # todo load current resource and remove keys
-        new_resource.attached_to_instance ''
-        new_resource.attached_to_device ''
-
+    if existing_volume.exists?
+      begin
+        converge_by "Detaching EBS volume #{fqn} in #{new_resource.region_name} from instance #{new_resource.instance_id}" do
+          existing_volume.detach_from(
+              ec2.instances[new_resource.attached_to_instance],
+              new_resource.attached_to_device,
+              :force => true
+            )
+            # todo load current resource and remove keys
+            new_resource.attached_to_instance ''
+            new_resource.attached_to_device ''
+        end
+      rescue AWS::EC2::Errors::IncorrectState => e
+        Chef::Log.debug(e.message)
       end
     end
 
     new_resource.save
   end
-
 
   def existing_volume
     @existing_volume ||=  new_resource.volume_id == nil ? nil : begin

@@ -39,7 +39,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
       rescue AWS::EC2::Errors::VolumeInUse => e
         # todo: add additional checking to make sure volume is attached to expected instance
         Chef::Log.debug(e.message)
-        retry if existing_volume.status != :deleted
+        retry if existing_volume.status != :deleted or existing_volume.exists?
       end
     end
 

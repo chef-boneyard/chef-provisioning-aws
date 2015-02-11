@@ -17,6 +17,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
             :iops => new_resource.iops,
             :encrypted => new_resource.encrypted
         )
+
         ebs.tags['Name'] = fqn
 
         new_resource.created_at DateTime.now.to_s
@@ -30,9 +31,15 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
   end
 
   action :delete do
-    if existing_volume.exists?
-      converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
-        existing_volume.delete
+    if existing_volume
+      begin
+        converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
+          existing_volume.delete
+        end
+      rescue AWS::EC2::Errors::VolumeInUse => e
+        # todo: add additional checking to make sure volume is attached to expected instance
+        Chef::Log.debug(e.message)
+        retry if existing_volume.status != :deleted
       end
     end
 
@@ -40,7 +47,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
   end
 
   action :attach do
-    if existing_volume.exists?
+    if existing_volume
       begin
         converge_by "Attaching EBS volume #{fqn} in #{new_resource.region_name} to instance #{new_resource.instance_id}" do
 
@@ -54,6 +61,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
       rescue AWS::EC2::Errors::VolumeInUse => e
         # todo: add additional checking to make sure volume is attached to expected instance
         Chef::Log.debug(e.message)
+      rescue AWS::EC2::Errors::IncorrectState => e
+        Chef::Log.debug(e.message)
+        retry if existing_volume.status != :available and existing_volume.status != :in_use
       end
     end
 
@@ -61,7 +71,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
   end
 
   action :detach do
-    if existing_volume.exists?
+    if existing_volume
       begin
         converge_by "Detaching EBS volume #{fqn} in #{new_resource.region_name} from instance #{new_resource.instance_id}" do
           existing_volume.detach_from(
@@ -76,6 +86,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
       rescue AWS::EC2::Errors::IncorrectState => e
         # todo: add additional checking to make sure volume is attached to expected instance
         Chef::Log.debug(e.message)
+        retry if existing_volume.status == :in_use or existing_volume.status != :available
       end
     end
 

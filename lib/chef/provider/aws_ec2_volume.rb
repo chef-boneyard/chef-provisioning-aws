@@ -1,12 +1,13 @@
 require 'chef/provider/aws_provider'
 require 'cheffish'
 require 'date'
+require 'retryable'
 
 class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   action :create do
     if existing_volume.nil?
-      # todo fix all region_name loads
+      # todo fix all region_name vars, => nil
       converge_by "Creating new EBS volume #{fqn} in #{new_resource.region_name}" do
 
         ebs = ec2.volumes.create(
@@ -20,6 +21,8 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
         ebs.tags['Name'] = fqn
 
+        wait_for_volume_status(:available)
+
         new_resource.created_at DateTime.now.to_s
         new_resource.volume_id ebs.id
       end
@@ -32,14 +35,10 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_volume
-      begin
-        converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
-          existing_volume.delete
-        end
-      rescue AWS::EC2::Errors::VolumeInUse => e
-        # todo: add additional checking to make sure volume is attached to expected instance
-        Chef::Log.debug(e.message)
-        retry if existing_volume.status != :deleted or existing_volume.exists?
+      converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
+        existing_volume.delete
+
+        wait_for_volume_status(:deleted)
       end
     end
 
@@ -57,14 +56,12 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
           )
           new_resource.attached_to_instance new_resource.instance_id
           new_resource.attached_to_device new_resource.device
+
+          wait_for_volume_status(:in_use)
         end
       rescue AWS::EC2::Errors::VolumeInUse => e
-        # todo: add additional checking to make sure volume is attached to expected instance
+        # assume attached correctly, still need to check if its the intended instance
         Chef::Log.debug(e.message)
-      rescue AWS::EC2::Errors::IncorrectState => e
-        Chef::Log.debug(e.message)
-        # todo -- still not good enough
-        retry if existing_volume.status != :available and existing_volume.status != :in_use
       end
     end
 
@@ -83,11 +80,12 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
             # todo load current resource and remove keys
             new_resource.attached_to_instance ''
             new_resource.attached_to_device ''
+
+            wait_for_volume_status(:available)
         end
       rescue AWS::EC2::Errors::IncorrectState => e
-        # todo: add additional checking to make sure volume is attached to expected instance
+        # assume detached correctly
         Chef::Log.debug(e.message)
-        retry if existing_volume.status == :in_use or existing_volume.status != :available
       end
     end
 
@@ -113,4 +111,20 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
   def id
     new_resource.name
   end
+
+  private
+
+  def wait_for_volume_status(status, with_exception = nil)
+    error_message = "Timeout waiting for volume status: #{status.to_s}"
+    error_message + "\n#{with_exception.message}" if with_exception
+
+    ensure_cb = Proc.new do
+      Chef::Log.error(error_message)
+    end
+
+    Retryable.retryable(:tries => 60, :sleep => 5, :on => TimeoutError, :ensure => ensure_cb) do
+      existing_volume.status == status
+    end
+  end
+
 end

@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver'
 with_driver 'aws'
 
-node.default['test'] = 'ebs-vol-test'
+node.default['test'] = 'ec2-vol-test'
 
 aws_key_pair node['test']
 

@@ -2,7 +2,7 @@ require 'chef/provider/aws_provider'
 require 'cheffish'
 require 'date'
 
-class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
+class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   action :create do
     if existing_volume.nil?
@@ -63,6 +63,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
         Chef::Log.debug(e.message)
       rescue AWS::EC2::Errors::IncorrectState => e
         Chef::Log.debug(e.message)
+        # todo -- still not good enough
         retry if existing_volume.status != :available and existing_volume.status != :in_use
       end
     end

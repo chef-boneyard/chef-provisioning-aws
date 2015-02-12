@@ -1,9 +1,9 @@
 require 'chef/resource/aws_resource'
 require 'chef/provisioning/aws_driver'
 
-class Chef::Resource::AwsEbsVolume < Chef::Resource::AwsResource
-  self.resource_name = 'aws_ebs_volume'
-  self.databag_name = 'ebs_volumes'
+class Chef::Resource::AwsEc2Volume < Chef::Resource::AwsResource
+  self.resource_name = 'aws_ec2_volume'
+  self.databag_name = 'ec2_volumes'
 
   actions :create, :delete, :attach, :detach, :nothing
   default_action :create

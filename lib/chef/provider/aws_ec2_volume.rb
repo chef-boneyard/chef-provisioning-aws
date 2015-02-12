@@ -5,12 +5,14 @@ require 'retryable'
 
 class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
+  use_inline_resources
+
   action :create do
     if existing_volume.nil?
       # todo fix all region_name vars, => nil
       converge_by "Creating new EBS volume #{fqn} in #{new_resource.region_name}" do
 
-        ebs = ec2.volumes.create(
+        @existing_volume = ec2.volumes.create(
             :availability_zone => new_resource.availability_zone,
             :size => new_resource.size,
             :snapshot_id => new_resource.snapshot_id,
@@ -19,12 +21,12 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
             :encrypted => new_resource.encrypted
         )
 
-        ebs.tags['Name'] = fqn
+        existing_volume.tags['Name'] = fqn
 
         wait_for_volume_status(:available)
 
         new_resource.created_at DateTime.now.to_s
-        new_resource.volume_id ebs.id
+        new_resource.volume_id existing_volume.id
       end
     else
       new_resource.volume_id existing_volume.id
@@ -35,10 +37,15 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_volume
-      converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
-        existing_volume.delete
+      begin
+        converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
+          existing_volume.delete
 
-        wait_for_volume_status(:deleted)
+          Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError) do
+            raise TimeoutError,
+              "Timed out waiting for volume #{new_resource.volume_id} to be deleted." if existing_volume.exists?
+          end
+        end
       end
     end
 
@@ -62,6 +69,7 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
       rescue AWS::EC2::Errors::VolumeInUse => e
         # assume attached correctly, still need to check if its the intended instance
         Chef::Log.debug(e.message)
+        new_resource.updated_by_last_action(true)
       end
     end
 
@@ -86,6 +94,7 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
       rescue AWS::EC2::Errors::IncorrectState => e
         # assume detached correctly
         Chef::Log.debug(e.message)
+        new_resource.updated_by_last_action(true)
       end
     end
 
@@ -114,16 +123,13 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   private
 
-  def wait_for_volume_status(status, with_exception = nil)
-    error_message = "Timeout waiting for volume status: #{status.to_s}"
-    error_message + "\n#{with_exception.message}" if with_exception
-
+  def wait_for_volume_status(status)
     ensure_cb = Proc.new do
-      Chef::Log.error(error_message)
+      Chef::Log.debug("Waiting for volume status: #{status.to_s}")
     end
 
-    Retryable.retryable(:tries => 60, :sleep => 5, :on => TimeoutError, :ensure => ensure_cb) do
-      existing_volume.status == status
+    Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError, :ensure => ensure_cb) do
+      raise TimeoutError, "Timed out waiting for volume status: #{status.to_s}" unless existing_volume.status == status
     end
   end
 

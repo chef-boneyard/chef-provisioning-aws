@@ -101,6 +101,8 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
     new_resource.save
   end
 
+  private
+
   def existing_volume
     @existing_volume ||=  new_resource.volume_id == nil ? nil : begin
       Chef::Log.debug("Loading volume #{new_resource.volume_id}")
@@ -121,15 +123,14 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
     new_resource.name
   end
 
-  private
-
   def wait_for_volume_status(status)
     ensure_cb = Proc.new do
       Chef::Log.debug("Waiting for volume status: #{status.to_s}")
     end
 
     Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError, :ensure => ensure_cb) do
-      raise TimeoutError, "Timed out waiting for volume status: #{status.to_s}" unless existing_volume.status == status
+      raise TimeoutError,
+        "Timed out waiting for volume status: #{status.to_s}" unless existing_volume.status == status
     end
   end
 

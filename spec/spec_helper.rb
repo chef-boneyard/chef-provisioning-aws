@@ -1,3 +1,4 @@
+require 'chef/mixin/shell_out'
 require 'chef/dsl/recipe'
 require 'chef/provisioning'
 require 'chef/provisioning/aws_driver'

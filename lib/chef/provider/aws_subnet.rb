@@ -9,7 +9,7 @@ class Chef::Provider::AwsSubnet < Chef::Provider::AwsProvider
     if existing_subnet == nil
       converge_by "Creating new Subnet #{fqn} in VPC #{new_resource.vpc} in #{new_resource.region_name}" do
         opts = { :vpc => vpc_id }
-	opts[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
+        opts[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
         subnet = ec2.subnets.create(new_resource.cidr_block, opts)
         subnet.tags['Name'] = new_resource.name
         subnet.tags['VPC'] = new_resource.vpc

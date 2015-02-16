@@ -12,17 +12,8 @@ describe Chef::Resource::AwsSubnet do
   }
 
   when_the_chef_server "is empty" do
-    it 'should be instantiated' do
-      expect(resource).to be
-    end
-
     it 'should match resource name' do
       expect(resource.resource_name).to eq(:aws_subnet)
-    end
-
-    it 'should match data_bag name' do
-      pending 'Not sure why using self.databag_name'
-      # expect(resource.databag_name).to eq('aws_subnet')
     end
 
     it 'should match name' do

@@ -9,7 +9,7 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   action :create do
     if existing_volume.nil?
-      # todo fix all region_name vars, => nil
+      # todo fix where all region_name vars => nil
       converge_by "Creating new EBS volume #{fqn} in #{new_resource.region_name}" do
 
         @existing_volume = ec2.volumes.create(
@@ -53,23 +53,22 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
   end
 
   action :attach do
-    if existing_volume
-      begin
-        converge_by "Attaching EBS volume #{fqn} in #{new_resource.region_name} to instance #{new_resource.instance_id}" do
+    if existing_volume.nil?
+      raise RuntimeError, "Volume #{new_resource.name} does not exist. Can not attempt attachment to an instance."
+    elsif volume_attached_to_configured_instance?
+      Chef::Log.debug "Volume already attached to expected instance."
+    # if volume is attached, but to a different instance allow aws sdk to handle the error
+    else
+      converge_by "Attaching EBS volume #{fqn} in #{new_resource.region_name} to instance #{new_resource.instance_id}" do
 
-          existing_volume.attach_to(
-            ec2.instances[new_resource.instance_id],
-            new_resource.device
-          )
-          new_resource.attached_to_instance new_resource.instance_id
-          new_resource.attached_to_device new_resource.device
+        existing_volume.attach_to(
+          ec2.instances[new_resource.instance_id],
+          new_resource.device
+        )
+        new_resource.attached_to_instance new_resource.instance_id
+        new_resource.attached_to_device new_resource.device
 
-          wait_for_volume_status(:in_use)
-        end
-      rescue AWS::EC2::Errors::VolumeInUse => e
-        # assume attached correctly, still need to check if its the intended instance
-        Chef::Log.debug(e.message)
-        new_resource.updated_by_last_action(true)
+        wait_for_volume_status(:in_use)
       end
     end
 
@@ -77,24 +76,25 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
   end
 
   action :detach do
-    if existing_volume
-      begin
-        converge_by "Detaching EBS volume #{fqn} in #{new_resource.region_name} from instance #{new_resource.instance_id}" do
-          existing_volume.detach_from(
-              ec2.instances[new_resource.attached_to_instance],
-              new_resource.attached_to_device,
-              :force => true
-            )
-            # todo load current resource and remove keys
-            new_resource.attached_to_instance ''
-            new_resource.attached_to_device ''
+    # raise exception if there is no volume to be detached
+    if existing_volume.nil?
+      raise RuntimeError, "Volume #{new_resource.name} does not exist. Can not attempt detachment from an instance."
+    # if volume is available can exit
+    elsif existing_volume.status == :available
+      Chef::Log.debug "Volume #{new_resource.name} is already detached."
+    # attempt detachment from instance
+    else
+      converge_by "Detaching EBS volume #{fqn} in #{new_resource.region_name} from instance #{new_resource.instance_id}" do
+        existing_volume.detach_from(
+            ec2.instances[new_resource.attached_to_instance],
+            new_resource.attached_to_device,
+            :force => true
+          )
+          # todo load current resource and remove keys
+          new_resource.attached_to_instance ''
+          new_resource.attached_to_device ''
 
-            wait_for_volume_status(:available)
-        end
-      rescue AWS::EC2::Errors::IncorrectState => e
-        # assume detached correctly
-        Chef::Log.debug(e.message)
-        new_resource.updated_by_last_action(true)
+          wait_for_volume_status(:available)
       end
     end
 
@@ -121,6 +121,13 @@ class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
 
   def id
     new_resource.name
+  end
+
+  def volume_attached_to_configured_instance?
+    detected = @existing_volume.attachments.detect { |attachment|
+      attachment.instance.id == new_resource.instance_id
+    }
+    detected ? true : false
   end
 
   def wait_for_volume_status(status)

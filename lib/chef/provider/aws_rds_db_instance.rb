@@ -1,3 +1,4 @@
+require 'chef/resource/aws_resource'
 require 'chef/provider/aws_provider'
 
 class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider

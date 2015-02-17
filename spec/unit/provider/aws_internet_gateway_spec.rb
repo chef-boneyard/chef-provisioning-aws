@@ -4,35 +4,33 @@ AWS.stub!
 
 describe Chef::Provider::AwsInternetGateway do
   extend ChefZeroRspecHelper
-  let(:new_resource) {
+  let(:new_resource) do
     Chef::Resource::AwsInternetGateway.new('my_igw', run_context)
-  }
-  let(:current_resource) {
+  end
+  let(:current_resource) do
     Chef::Resource::AwsInternetGateway.new('my_igw', run_context)
-  }
-  let(:my_node) {
+  end
+  let(:my_node) do
     node = Chef::Node.new
     node.automatic['platform'] = 'ubuntu'
     node.automatic['platform_version'] = '12.04'
     node
-  }
+  end
   let(:events) { Chef::EventDispatch::Dispatcher.new }
-  let(:run_context) {
+  let(:run_context) do
     cookbook_collection = {}
-    Chef::RunContext.new(my_node, cookbook_collection ,events)
-  }
+    Chef::RunContext.new(my_node, cookbook_collection, events)
+  end
 
   let(:vpc_testme) { AWS::EC2::VPC.new('vpc-testme') }
   let(:vpc_fakeme) { AWS::EC2::VPC.new('vpc-fakeme') }
   let(:igw_testme) { AWS::EC2::InternetGateway.new('igw-testme') }
 
-
-  subject(:provider) {
+  subject(:provider) do
     described_class.new(new_resource, run_context)
-  }
+  end
 
   when_the_chef_server "is empty" do
-
     describe '#exists?' do
       it "is true with one igw matching name" do
         igw = AWS::EC2::InternetGateway.new('igw-testme')
@@ -70,7 +68,7 @@ describe Chef::Provider::AwsInternetGateway do
         allow_any_instance_of(AWS::EC2::VPCCollection)
           .to receive(:with_tag)
           .and_return( [vpc_testme, vpc_fakeme] )
-        expect{ subject.vpc_id }.to raise_error(ArgumentError)
+        expect { subject.vpc_id }.to raise_error(ArgumentError)
       end
     end
 
@@ -78,8 +76,8 @@ describe Chef::Provider::AwsInternetGateway do
       it 'is true when attached' do
         attachment = double(
           'attachment',
-          :vpc => vpc_testme,
-          :internet_gateway => igw_testme
+          vpc: vpc_testme,
+          internet_gateway: igw_testme,
         )
         allow_any_instance_of(AWS::EC2::InternetGateway)
           .to receive(:attachments)
@@ -110,10 +108,10 @@ describe Chef::Provider::AwsInternetGateway do
 
     describe '#action_attach' do
       it 'requires vpc attribute' do
-        expect{ subject.action_attach }
+        expect { subject.action_attach }
           .to raise_error(
             ArgumentError,
-            "my_igw needs a vpc attribute"
+            "my_igw needs a vpc attribute",
           )
       end
 
@@ -122,12 +120,12 @@ describe Chef::Provider::AwsInternetGateway do
         new_resource.vpc vpc_name
         allow_any_instance_of(AWS::EC2::VPCCollection)
           .to receive(:with_tag)
-          .with('Name',vpc_name)
+          .with('Name', vpc_name)
           .and_return([])
-        expect{ subject.action_attach }
+        expect { subject.action_attach }
           .to raise_error(
             ArgumentError,
-            "VPC #{vpc_name} not found"
+            "VPC #{vpc_name} not found",
           )
       end
 
@@ -139,8 +137,8 @@ describe Chef::Provider::AwsInternetGateway do
           .and_return('vpc-testme')
 
         allow_any_instance_of(AWS::EC2::InternetGateway)
-            .to receive(:attachments)
-            .and_return([])
+          .to receive(:attachments)
+          .and_return([])
 
         expect(new_resource)
           .to receive(:save)

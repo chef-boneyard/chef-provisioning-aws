@@ -8,8 +8,8 @@ class Chef::Resource::AwsInternetGateway < Chef::Resource::AwsResource
   actions :create, :delete, :attach, :nothing
   default_action :create
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :vpc, :kind_of => String
+  attribute :name, kind_of: String, name_attribute: true
+  attribute :vpc, kind_of: String
 
   stored_attribute :internet_gateway_id
 

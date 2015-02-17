@@ -5,20 +5,19 @@
 #    -------------
 #    You must supply a name when declaring a chef_data_bag resource
 
-
 require 'spec_helper'
 require 'chef_zero_rspec_helper'
 AWS.stub!
 
 describe Chef::Resource::AwsInternetGateway do
   extend ChefZeroRspecHelper
-  let(:my_node) { Chef::Node.new() }
+  let(:my_node) { Chef::Node.new }
   let(:events) { Chef::EventDispatch::Dispatcher.new }
-  let(:run_context) { Chef::RunContext.new(my_node,{},events) }
+  let(:run_context) { Chef::RunContext.new(my_node, {}, events) }
 
-  let(:resource) {
+  let(:resource) do
     described_class.new('my_igw', run_context)
-  }
+  end
 
   when_the_chef_server "is empty" do
     it 'should match resource name' do

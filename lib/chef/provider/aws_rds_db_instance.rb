@@ -10,7 +10,8 @@ class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider
       :db_instance_class => new_resource.db_instance_class,
       :engine => new_resource.engine,
       :master_username => new_resource.master_username,
-      :master_user_password => new_resource.master_user_password
+      :master_user_password => new_resource.master_user_password,
+      :db_subnet_group_name => new_resource.db_subnet_group_name
     }
 
     converge_by "Creating new RDS database with engine #{new_resource.engine}" do

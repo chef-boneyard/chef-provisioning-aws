@@ -14,6 +14,7 @@ class Chef::Resource::AwsRdsDbInstance < Chef::Resource::AwsResource
   attribute :master_username, :kind_of => String
   attribute :master_user_password, :kind_of => String
   attribute :allocated_storage
+  attribute :db_subnet_group_name, :kind_of => String
 
   def initialize(*args)
     super

@@ -291,7 +291,7 @@ EOD
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
         bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{@region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
           instance = ec2.instances.create(bootstrap_options.to_hash)

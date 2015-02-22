@@ -62,9 +62,9 @@ module AWSDriver
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options ||= {}
       if lb_options[:security_group_id]
-        security_group = ec2.security_groups[:security_group_id]
+        security_groups = ec2.security_groups[:security_group_id]
       elsif lb_options[:security_group_name]
-        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name]).first
+        security_groups = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
       end
 
       availability_zones = lb_options[:availability_zones]
@@ -75,7 +75,7 @@ module AWSDriver
       validate_listeners(listeners)
 
       lb_optionals = {}
-      lb_optionals[:security_groups] = [security_group] if security_group
+      lb_optionals[:security_groups] = (security_groups.map { |sg| sg.id }) if security_groups
       lb_optionals[:availability_zones] = availability_zones if availability_zones
       lb_optionals[:listeners] = listeners if listeners
       lb_optionals[:subnets] = subnets if subnets
@@ -85,10 +85,12 @@ module AWSDriver
       if !actual_elb.exists?
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
 
+        security_group_names = security_groups.map { |sg| sg.name }.join(",")
+
         updates = [ "Create load balancer #{lb_spec.name} in #{aws_config.region}" ]
         updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
         updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
-        updates << "  with security group #{security_group.name}" if security_group
+        updates << "  with security groups #{security_group_names}" if security_groups
 
         action_handler.perform_action updates do
           actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)

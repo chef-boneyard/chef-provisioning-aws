@@ -62,7 +62,7 @@ module AWSDriver
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options ||= {}
       if lb_options[:security_group_id]
-        security_groups = ec2.security_groups[:security_group_id]
+        security_groups = [ec2.security_groups[lb_options[:security_group_id]]]
       elsif lb_options[:security_group_name]
         security_groups = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
       end

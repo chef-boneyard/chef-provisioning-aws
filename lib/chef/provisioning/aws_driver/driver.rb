@@ -71,6 +71,8 @@ module AWSDriver
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
 
+      validate_listeners(listeners)
+
       lb_optionals = {}
       lb_optionals[:security_groups] = [security_group] if security_group
       lb_optionals[:availability_zones] = availability_zones if availability_zones
@@ -155,7 +157,7 @@ module AWSDriver
             end
           end
         end
-        add_listeners.each do |listener|
+        add_listeners.values.each do |listener|
           updates = [ "  add listener #{listener[:port]}" ]
           updates << "    set protocol to #{listener[:protocol].inspect}"
           updates << "    set instance port to #{listener[:instance_port].inspect}"
@@ -833,6 +835,19 @@ EOD
         yield instance if block_given?
         instance
       end.to_a
+    end
+
+    # The listeners API is different between the SDK v1 and v2
+    # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Listener.html
+    VALID_LISTENER_KEYS = [:port, :protocol, :instance_port, :instance_protocol]
+    def validate_listeners(listeners)
+      listeners.each do |listener|
+        listener.keys.each do |k|
+          unless VALID_LISTENER_KEYS.include?(k)
+            raise "#{k} is an invalid listener key, can be one of #{VALID_LISTENER_KEYS.inspect}"
+          end
+        end
+      end
     end
 
   end

@@ -122,35 +122,37 @@ module AWSDriver
           end
         end
 
-        # Update listeners
-        perform_listener_action = proc do |desc, &block|
-          perform_listener_action = proc { |desc, &block| perform_action.call(desc, &block) }
-        end
+        # Update listeners - THIS IS NOT ATOMIC
         add_listeners = {}
         listeners.each { |l| add_listeners[l[:port]] = l } if listeners
         actual_elb.listeners.each do |listener|
           desired_listener = add_listeners.delete(listener.port)
           if desired_listener
+
+            # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
+            # of the listener - must create a new one and delete old one
+            immutable_updates = []
             if listener.protocol != desired_listener[:protocol].to_sym.downcase
-              perform_listener_action.call("    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}'") do
-                listener.protocol = desired_listener[:protocol]
-              end
+              immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
             end
             if listener.instance_port != desired_listener[:instance_port]
-              perform_listener_action.call("    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}'") do
-                listener.instance_port = desired_listener[:instance_port]
-              end
+              immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
             end
             if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
-              perform_listener_action.call("    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}'") do
-                listener.instance_protocol = desired_listener[:instance_protocol]
-              end
+              immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
             end
-            if listener.server_certificate != desired_listener[:server_certificate]
-              perform_listener_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}'") do
+            if !immutable_updates.empty?
+              perform_action.call(immutable_updates) do
+                listener.delete
+                actual_elb.listeners.create(desired_listener)
+              end
+            elsif listener.server_certificate != desired_listener[:server_certificate]
+              # Server certificate is mutable - if no immutable changes required a full recreate, update cert
+              perform_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}") do
                 listener.server_certificate = desired_listener[:server_certificate]
               end
             end
+
           else
             perform_action.call("  remove listener #{listener.port}") do
               listener.delete

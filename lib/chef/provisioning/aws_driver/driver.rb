@@ -124,14 +124,14 @@ module AWSDriver
 
         # Update listeners
         perform_listener_action = proc do |desc, &block|
-          perform_listener_action = proc { |desc, &block| perform_action(desc, &block) }
+          perform_listener_action = proc { |desc, &block| perform_action.call(desc, &block) }
         end
         add_listeners = {}
         listeners.each { |l| add_listeners[l[:port]] = l } if listeners
         actual_elb.listeners.each do |listener|
           desired_listener = add_listeners.delete(listener.port)
           if desired_listener
-            if listener.protocol != desired_listener[:protocol]
+            if listener.protocol != desired_listener[:protocol].to_sym.downcase
               perform_listener_action.call("    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}'") do
                 listener.protocol = desired_listener[:protocol]
               end
@@ -141,7 +141,7 @@ module AWSDriver
                 listener.instance_port = desired_listener[:instance_port]
               end
             end
-            if listener.instance_protocol != desired_listener[:instance_protocol]
+            if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
               perform_listener_action.call("    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}'") do
                 listener.instance_protocol = desired_listener[:instance_protocol]
               end

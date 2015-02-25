@@ -118,7 +118,7 @@ module AWSDriver
         # TODO: refactor this whole giant method into many smaller method calls
         # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
         # ELB and create a new one
-        if scheme.downcase != actual_elb.scheme
+        if scheme && scheme.downcase != actual_elb.scheme
           desc = ["  updating scheme to #{scheme}"]
           desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
           perform_action.call(desc) do
@@ -151,16 +151,16 @@ module AWSDriver
           enable_zones = (availability_zones || []).dup
           disable_zones = []
           actual_elb.availability_zones.each do |availability_zone|
-            if !enable_zones.delete(availability_zone.name)
+            unless enable_zones.delete(availability_zone.name)
               disable_zones << availability_zone.name
             end
           end
-          if enable_zones.size > 0
+          unless enable_zones.empty?
             perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
               actual_elb.availability_zones.enable(*enable_zones)
             end
           end
-          if disable_zones.size > 0
+          unless disable_zones.empty?
             perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
               actual_elb.availability_zones.disable(*disable_zones)
             end
@@ -171,11 +171,11 @@ module AWSDriver
           attach_subnets = (subnets || []).dup
           detach_subnets = []
           actual_elb.subnets.each do |subnet|
-            if !attach_subnets.delete(subnet.id)
+            unless attach_subnets.delete(subnet.id)
               detach_subnets << subnet.id
             end
           end
-          if attach_subnets.size > 0
+          unless attach_subnets.empty?
             perform_action.call("  attach subnets #{attach_subnets.join(', ')}") do
               elb.client.attach_load_balancer_to_subnets(
                 load_balancer_name: actual_elb.name,
@@ -183,7 +183,7 @@ module AWSDriver
               )
             end
           end
-          if detach_subnets.size > 0
+          unless detach_subnets.empty?
             perform_action.call("  detach subnets #{detach_subnets.join(', ')}") do
               elb.client.detach_load_balancer_from_subnets(
                 load_balancer_name: actual_elb.name,

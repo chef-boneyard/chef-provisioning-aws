@@ -1,6 +1,10 @@
 require 'bundler'
 require 'bundler/gem_tasks'
+require 'rspec/core/rake_task'
 
-task :spec do
-  require File.expand_path('spec/run')
+task :default => :spec
+
+desc "Run specs"
+RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = 'spec/**/*_spec.rb'
 end

@@ -37,14 +37,12 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_volume
-      begin
-        converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
-          existing_volume.delete
+      converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
+        existing_volume.delete
 
-          Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError) do
-            raise TimeoutError,
-              "Timed out waiting for volume #{new_resource.volume_id} to be deleted." if existing_volume.exists?
-          end
+        Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError) do
+          raise TimeoutError,
+            "Timed out waiting for volume #{new_resource.volume_id} to be deleted." if existing_volume.exists?
         end
       end
     end

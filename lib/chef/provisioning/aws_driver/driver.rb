@@ -71,6 +71,8 @@ module AWSDriver
       availability_zones = lb_options[:availability_zones]
       listeners = lb_options[:listeners]
 
+      validate_listeners(listeners)
+
       lb_optionals = {}
       lb_optionals[:security_groups] = [security_group] if security_group
       lb_optionals[:availability_zones] = availability_zones if availability_zones
@@ -120,42 +122,44 @@ module AWSDriver
           end
         end
 
-        # Update listeners
-        perform_listener_action = proc do |desc, &block|
-          perform_listener_action = proc { |desc, &block| perform_action(desc, &block) }
-        end
+        # Update listeners - THIS IS NOT ATOMIC
         add_listeners = {}
         listeners.each { |l| add_listeners[l[:port]] = l } if listeners
         actual_elb.listeners.each do |listener|
           desired_listener = add_listeners.delete(listener.port)
           if desired_listener
-            if listener.protocol != desired_listener[:protocol]
-              perform_listener_action.call("    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}'") do
-                listener.protocol = desired_listener[:protocol]
-              end
+
+            # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
+            # of the listener - must create a new one and delete old one
+            immutable_updates = []
+            if listener.protocol != desired_listener[:protocol].to_sym.downcase
+              immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
             end
             if listener.instance_port != desired_listener[:instance_port]
-              perform_listener_action.call("    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}'") do
-                listener.instance_port = desired_listener[:instance_port]
-              end
+              immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
             end
-            if listener.instance_protocol != desired_listener[:instance_protocol]
-              perform_listener_action.call("    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}'") do
-                listener.instance_protocol = desired_listener[:instance_protocol]
-              end
+            if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
+              immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
             end
-            if listener.server_certificate != desired_listener[:server_certificate]
-              perform_listener_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}'") do
+            if !immutable_updates.empty?
+              perform_action.call(immutable_updates) do
+                listener.delete
+                actual_elb.listeners.create(desired_listener)
+              end
+            elsif listener.server_certificate != desired_listener[:server_certificate]
+              # Server certificate is mutable - if no immutable changes required a full recreate, update cert
+              perform_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}") do
                 listener.server_certificate = desired_listener[:server_certificate]
               end
             end
+
           else
             perform_action.call("  remove listener #{listener.port}") do
               listener.delete
             end
           end
         end
-        add_listeners.each do |listener|
+        add_listeners.values.each do |listener|
           updates = [ "  add listener #{listener[:port]}" ]
           updates << "    set protocol to #{listener[:protocol].inspect}"
           updates << "    set instance port to #{listener[:instance_port].inspect}"
@@ -833,6 +837,19 @@ EOD
         yield instance if block_given?
         instance
       end.to_a
+    end
+
+    # The listeners API is different between the SDK v1 and v2
+    # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Listener.html
+    VALID_LISTENER_KEYS = [:port, :protocol, :instance_port, :instance_protocol]
+    def validate_listeners(listeners)
+      listeners.each do |listener|
+        listener.keys.each do |k|
+          unless VALID_LISTENER_KEYS.include?(k)
+            raise "#{k} is an invalid listener key, can be one of #{VALID_LISTENER_KEYS.inspect}"
+          end
+        end
+      end
     end
 
   end

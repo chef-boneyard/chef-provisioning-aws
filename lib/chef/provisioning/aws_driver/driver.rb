@@ -122,7 +122,7 @@ module AWSDriver
 
         # Update listeners
         perform_listener_action = proc do |desc, &block|
-          perform_listener_action = proc { |desc, &block| perform_action(desc, &block) }
+          perform_listener_action = proc { |desc, &block| perform_action.call(desc, &block) }
         end
         add_listeners = {}
         listeners.each { |l| add_listeners[l[:port]] = l } if listeners
@@ -155,7 +155,7 @@ module AWSDriver
             end
           end
         end
-        add_listeners.each do |listener|
+        add_listeners.each do |port, listener|
           updates = [ "  add listener #{listener[:port]}" ]
           updates << "    set protocol to #{listener[:protocol].inspect}"
           updates << "    set instance port to #{listener[:instance_port].inspect}"

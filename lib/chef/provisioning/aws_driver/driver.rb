@@ -61,24 +61,30 @@ module AWSDriver
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options ||= {}
-      if lb_options[:security_group_id]
-        security_groups = [ec2.security_groups[lb_options[:security_group_id]]]
-      elsif lb_options[:security_group_name]
-        security_groups = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
+      if lb_options[:security_group_ids]
+        security_groups = ec2.security_groups.filter('group-id', lb_options[:security_group_ids]).to_a
+      elsif lb_options[:security_group_names]
+        security_groups = ec2.security_groups.filter('group-name', lb_options[:security_group_names]).to_a
+      else
+        security_groups = []
       end
+      security_group_ids = security_groups.map { |sg| sg.id }
 
-      availability_zones = lb_options[:availability_zones]
+      availability_zones = lb_options[:availability_zones] || []
+      subnets = lb_options[:subnets] || []
       listeners = lb_options[:listeners]
-      subnets = lb_options[:subnets]
       scheme = lb_options[:scheme]
 
       validate_listeners(listeners)
+      if !availability_zones.empty? && !subnets.empty?
+        raise "You cannot specify both `availability_zones` and `subnets`"
+      end
 
       lb_optionals = {}
-      lb_optionals[:security_groups] = (security_groups.map { |sg| sg.id }) if security_groups
-      lb_optionals[:availability_zones] = availability_zones if availability_zones
+      lb_optionals[:security_groups] = security_group_ids unless security_group_ids.empty?
+      lb_optionals[:availability_zones] = availability_zones unless availability_zones.empty?
+      lb_optionals[:subnets] = subnets unless subnets.empty?
       lb_optionals[:listeners] = listeners if listeners
-      lb_optionals[:subnets] = subnets if subnets
       lb_optionals[:scheme] = scheme if scheme
 
       actual_elb = load_balancer_for(lb_spec)
@@ -88,9 +94,10 @@ module AWSDriver
         security_group_names = security_groups.map { |sg| sg.name }.join(",")
 
         updates = [ "Create load balancer #{lb_spec.name} in #{aws_config.region}" ]
-        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
+        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones.size > 0
+        updates << "  attach subnets #{subnets.join(', ')}" if subnets.size > 0
         updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
-        updates << "  with security groups #{security_group_names}" if security_groups
+        updates << "  with security groups #{security_group_names}" if security_group_names
 
         action_handler.perform_action updates do
           actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
@@ -108,22 +115,81 @@ module AWSDriver
           action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
         end
 
-        # Update availability zones
-        enable_zones = (availability_zones || []).dup
-        disable_zones = []
-        actual_elb.availability_zones.each do |availability_zone|
-          if !enable_zones.delete(availability_zone.name)
-            disable_zones << availability_zone.name
+        # TODO: refactor this whole giant method into many smaller method calls
+        # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
+        # ELB and create a new one
+        if scheme.downcase != actual_elb.scheme
+          desc = ["  updating scheme to #{scheme}"]
+          desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
+          perform_action.call(desc) do
+            actual_elb.delete
+            actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
           end
         end
-        if enable_zones.size > 0
-          perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
-            actual_elb.availability_zones.enable(*enable_zones)
+
+        # Update security groups
+        if security_group_ids.empty?
+            Chef::Log.info("No Security Groups specified in resource; load_balancer[#{actual_elb.name}] cannot have " +
+            "empty Security Groups, so assuming it only currently has the default Security Group.  No action taken.")
+        else
+          current = Set.new(actual_elb.security_group_ids)
+          desired = Set.new(security_group_ids)
+          if current != desired
+            perform_action.call("  updating security groups to #{desired.to_a}") do
+              elb.client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.name,
+                security_groups: desired.to_a
+              )
+            end
           end
         end
-        if disable_zones.size > 0
-          perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
-            actual_elb.availability_zones.disable(*disable_zones)
+
+        # You can only have 1 of either subnets or availability zones, and if in a VPC you must have
+        # at least one of either.
+        if !availability_zones.empty?
+
+          enable_zones = (availability_zones || []).dup
+          disable_zones = []
+          actual_elb.availability_zones.each do |availability_zone|
+            if !enable_zones.delete(availability_zone.name)
+              disable_zones << availability_zone.name
+            end
+          end
+          if enable_zones.size > 0
+            perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
+              actual_elb.availability_zones.enable(*enable_zones)
+            end
+          end
+          if disable_zones.size > 0
+            perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
+              actual_elb.availability_zones.disable(*disable_zones)
+            end
+          end
+
+        elsif !subnets.empty?
+
+          attach_subnets = (subnets || []).dup
+          detach_subnets = []
+          actual_elb.subnets.each do |subnet|
+            if !attach_subnets.delete(subnet.id)
+              detach_subnets << subnet.id
+            end
+          end
+          if attach_subnets.size > 0
+            perform_action.call("  attach subnets #{attach_subnets.join(', ')}") do
+              elb.client.attach_load_balancer_to_subnets(
+                load_balancer_name: actual_elb.name,
+                subnets: attach_subnets
+              )
+            end
+          end
+          if detach_subnets.size > 0
+            perform_action.call("  detach subnets #{detach_subnets.join(', ')}") do
+              elb.client.detach_load_balancer_from_subnets(
+                load_balancer_name: actual_elb.name,
+                subnets: detach_subnets
+              )
+            end
           end
         end
 

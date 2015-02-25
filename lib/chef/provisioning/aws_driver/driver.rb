@@ -87,6 +87,7 @@ module AWSDriver
       lb_optionals[:listeners] = listeners if listeners
       lb_optionals[:scheme] = scheme if scheme
 
+      old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
@@ -122,7 +123,7 @@ module AWSDriver
           desc = ["  updating scheme to #{scheme}"]
           desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
           perform_action.call(desc) do
-            actual_elb.delete
+            old_elb = actual_elb
             actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
           end
         end
@@ -262,6 +263,19 @@ module AWSDriver
             actual_elb.instances.remove(instance_ids_to_remove)
           end
         end
+      end
+
+      # We have successfully switched all our instances to the (possibly) new LB
+      # so it is safe to delete the old one.
+      unless old_elb.nil?
+        old_elb.delete
+      end
+    ensure
+      # Something went wrong before we could moved instances from the old ELB to the new one
+      # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
+      unless old_elb.nil?
+        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.id} and #{actual_elb.id}. " +
+        "Determine which is correct and manually clean up the other.")
       end
     end
 

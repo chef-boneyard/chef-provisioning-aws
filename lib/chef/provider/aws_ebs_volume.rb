@@ -3,7 +3,7 @@ require 'cheffish'
 require 'date'
 require 'retryable'
 
-class Chef::Provider::AwsEc2Volume < Chef::Provider::AwsProvider
+class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
 
   use_inline_resources
 

@@ -21,3 +21,7 @@ tmp
 *.a
 mkmf.log
 *.sw*
+x.rb
+blah.rb
+clients
+nodes

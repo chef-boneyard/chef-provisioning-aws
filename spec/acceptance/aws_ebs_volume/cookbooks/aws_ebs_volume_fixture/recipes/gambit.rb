@@ -1,8 +1,8 @@
-include_recipe 'aws_ec2_volume_fixture'
+include_recipe 'aws_ebs_volume_fixture'
 
 ebs_test_node = search(:node, "*:#{node['test']}").first
 
-volume1 = aws_ec2_volume node['test'] do
+volume1 = aws_ebs_volume node['test'] do
   action [:create, :attach, :detach, :delete]
   availability_zone 'us-west-2a'
   size 10
@@ -12,7 +12,7 @@ volume1 = aws_ec2_volume node['test'] do
   device '/dev/xvdf'
 end
 
-volume2 = aws_ec2_volume "#{node['test']}-2" do
+volume2 = aws_ebs_volume "#{node['test']}-2" do
   action [:create, :attach, :detach, :delete]
   availability_zone 'us-west-2a'
   size 10

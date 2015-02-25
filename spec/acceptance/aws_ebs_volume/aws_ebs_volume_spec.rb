@@ -1,6 +1,12 @@
-describe 'aws_ec2_volume' do
+describe 'aws_ebs_volume' do
   def run_recipe(recipe)
-    system("bundle exec chef-client -z -o aws_ec2_volume_fixture::#{recipe}")
+    cwd = Dir.pwd
+    Dir.chdir(File.dirname(__FILE__))
+    begin
+      system("bundle exec chef-client -z -o aws_ebs_volume_fixture::#{recipe}")
+    ensure
+      Dir.chdir(Dir.pwd)
+    end
   end
 
   before(:all) do

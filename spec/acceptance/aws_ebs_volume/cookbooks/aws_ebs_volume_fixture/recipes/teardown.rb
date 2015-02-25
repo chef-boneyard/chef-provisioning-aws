@@ -1,4 +1,4 @@
-include_recipe 'aws_ec2_volume_fixture'
+include_recipe 'aws_ebs_volume_fixture'
 
 machine node['test'] do
   action :destroy

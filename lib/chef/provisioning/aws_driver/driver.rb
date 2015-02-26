@@ -17,6 +17,7 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
+require 'set'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -130,7 +131,7 @@ module AWSDriver
 
         # Update security groups
         if security_group_ids.empty?
-            Chef::Log.info("No Security Groups specified in resource; load_balancer[#{actual_elb.name}] cannot have " +
+            Chef::Log.debug("No Security Groups specified. Load_balancer[#{actual_elb.name}] cannot have " +
             "empty Security Groups, so assuming it only currently has the default Security Group.  No action taken.")
         else
           current = Set.new(actual_elb.security_group_ids)
@@ -145,35 +146,60 @@ module AWSDriver
           end
         end
 
-        # You can only have 1 of either subnets or availability zones, and if in a VPC you must have
-        # at least one of either.
-        if !availability_zones.empty?
+        if subnets.empty? && availability_zones.empty?
+          Chef::Log.debug("No subnets or availability zones specified. No action taken.")
+        else
+          #TODO does AWS preserve casing?
+          # Users can switch from availability zones to subnets or vice versa.  To ensure we do not
+          # unassign all (which causes an AWS error) we first add all available ones, then remove
+          # an unecessary ones
+          actual_zones_subnets = {}
+          actual_elb.subnets.each do |subnet|
+            zone = subnet.availability_zone.name
+            actual_zones_subnets[zone] ||= Set.new
+            actual_zones_subnets[zone] << subnet.id
+          end
+          actual_elb.availability_zones.each do |zone|
+            actual_zones_subnets[zone.name] ||= Set.new
+          end
 
-          enable_zones = (availability_zones || []).dup
-          disable_zones = []
-          actual_elb.availability_zones.each do |availability_zone|
-            unless enable_zones.delete(availability_zone.name)
-              disable_zones << availability_zone.name
+          desired_zones_subnets = {}
+          (availability_zones || []).each do |zone|
+            desired_zones_subnets[zone.downcase] ||= Set.new
+          end
+          if subnets.empty?
+            subnet_objects = []
+          else
+            subnet_objects = ec2.client.describe_subnets(:subnet_ids => subnets)[:subnet_set]
+          end
+          subnet_objects.each do |subnet|
+            zone = subnet[:availability_zone].downcase
+            desired_zones_subnets[zone] ||= Set.new
+            desired_zones_subnets[zone] << subnet[:subnet_id]
+          end
+
+          # Adding a subnet automatically adds the availability zone (because subnets live in a zone)
+          # So add all necessary subnets first, then availability zones
+          attach_subnets = []
+          enable_zones = []
+          desired_zones_subnets.each do |zone, subnets|
+            if actual_zones_subnets.keys.include?(zone)
+              # The zone already exists - do we need to add any subnets?
+              attach_subnets += (subnets - actual_zones_subnets[zone]).to_a
+            else
+              # The zone doesn't exist - do we need to add it as a zone or via its subnets?
+              if subnets.empty?
+                enable_zones << zone
+              else
+                attach_subnets += subnets.to_a
+              end
             end
           end
+
+          # Add all available
           unless enable_zones.empty?
             perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
               actual_elb.availability_zones.enable(*enable_zones)
-            end
-          end
-          unless disable_zones.empty?
-            perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
-              actual_elb.availability_zones.disable(*disable_zones)
-            end
-          end
-
-        elsif !subnets.empty?
-
-          attach_subnets = (subnets || []).dup
-          detach_subnets = []
-          actual_elb.subnets.each do |subnet|
-            unless attach_subnets.delete(subnet.id)
-              detach_subnets << subnet.id
             end
           end
           unless attach_subnets.empty?
@@ -184,12 +210,34 @@ module AWSDriver
               )
             end
           end
+
+          # Only remove an availability zone if removing all subnets AND removing the availabilty zone
+          detach_subnets = []
+          disable_zones = []
+          actual_zones_subnets.each do |zone, subnets|
+            if desired_zones_subnets.keys.include?(zone)
+              # Don't remove the subnet if it would remove a desired zone
+              unless desired_zones_subnets[zone].empty?
+                detach_subnets += (subnets - desired_zones_subnets[zone]).to_a
+              end
+            else
+              disable_zones << zone unless availability_zones.empty?
+              detach_subnets += subnets.to_a
+            end
+          end
+
+          # Remove unecessary ones
           unless detach_subnets.empty?
             perform_action.call("  detach subnets #{detach_subnets.join(', ')}") do
               elb.client.detach_load_balancer_from_subnets(
                 load_balancer_name: actual_elb.name,
                 subnets: detach_subnets
               )
+            end
+          end
+          unless disable_zones.empty?
+            perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
+              actual_elb.availability_zones.disable(*disable_zones)
             end
           end
         end

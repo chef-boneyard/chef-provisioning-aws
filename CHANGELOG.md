@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3 (2/25/2015)
+
+- WinRM support! (@erikvanbrakel)
+- Make load balancers much more updateable (@tyler-ball)
+- Load balancer crash fixes (@lynchc)
+- Fix machine_batch to pick an image when image is not specified (@jkeiser)
+- Delete snapshot when deleting image (@christinedraper)
+- Support bootstrap_options => { image_id: 'ami-234243225' } (@christinedraper)
+- Support load_balancers and desired_capacity in aws_auto_scaling_group (@christinedraper)
+- Get aws_security_group :delete working (@christinedraper)
+- Fixes for merged machine_options (add_machine_options, etc.) (@schisamo @jkeiser)
+
 ## 0.2.1 (1/27/2015)
 
 - Fix issue with not waiting for ssh transport to be up (@afiune)

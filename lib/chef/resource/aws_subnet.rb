@@ -12,14 +12,7 @@ class Chef::Resource::AwsSubnet < Chef::Resource::AwsResource
   attribute :cidr_block, :kind_of => String
   attribute :vpc, :kind_of => String
   attribute :availability_zone, :kind_of => String
+  attribute :map_public_ip_on_launch, :kind_of => [ TrueClass, FalseClass ]
 
   stored_attribute :subnet_id
-
-  def initialize(*args)
-    super
-  end
-
-  def after_created
-    super
-  end
 end

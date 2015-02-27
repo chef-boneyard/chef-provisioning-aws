@@ -21,3 +21,9 @@ tmp
 *.a
 mkmf.log
 *.sw*
+clients
+nodes
+x.rb
+docs/examples/nodes
+docs/examples/clients
+docs/examples/data_bags

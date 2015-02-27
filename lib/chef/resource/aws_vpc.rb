@@ -10,6 +10,15 @@ class Chef::Resource::AwsVpc < Chef::Resource::AwsResource
 
   attribute :name, :kind_of => String, :name_attribute => true
   attribute :cidr_block, :kind_of => String
+  attribute :internet_gateway, :kind_of => [ String, TrueClass, FalseClass ]
+  attribute :internet_gateway_routes, :kind_of => Array
+  def internet_gateway_routes(*routes)
+    if routes.size == 0
+      @internet_gateway_routes || []
+    else
+      @internet_gateway_routes = routes.flatten
+    end
+  end
 
   stored_attribute :vpc_id
 

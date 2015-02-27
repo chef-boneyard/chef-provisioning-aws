@@ -6,9 +6,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
 
   action :create do
     if existing_volume == nil
-      converge_by "Creating new EBS volume #{fqn} in #{new_resource.region_name}" do
+      converge_by "Creating new EBS volume #{fqn} in #{new_driver.aws_config.region}" do
 
-        ebs = ec2.volumes.create(
+        ebs = new_driver.ec2.volumes.create(
             :availability_zone => new_resource.availability_zone,
             :size => new_resource.size.to_i
         )
@@ -27,7 +27,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_volume
-      converge_by "Deleting EBS volume #{fqn} in #{new_resource.region_name}" do
+      converge_by "Deleting EBS volume #{fqn} in #{new_driver.aws_config.region}" do
         existing_volume.delete
       end
     end
@@ -39,7 +39,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
   def existing_volume
     @existing_volume ||=  new_resource.volume_id == nil ? nil : begin
       Chef::Log.debug("Loading volume #{new_resource.volume_id}")
-      volume = ec2.volumes[new_resource.volume_id]
+      volume = new_driver.ec2.volumes[new_resource.volume_id]
       if [:deleted, :deleting, :error].include? volume.status
         nil
       else

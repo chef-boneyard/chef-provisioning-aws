@@ -5,7 +5,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
   action :create do
     if existing_bucket == nil
       converge_by "Creating new S3 bucket #{fqn}" do
-        bucket = s3.buckets.create(fqn)
+        bucket = new_driver.s3.buckets.create(fqn)
         bucket.tags['Name'] = new_resource.name
       end
     end
@@ -38,7 +38,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
 
   def existing_bucket
     Chef::Log.debug("Checking for S3 bucket #{fqn}")
-    @existing_bucket ||= s3.buckets[fqn] if s3.buckets[fqn].exists?
+    @existing_bucket ||= new_driver.s3.buckets[fqn] if new_driver.s3.buckets[fqn].exists?
   end
 
   def modifies_website_configuration?

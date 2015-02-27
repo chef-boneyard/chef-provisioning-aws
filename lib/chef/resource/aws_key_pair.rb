@@ -4,15 +4,9 @@ require 'chef/resource/aws_resource'
 class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
   self.resource_name = 'aws_key_pair'
 
-  def initialize(*args)
-    super
-    @driver = run_context.chef_provisioning.current_driver
-  end
-
   actions :create, :delete, :nothing
   default_action :create
 
-  attribute :driver
   # Private key to use as input (will be generated if it does not exist)
   attribute :private_key_path, :kind_of => String
   # Public key to use as input (will be generated if it does not exist)

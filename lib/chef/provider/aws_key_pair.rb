@@ -18,7 +18,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
   action :delete do
     if current_resource_exists?
-      ec2.key_pairs[new_resource.name].delete
+      new_driver.ec2.key_pairs[new_resource.name].delete
     end
   end
 
@@ -79,8 +79,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            ec2.key_pairs[new_resource.name].delete
-            ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            new_driver.ec2.key_pairs[new_resource.name].delete
+            new_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -92,7 +92,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        new_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
@@ -136,7 +136,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
   def existing_keypair
     @existing_keypair ||= begin
-      ec2.key_pairs[fqn]
+      new_driver.ec2.key_pairs[fqn]
     rescue
       nil
     end
@@ -175,7 +175,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
   def load_current_resource
     @current_resource = Chef::Resource::AwsKeyPair.new(new_resource.name, run_context)
 
-    current_key_pair = ec2.key_pairs[new_resource.name]
+    current_key_pair = new_driver.ec2.key_pairs[new_resource.name]
     if current_key_pair && current_key_pair.exists?
       @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
     else

@@ -1,9 +1,8 @@
 require 'chef/provisioning/aws_driver'
-with_driver 'aws'
 
-with_data_center 'eu-west-1' do
-  aws_security_group "provisioning-security-group" do 
-    inbound_rules [ 
+with_driver 'aws::eu-west-1' do
+  aws_security_group "provisioning-security-group" do
+    inbound_rules [
       {:ports => 2223, :protocol => :tcp, :sources => ["10.0.0.0/24"] },
       {:ports => 80..100, :protocol => :udp, :sources => ["1.1.1.0/24"] }
     ]

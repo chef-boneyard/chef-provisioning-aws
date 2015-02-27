@@ -5,10 +5,10 @@ class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
 
   action :create do
     if existing_queue == nil
-      converge_by "Creating new SQS queue #{fqn} in #{new_resource.region_name}" do
+      converge_by "Creating new SQS queue #{fqn} in #{new_driver.aws_config.region}" do
         loop do
           begin
-            sqs.queues.create(fqn)
+            new_driver.sqs.queues.create(fqn)
             break
           rescue AWS::SQS::Errors::QueueDeletedRecently
             sleep 5
@@ -23,7 +23,7 @@ class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_queue
-      converge_by "Deleting SQS queue #{fqn} in #{new_resource.region_name}" do
+      converge_by "Deleting SQS queue #{fqn} in #{new_driver.aws_config.region}" do
         existing_queue.delete
       end
     end
@@ -33,7 +33,7 @@ class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
 
   def existing_queue
     @existing_queue ||= begin
-      sqs.queues.named(fqn)
+      new_driver.sqs.queues.named(fqn)
     rescue
       nil
     end

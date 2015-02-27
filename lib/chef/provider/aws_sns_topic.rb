@@ -5,8 +5,8 @@ class Chef::Provider::AwsSnsTopic < Chef::Provider::AwsProvider
 
   action :create do
     if existing_topic == nil
-      converge_by "Creating new SNS topic #{fqn} in #{new_resource.region_name}" do
-        sns.topics.create(fqn)
+      converge_by "Creating new SNS topic #{fqn} in #{new_driver.aws_config.region}" do
+        new_driver.sns.topics.create(fqn)
 
         new_resource.created_at DateTime.now.to_s
         new_resource.save
@@ -16,7 +16,7 @@ class Chef::Provider::AwsSnsTopic < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_topic
-      converge_by "Deleting SNS topic #{fqn} in #{new_resource.region_name}" do
+      converge_by "Deleting SNS topic #{fqn} in #{new_driver.aws_config.region}" do
         existing_topic.delete
       end
     end
@@ -26,7 +26,7 @@ class Chef::Provider::AwsSnsTopic < Chef::Provider::AwsProvider
 
   def existing_topic
     @existing_topic ||= begin
-      sns.topics.named(fqn)
+      new_driver.sns.topics.named(fqn)
     rescue
       nil
     end

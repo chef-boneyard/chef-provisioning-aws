@@ -40,7 +40,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
       end
         eip = new_driver.ec2.elastic_ips[new_resource.public_ip]
       begin
-        spec = Chef::Provisioning::ChefMachineSpec.get(new_resource.machine)
+        spec = spec_registry.get(:machine, new_resource.machine)
         if spec == nil
           Chef::Application.fatal!("Could not find machine #{new_resource.machine}")
         else

@@ -7,9 +7,9 @@ class Chef::Provider::AwsVpc < Chef::Provider::AwsProvider
     fail "Can't create a VPC without a CIDR block" if new_resource.cidr_block.nil?
 
     if existing_vpc == nil
-      converge_by "Creating new VPC #{fqn} in #{new_resource.region_name}" do
+      converge_by "Creating new VPC #{fqn} in #{new_driver.aws_config.region}" do
         opts = { :instance_tenancy => :default}
-        vpc = ec2.vpcs.create(new_resource.cidr_block, opts)
+        vpc = new_driver.ec2.vpcs.create(new_resource.cidr_block, opts)
         vpc.tags['Name'] = new_resource.name
         new_resource.vpc_id vpc.id
         new_resource.save
@@ -19,7 +19,7 @@ class Chef::Provider::AwsVpc < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_vpc
-      converge_by "Deleting VPC #{fqn} in #{new_resource.region_name}" do
+      converge_by "Deleting VPC #{fqn} in #{new_driver.aws_config.region}" do
         existing_vpc.delete
       end
     end
@@ -29,7 +29,7 @@ class Chef::Provider::AwsVpc < Chef::Provider::AwsProvider
 
   def existing_vpc
     @existing_vpc ||= begin
-      ec2.vpcs.with_tag('Name', new_resource.name).first
+      new_driver.ec2.vpcs.with_tag('Name', new_resource.name).first
     rescue
       nil
     end

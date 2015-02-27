@@ -9,12 +9,12 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
         :max_size => new_resource.max_size,
         :availability_zones => availability_zones
       }
-      
+
       auto_scaling_opts[:desired_capacity] = new_resource.desired_capacity if new_resource.desired_capacity
       auto_scaling_opts[:load_balancers] = new_resource.load_balancers if new_resource.load_balancers
-       
-      converge_by "Creating new Auto Scaling group #{new_resource.name} in #{new_resource.region_name}" do
-        @existing_group = auto_scaling.groups.create(
+
+      converge_by "Creating new Auto Scaling group #{new_resource.name} in #{new_driver.aws_config.region}" do
+        @existing_group = new_driver.auto_scaling.groups.create(
           new_resource.name,
           auto_scaling_opts
         )
@@ -26,7 +26,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_group
-      converge_by "Deleting Auto Scaling group #{new_resource.name} in #{new_resource.region_name}" do
+      converge_by "Deleting Auto Scaling group #{new_resource.name} in #{new_driver.aws_config.region}" do
         existing_group.delete!
       end
     end
@@ -35,12 +35,12 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
   end
 
   def availability_zones
-    @availability_zones ||= ec2.availability_zones.reduce([]) { |result, az| result << az }
+    @availability_zones ||= new_driver.ec2.availability_zones.reduce([]) { |result, az| result << az }
   end
 
   def existing_group
     @existing_group ||= begin
-                          eg = auto_scaling.groups[new_resource.name]
+                          eg = new_driver.auto_scaling.groups[new_resource.name]
                           eg.exists? ? eg : nil
                         end
   end

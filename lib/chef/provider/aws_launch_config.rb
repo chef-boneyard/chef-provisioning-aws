@@ -3,8 +3,8 @@ require 'chef/provider/aws_provider'
 class Chef::Provider::AwsLaunchConfig < Chef::Provider::AwsProvider
   action :create do
     if existing_launch_config.nil?
-      converge_by "Creating new Launch Config #{id} in #{new_resource.region_name}" do
-        @existing_launch_config = auto_scaling.launch_configurations.create(
+      converge_by "Creating new Launch Config #{id} in #{new_driver.aws_config.region}" do
+        @existing_launch_config = new_driver.auto_scaling.launch_configurations.create(
           new_resource.name,
           new_resource.image,
           new_resource.instance_type
@@ -17,7 +17,7 @@ class Chef::Provider::AwsLaunchConfig < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_launch_config
-      converge_by "Deleting Launch Config #{id} in #{new_resource.region_name}" do
+      converge_by "Deleting Launch Config #{id} in #{new_driver.aws_config.region}" do
         begin
           existing_launch_config.delete
         rescue AWS::AutoScaling::Errors::ResourceInUse
@@ -32,7 +32,7 @@ class Chef::Provider::AwsLaunchConfig < Chef::Provider::AwsProvider
 
   def existing_launch_config
     @existing_launch_config ||= begin
-                                  elc = auto_scaling.launch_configurations[new_resource.name]
+                                  elc = new_driver.auto_scaling.launch_configurations[new_resource.name]
                                   elc.exists? ? elc : nil
                                 end
   end

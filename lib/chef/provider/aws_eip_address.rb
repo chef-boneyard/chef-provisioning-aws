@@ -6,8 +6,8 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
 
   action :create do
     if existing_ip == nil
-      converge_by "Creating new EIP address in #{new_resource.region_name}" do
-        eip = ec2.elastic_ips.create :vpc => new_resource.associate_to_vpc
+      converge_by "Creating new EIP address in #{new_driver.aws_config.region}" do
+        eip = new_driver.ec2.elastic_ips.create :vpc => new_resource.associate_to_vpc
         new_resource.public_ip eip.public_ip
         new_resource.domain eip.domain
         new_resource.instance_id eip.instance_id
@@ -22,7 +22,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_ip
-      converge_by "Deleting EIP Address #{new_resource.name} in #{new_resource.region_name}" do
+      converge_by "Deleting EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
         #if it's attached to something in a vpc, disassociate first
         if existing_ip.instance_id != nil && existing_ip.domain == 'vpc'
           existing_ip.disassociate
@@ -34,11 +34,11 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
   end
 
   action :associate do
-    converge_by "Associating EIP Address #{new_resource.name} in #{new_resource.region_name}" do
+    converge_by "Associating EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
       if existing_ip == nil
         action_create
       end
-        eip = ec2.elastic_ips[new_resource.public_ip]
+        eip = new_driver.ec2.elastic_ips[new_resource.public_ip]
       begin
         spec = Chef::Provisioning::ChefMachineSpec.get(new_resource.machine)
         if spec == nil
@@ -55,7 +55,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
   end
 
   action :disassociate do
-    converge_by "Disassociating EIP Address #{new_resource.name} in #{new_resource.region_name}" do
+    converge_by "Disassociating EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
       begin
         if existing_ip != nil
           existing_ip.disassociate
@@ -73,7 +73,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
   def existing_ip
     new_resource.hydrate
     @existing_ip ||=  new_resource.public_ip == nil ? nil : begin
-      eip = ec2.elastic_ips[new_resource.public_ip]
+      eip = new_driver.ec2.elastic_ips[new_resource.public_ip]
       eip
     rescue => e
       Chef::Application.fatal!("Error looking for EIP Address: #{e}")

@@ -1,8 +1,7 @@
 require 'chef/provisioning/aws_driver'
-with_driver 'aws'
 
-with_data_center 'eu-west-1' do
-  aws_vpc "provisioning-vpc" do 
+with_driver 'aws::eu-west-1' do
+  aws_vpc "provisioning-vpc" do
     cidr_block "10.0.1.0/24"
   end
 
@@ -12,8 +11,8 @@ with_data_center 'eu-west-1' do
     availability_zone "eu-west-1a"
   end
 
-  aws_security_group "provisioning-vpc-security-group" do 
-    inbound_rules [ 
+  aws_security_group "provisioning-vpc-security-group" do
+    inbound_rules [
       {:ports => 2223, :protocol => :tcp, :sources => ["10.0.0.0/24"] },
       {:ports => 80..100, :protocol => :udp, :sources => ["1.1.1.0/24"] }
     ]

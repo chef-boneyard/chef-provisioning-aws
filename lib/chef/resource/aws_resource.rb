@@ -1,10 +1,10 @@
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Resource::AwsResource < Chef::Resource::ChefDataBagResource
-  stored_attribute :region_name
+  stored_attribute :driver
 
   def initialize(*args)
     super
-    @region_name = run_context.chef_provisioning.current_data_center
+    @driver = run_context.chef_provisioning.current_driver
   end
 
 end

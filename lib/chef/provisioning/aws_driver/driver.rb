@@ -29,7 +29,7 @@ module AWSDriver
 
     include Chef::Mixin::ShellOut
 
-    attr_reader :region
+    attr_reader :aws_config
 
     # URL scheme:
     # aws:profilename:region
@@ -47,17 +47,16 @@ module AWSDriver
       region = nil if region && region.empty?
 
       credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
-      @region = region || credentials[:region]
-      # TODO: fix credentials here
-      AWS.config(:access_key_id => credentials[:aws_access_key_id],
-                 :secret_access_key => credentials[:aws_secret_access_key],
-                 :region => @region)
+      @aws_config = AWS::Core::Configuration.new(
+        access_key_id:     credentials[:aws_access_key_id],
+        secret_access_key: credentials[:aws_secret_access_key],
+        region: region
+      )
     end
 
     def self.canonicalize_url(driver_url, config)
       [ driver_url, config ]
     end
-
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
@@ -82,7 +81,7 @@ module AWSDriver
       if !actual_elb.exists?
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
 
-        updates = [ "Create load balancer #{lb_spec.name} in #{@region}" ]
+        updates = [ "Create load balancer #{lb_spec.name} in #{aws_config.region}" ]
         updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
         updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
         updates << "  with security group #{security_group.name}" if security_group
@@ -100,7 +99,7 @@ module AWSDriver
         # Header gets printed the first time we make an update
         perform_action = proc do |desc, &block|
           perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
-          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{@region}", desc ].flatten, &block
+          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
         end
 
         # Update availability zones
@@ -180,7 +179,7 @@ module AWSDriver
       if instances_to_add.size > 0
         perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
           instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
-          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{@region}")
+          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
           actual_elb.instances.add(instance_ids_to_add)
         end
       end
@@ -295,7 +294,7 @@ EOD
       if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
         bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{@region}" do
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
           instance = ec2.instances.create(bootstrap_options.to_hash)
@@ -339,7 +338,7 @@ EOD
       if instance.status != :running
         wait_until_machine(action_handler, machine_spec, instance) { instance.status != :stopping }
         if instance.status == :stopped
-          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
+          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{aws_config.region} ..." do
             instance.start
           end
         end
@@ -364,7 +363,7 @@ EOD
       instance = instance_for(machine_spec)
       if instance && instance.exists?
         # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
-        action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
+        action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{aws_config.region} ..." do
           instance.terminate
           machine_spec.location = nil
         end
@@ -374,6 +373,30 @@ EOD
 
       strategy = convergence_strategy_for(machine_spec, machine_options)
       strategy.cleanup_convergence(action_handler, machine_spec)
+    end
+
+    def ec2
+      @ec2 ||= AWS::EC2.new(config: aws_config)
+    end
+
+    def elb
+      @elb ||= AWS::ELB.new(config: aws_config)
+    end
+
+    def sns
+      @sns ||= AWS::SNS.new(config: aws_config)
+    end
+
+    def sqs
+      @sqs ||= AWS::SQS.new(config: aws_config)
+    end
+
+    def s3
+      @s3 ||= AWS::S3.new(config: aws_config)
+    end
+
+    def auto_scaling
+      @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end
 
     private
@@ -397,7 +420,7 @@ EOD
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
-      image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(@region)
+      image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
       if !bootstrap_options[:key_name]
         Chef::Log.debug('No key specified, generating a default one...')
@@ -413,14 +436,6 @@ EOD
 
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options
-    end
-
-    def ec2
-      @ec2 ||= AWS.ec2
-    end
-
-    def elb
-      @elb ||= AWS::ELB.new
     end
 
     def default_ssh_username
@@ -747,13 +762,11 @@ EOD
     def default_aws_keypair(action_handler, machine_spec)
       driver = self
       default_key_name = default_aws_keypair_name(machine_spec)
-      _region = region
       updated = @@chef_default_lock.synchronize do
         Provisioning.inline_resource(action_handler) do
           aws_key_pair default_key_name do
             driver driver
             allow_overwrite true
-            region_name _region
           end
         end
       end

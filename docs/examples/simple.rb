@@ -5,9 +5,8 @@
 # It will also create an SNS topic and SQS queue in us-west-1.
 
 require 'chef/provisioning/aws_driver'
-with_driver 'aws'
 
-with_data_center 'eu-west-1' do
+with_driver 'aws::eu-west-1' do
   aws_sqs_queue "mariopipes"
 
   machine 'bowser' do

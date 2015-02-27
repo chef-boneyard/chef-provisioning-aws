@@ -1,7 +1,6 @@
 require 'chef/provisioning/aws_driver'
-with_driver 'aws'
 
-with_data_center 'eu-west-1' do
+with_driver 'aws::eu-west-1' do
   aws_launch_config 'my-sweet-launch-config' do
     image 'ami-f0b11187'
     instance_type 't1.micro'

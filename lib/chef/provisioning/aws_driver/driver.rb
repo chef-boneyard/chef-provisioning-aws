@@ -210,7 +210,7 @@ module AWSDriver
     end
 
     # Image methods
-    def allocate_image(action_handler, image_spec, image_options, machine_spec)
+    def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
       if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
@@ -225,8 +225,7 @@ module AWSDriver
             'image_id' => image.id,
             'allocated_at' => Time.now.to_i
           }
-          image_spec.machine_options ||= {}
-          image_spec.machine_options.merge!({
+          machine_options.merge!({
             :bootstrap_options => {
                 :image_id => image.id
             }
@@ -235,7 +234,7 @@ module AWSDriver
       end
     end
 
-    def ready_image(action_handler, image_spec, image_options)
+    def ready_image(action_handler, image_spec, image_options, machine_options)
       actual_image = image_for(image_spec)
       if actual_image.nil? || !actual_image.exists?
         raise 'Cannot ready an image that does not exist'
@@ -249,7 +248,7 @@ module AWSDriver
       end
     end
 
-    def destroy_image(action_handler, image_spec, image_options)
+    def destroy_image(action_handler, image_spec, image_options, machine_options)
       actual_image = image_for(image_spec)
       snapshots = snapshots_for(image_spec)
       if actual_image.nil? || !actual_image.exists?
@@ -353,7 +352,7 @@ EOD
       if name.is_a?(MachineSpec)
         machine_spec = name
       else
-        machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
+        machine_spec = Provisioning.chef_spec_registry(chef_server).get(:machine, name)
       end
 
       machine_for(machine_spec, machine_spec.location)
@@ -420,6 +419,13 @@ EOD
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+
+      # Look up subnet (TODO: can we look up vpc name?  Will vpc name work?)
+      if bootstrap_options[:subnet] && bootstrap_options[:subnet] !~ /^subnet-[a-f0-9]{8}$/
+        subnet = machine_spec.spec_registry.get!(:aws_subnet, bootstrap_options[:subnet])
+        bootstrap_options[:subnet] = subnet.data['subnet_id']
+      end
+
       image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
       if !bootstrap_options[:key_name]

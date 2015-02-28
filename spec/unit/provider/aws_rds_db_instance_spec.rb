@@ -47,6 +47,22 @@ describe Chef::Provider::AwsRdsDbInstance do
         expect(new_resource).to receive(:db_instance_id) { 'mydbinstance' }
         provider.action_create
       end
+
+      it 'should not converge when db instance already exists' do
+        existing_instance = AWS::RDS::DBInstance.new('mydbinstance')
+        
+        allow_any_instance_of(AWS::RDS::DBInstanceCollection)
+          .to receive(:[])
+          .and_return(existing_instance)
+        
+        allow(existing_instance)
+          .to receive(:exists)
+          .and_return(true)
+
+        expect(new_resource).to_not receive(:save)
+        provider.action_create
+      end
+
     end
   end
 end

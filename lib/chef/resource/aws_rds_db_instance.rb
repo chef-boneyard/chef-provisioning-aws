@@ -16,6 +16,8 @@ class Chef::Resource::AwsRdsDbInstance < Chef::Resource::AwsResource
   attribute :allocated_storage
   attribute :db_subnet_group_name, :kind_of => String
 
+  stored_attribute :db_instance_id
+
   def initialize(*args)
     super
   end

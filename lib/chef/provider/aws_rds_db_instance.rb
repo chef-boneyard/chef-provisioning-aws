@@ -16,6 +16,8 @@ class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider
 
     converge_by "Creating new RDS database with engine #{new_resource.engine}" do
       dbInstance = rds.db_instances.create(new_resource.name, options)
+      new_resource.db_instance_id dbInstance.id
+      new_resource.save
     end
 
   end

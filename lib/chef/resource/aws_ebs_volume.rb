@@ -1,31 +1,25 @@
 require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
 
 class Chef::Resource::AwsEbsVolume < Chef::Resource::AwsResource
   self.resource_name = 'aws_ebs_volume'
-  self.databag_name = 'ebs_volumes'
 
   actions :create, :delete, :nothing
   default_action :create
 
-  stored_attribute :volume_id
-  stored_attribute :created_at
+  attribute :name,    kind_of: String, name_attribute: true
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :volume_name, :kind_of => String
+  attribute :availability_zone, kind_of: String
+  attribute :size,              kind_of: Integer
+  attribute :snapshot,          kind_of: String
 
-  attribute :size
-  attribute :mount_point
-  attribute :availability_zone
+  attribute :iops,              kind_of: Integer
+  attribute :volume_type,       kind_of: Symbol
+  attribute :encrypted,         kind_of: [ TrueClass, FalseClass ]
 
-
-  def initialize(*args)
-    super
+  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
+  def aws_object
+    get_aws_object(:volume, name)
   end
 
-  def after_created
-    super
-  end
-
-
+  Chef::Provisioning::ChefManagedEntryStore.type_names_for_backcompat[:aws_ebs_volume] = 'ebs_volumes'
 end

@@ -5,55 +5,42 @@ require 'date'
 class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
 
   action :create do
-    if existing_volume == nil
-      converge_by "Creating new EBS volume #{fqn} in #{new_driver.aws_config.region}" do
+    if !current_aws_object
+      converge_by "Creating new EBS volume #{new_resource.name} in #{region}" do
 
-        ebs = new_driver.ec2.volumes.create(
-            :availability_zone => new_resource.availability_zone,
-            :size => new_resource.size.to_i
-        )
-        ebs.tags['Name'] = fqn
+        options = {}
+        options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
+        options[:size] = new_resource.size if new_resource.size
+        options[:snapshot_id] = new_resource.snapshot if new_resource.snapshot
+        options[:iops] = new_resource.iops if new_resource.iops
+        options[:volume_type] = new_resource.volume_type if new_resource.volume_type
+        options[:encrypted] = new_resource.encrypted if !new_resource.encrypted.nil?
 
-        new_resource.created_at DateTime.now.to_s
-        new_resource.volume_id ebs.id
+        ebs = new_driver.ec2.volumes.create(managed_aws.lookup_options(options))
+        ebs.tags['Name'] = new_resource.name
 
+        save_entry(id: ebs.id)
       end
-    else
-      new_resource.volume_id existing_volume.id
     end
-
-    new_resource.save
   end
 
   action :delete do
-    if existing_volume
-      converge_by "Deleting EBS volume #{fqn} in #{new_driver.aws_config.region}" do
-        existing_volume.delete
+    if current_aws_object
+      converge_by "Deleting EBS volume #{new_resource.name} in #{region}" do
+        current_aws_object.delete
       end
     end
-
-    new_resource.delete
+    delete_spec
   end
 
-
-  def existing_volume
-    @existing_volume ||=  new_resource.volume_id == nil ? nil : begin
-      Chef::Log.debug("Loading volume #{new_resource.volume_id}")
-      volume = new_driver.ec2.volumes[new_resource.volume_id]
-      if [:deleted, :deleting, :error].include? volume.status
-        nil
-      else
-        Chef::Log.debug("Found EBS volume #{volume.inspect}")
+  def current_aws_object
+    @current_aws_object ||= begin
+      volume = super
+      if volume && ![:deleted, :deleting, :error].include?(volume.status)
         volume
+      else
+        nil
       end
-    rescue => e
-      Chef::Log.error("Error looking for EBS volume: #{e}")
-      nil
     end
   end
-
-  def id
-    new_resource.volume_name
-  end
-
 end

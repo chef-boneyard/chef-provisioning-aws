@@ -1,44 +1,35 @@
 require 'chef/provider/aws_provider'
 require 'date'
+require 'ipaddr'
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
 
   action :create do
-    if existing_sg == nil
-      converge_by "Creating new SG #{new_resource.name} in #{new_driver.aws_config.region}" do
-        opts = {
-            :description => new_resource.description,
-            :vpc => nil
-        }
-        # Use VPC ID if provided, otherwise lookup VPC by name
-        if new_resource.vpc_id
-          opts[:vpc] = new_resource.vpc_id
-        elsif new_resource.vpc_name
-          existing_vpc = new_driver.ec2.vpcs.with_tag('Name', new_resource.vpc_name).first
-          Chef::Log.debug("Existing VPC: #{existing_vpc.inspect}")
-          if existing_vpc
-            opts[:vpc] = existing_vpc
-          end
-        end
+    sg = current_aws_object
+    if !sg
+      converge_by "Creating new SG #{new_resource.name} in #{region}" do
+        options = { description: new_resource.description }
+        options[:vpc] = new_resource.vpc if new_resource.vpc
+        options = managed_aws.lookup_options(options)
+        Chef::Log.debug("VPC: #{options[:vpc]}")
 
-        sg = new_driver.ec2.security_groups.create(new_resource.name, opts)
-        new_resource.security_group_id sg.group_id
-        new_resource.save
+        sg = new_driver.ec2.security_groups.create(new_resource.name, options)
+        save_entry(id: sg.id)
       end
     end
 
     # Update rules
-    apply_rules(existing_sg)
+    apply_rules(sg)
   end
 
   action :delete do
-    if existing_sg
-      converge_by "Deleting SG #{new_resource.name} in #{new_driver.aws_config.region}" do
-        existing_sg.delete
+    if current_aws_object
+      converge_by "Deleting SG #{new_resource.name} in #{region}" do
+        current_aws_object.delete
       end
     end
 
-    new_resource.delete
+    delete_entry
   end
 
   # TODO check existing rules and compare / remove?
@@ -47,8 +38,9 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
     if new_resource.inbound_rules
       new_resource.inbound_rules.each do |rule|
         begin
-          converge_by "Updating SG #{new_resource.name} in #{new_driver.aws_config.region} to allow inbound #{rule[:protocol]}/#{rule[:ports]} from #{rule[:sources]}" do
-            security_group.authorize_ingress(rule[:protocol], rule[:ports], *rule[:sources])
+          converge_by "Updating SG #{new_resource.name} in #{region} to allow inbound #{rule[:protocol]}/#{rule[:ports]} from #{rule[:sources]}" do
+            sources = get_sources(rule[:sources])
+            security_group.authorize_ingress(rule[:protocol], rule[:ports], *sources)
           end
         rescue AWS::EC2::Errors::InvalidPermission::Duplicate
           Chef::Log.debug 'Duplicate rule, ignoring.'
@@ -60,8 +52,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
     if new_resource.outbound_rules
       new_resource.outbound_rules.each do |rule|
         begin
-          converge_by "Updating SG #{new_resource.name} in #{new_driver.aws_config.region} to allow outbound #{rule[:protocol]}/#{rule[:ports]} to #{rule[:destinations]}" do
-            security_group.authorize_egress( *rule[:destinations], :protocol => rule[:protocol], :ports => rule[:ports])
+          converge_by "Updating SG #{new_resource.name} in #{region} to allow outbound #{rule[:protocol]}/#{rule[:ports]} to #{rule[:destinations]}" do
+            security_group.authorize_egress( *get_sources(rule[:destinations]), :protocol => rule[:protocol], :ports => rule[:ports])
           end
         rescue AWS::EC2::Errors::InvalidPermission::Duplicate
           Chef::Log.debug 'Duplicate rule, ignoring.'
@@ -70,20 +62,20 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
     end
   end
 
-  def existing_sg
-    @existing_sg ||= begin
-      if id != nil
-        new_driver.ec2.security_groups[id]
+  # TODO need support for load balancers!
+  def get_sources(sources)
+    sources.map do |s|
+      if s.is_a?(String)
+        begin
+          IPAddr.new(s)
+          s
+        rescue
+          { group_id: managed_aws.get_aws_object(:security_group, s, required: true).id }
+        end
       else
-        nil
+        s
       end
-    rescue
-      nil
     end
-  end
-
-  def id
-    new_resource.security_group_id
   end
 
 end

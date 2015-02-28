@@ -4,6 +4,8 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
 
   action :create do
 
+    fail "Can't create a subnet group without a description" if new_resource.description.nil?
+
     if existing_db_subnet_group == nil
 
       subnet_ids = ec2.subnets.with_tag('Name', new_resource.subnets).map { |s| s.id }
@@ -16,6 +18,7 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
  
       converge_by "Creating new RDS subnet group" do
         dbInstance = rds.client.create_db_subnet_group(options)
+        new_resource.save
       end
 
     end
@@ -23,7 +26,8 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
 
   def existing_db_subnet_group
     @existing_db_subnet_group ||= begin
-      rds.client.describe_db_subnet_groups(db_subnet_group_name: new_resource.name).first
+      response = rds.client.describe_db_subnet_groups(db_subnet_group_name: new_resource.name)
+      response[:data][:db_subnet_groups].first
     rescue
       nil
     end

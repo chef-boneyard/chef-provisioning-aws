@@ -170,23 +170,25 @@ module AWSDriver
         end
       end
 
-      # Update instance list
+      # Update instance list, but only if there are machines specified
       actual_instance_ids = Set.new(actual_elb.instances.map { |i| i.instance_id })
 
-      instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
-      instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
-
-      if instances_to_add.size > 0
-        perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
-          instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
-          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
-          actual_elb.instances.add(instance_ids_to_add)
+      if machine_specs
+        instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
+        instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
+  
+        if instances_to_add.size > 0
+          perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
+            instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
+            actual_elb.instances.add(instance_ids_to_add)
+          end
         end
-      end
-
-      if instance_ids_to_remove.size > 0
-        perform_action.call("  remove instances #{instance_ids_to_remove}") do
-          actual_elb.instances.remove(instance_ids_to_remove)
+  
+        if instance_ids_to_remove.size > 0
+          perform_action.call("  remove instances #{instance_ids_to_remove}") do
+            actual_elb.instances.remove(instance_ids_to_remove)
+          end
         end
       end
     end

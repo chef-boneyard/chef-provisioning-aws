@@ -5,7 +5,9 @@ AWS.stub!
 describe Chef::Provider::AwsSubnet do
   extend ChefZeroRspecHelper
   let(:new_resource) {
-    Chef::Resource::AwsSubnet.new('my_subnet', run_context)
+    resource = Chef::Resource::AwsSubnet.new('my_subnet', run_context)
+    resource.driver 'aws'
+    resource
   }
   let(:my_node) {
     node = Chef::Node.new

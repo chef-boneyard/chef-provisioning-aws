@@ -5,7 +5,7 @@ class Chef::Resource::AwsRdsDbSubnetGroup < Chef::Resource::AwsResource
   self.resource_name = 'aws_rds_db_subnet_group'
   self.databag_name = 'aws_rds_db_subnet_group'
 
-  actions :create, :nothing
+  actions :create, :delete, :nothing
   default_action :create
 
   attribute :name, :kind_of => String, :name_attribute => true

@@ -69,5 +69,12 @@ describe Chef::Provider::AwsRdsDbSubnetGroup do
         provider.action_create
       end
     end
+
+    describe '#action_delete' do
+      it 'should delete the db subnet group' do
+        expect(new_resource).to receive(:delete)
+        provider.action_delete
+      end
+    end
   end
 end

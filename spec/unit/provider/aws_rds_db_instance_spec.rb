@@ -6,7 +6,9 @@ describe Chef::Provider::AwsRdsDbInstance do
   extend ChefZeroRspecHelper
 
   let(:new_resource) { 
-    Chef::Resource::AwsRdsDbInstance.new('new_db_instance', run_context)
+    resource = Chef::Resource::AwsRdsDbInstance.new('new_db_instance', run_context)
+    resource.driver 'aws'
+    resource
   }
 
   let(:my_node) {

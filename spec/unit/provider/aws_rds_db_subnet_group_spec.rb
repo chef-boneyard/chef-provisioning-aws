@@ -6,7 +6,9 @@ describe Chef::Provider::AwsRdsDbSubnetGroup do
   extend ChefZeroRspecHelper
 
   let(:new_resource) { 
-    Chef::Resource::AwsRdsDbSubnetGroup.new('new_subnet_group', run_context)
+    resource = Chef::Resource::AwsRdsDbSubnetGroup.new('new_subnet_group', run_context)
+    resource.driver 'aws'
+    resource
   }
 
   let(:my_node) {
@@ -41,9 +43,17 @@ describe Chef::Provider::AwsRdsDbSubnetGroup do
         allow_any_instance_of(AWS::RDS::Client::V20140901)
           .to receive(:describe_db_subnet_groups)
           .and_return(:data => { :db_subnet_groups => []})
+        
+        allow_any_instance_of(AWS::EC2::SubnetCollection)
+          .to receive(:with_tag)
+          .and_return([AWS::EC2::Subnet.new('subnet-12345678')])
+
+        allow_any_instance_of(AWS::RDS::Client::V20140901)
+          .to receive(:create_db_subnet_group)
+          .and_return({})
 
         new_resource.description('subnet_group_description')
-        new_resource.subnets(['subnet1', 'subnet2'])
+        new_resource.subnets(['subnet-12345678'])
         expect(new_resource).to receive(:save)
         provider.action_create
       end
@@ -54,7 +64,7 @@ describe Chef::Provider::AwsRdsDbSubnetGroup do
           .and_return(:data => { :db_subnet_groups => [{}]})
 
         new_resource.description('subnet_group_description')
-        new_resource.subnets(['subnet1', 'subnet2'])
+
         expect(new_resource).to_not receive(:save)
         provider.action_create
       end

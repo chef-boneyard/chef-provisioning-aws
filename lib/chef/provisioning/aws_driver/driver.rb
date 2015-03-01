@@ -507,6 +507,9 @@ EOD
       @sqs ||= AWS::SQS.new(config: aws_config)
     end
 
+    def rds
+      @rds ||= AWS::RDS.new(config: aws_config)
+    end
     def auto_scaling
       @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end

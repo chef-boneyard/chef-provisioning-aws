@@ -16,7 +16,7 @@ class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider
       }
 
       converge_by "Creating new RDS database with engine #{new_resource.engine}" do
-        dbInstance = rds.db_instances.create(new_resource.name, options)
+        dbInstance = new_driver.rds.db_instances.create(new_resource.name, options)
         new_resource.db_instance_id dbInstance.id
         new_resource.save
       end
@@ -25,7 +25,7 @@ class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider
 
   def existing_db_instance 
     @existing_db_instance ||= begin
-      db_instance = rds.db_instances[new_resource.name]
+      db_instance = new_driver.rds.db_instances[new_resource.name]
 
       if db_instance.exists
         db_instance

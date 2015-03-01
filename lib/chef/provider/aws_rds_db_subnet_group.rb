@@ -1,3 +1,4 @@
+require 'chef/resource/aws_resource'
 require 'chef/provider/aws_provider'
 
 class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
@@ -8,7 +9,7 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
 
     if existing_db_subnet_group == nil
 
-      subnet_ids = ec2.subnets.with_tag('Name', new_resource.subnets).map { |s| s.id }
+      subnet_ids = new_driver.ec2.subnets.with_tag('Name', new_resource.subnets).map { |s| s.id }
 
       options = {
         :db_subnet_group_name => new_resource.name,
@@ -17,7 +18,7 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
       }
  
       converge_by "Creating new RDS subnet group" do
-        dbInstance = rds.client.create_db_subnet_group(options)
+        dbInstance = new_driver.rds.client.create_db_subnet_group(options)
         new_resource.save
       end
 
@@ -26,7 +27,7 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
 
   def existing_db_subnet_group
     @existing_db_subnet_group ||= begin
-      response = rds.client.describe_db_subnet_groups(db_subnet_group_name: new_resource.name)
+      response = new_driver.rds.client.describe_db_subnet_groups(db_subnet_group_name: new_resource.name)
       response[:data][:db_subnet_groups].first
     rescue
       nil

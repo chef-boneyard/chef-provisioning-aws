@@ -187,7 +187,7 @@ module AWSDriver
   
         if instance_ids_to_remove.size > 0
           perform_action.call("  remove instances #{instance_ids_to_remove}") do
-            actual_elb.instances.remove(instance_ids_to_remove)
+            actual_elb.instances.remove(*instance_ids_to_remove.to_a())
           end
         end
       end

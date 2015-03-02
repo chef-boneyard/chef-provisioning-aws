@@ -5,9 +5,7 @@ AWS.stub!
 describe Chef::Provider::AwsSubnet do
   extend ChefZeroRspecHelper
   let(:new_resource) {
-    resource = Chef::Resource::AwsSubnet.new('my_subnet', run_context)
-    resource.driver 'aws'
-    resource
+    Chef::Resource::AwsSubnet.new('my_subnet', run_context)
   }
   let(:my_node) {
     node = Chef::Node.new
@@ -18,7 +16,9 @@ describe Chef::Provider::AwsSubnet do
   let(:events) { Chef::EventDispatch::Dispatcher.new }
   let(:run_context) {
     cookbook_collection = {}
-    Chef::RunContext.new(my_node, cookbook_collection ,events)
+    run_context = Chef::RunContext.new(my_node, cookbook_collection, events)
+    run_context.chef_provisioning.with_driver 'aws'
+    run_context
   }
 
   subject(:provider) {

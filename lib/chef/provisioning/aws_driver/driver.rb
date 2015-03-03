@@ -154,74 +154,73 @@ module AWSDriver
           # We do this check here because there is no atomic call we can make to specify both
           # subnets and AZs at the same time
           raise "You cannot specify both `availability_zones` and `subnets`"
-        else
-          # Users can switch from availability zones to subnets or vice versa.  To ensure we do not
-          # unassign all (which causes an AWS error) we first add all available ones, then remove
-          # an unecessary ones
-          actual_zones_subnets = {}
-          actual_elb.subnets.each do |subnet|
-            actual_zones_subnets[subnet.id] = subnet.availability_zone.name
-          end
+        end
+        # Users can switch from availability zones to subnets or vice versa.  To ensure we do not
+        # unassign all (which causes an AWS error) we first add all available ones, then remove
+        # an unecessary ones
+        actual_zones_subnets = {}
+        actual_elb.subnets.each do |subnet|
+          actual_zones_subnets[subnet.id] = subnet.availability_zone.name
+        end
 
-          # Only 1 of subnet or AZ will be populated b/c of our check earlier
-          desired_subnets_zones = {}
-          availability_zones.each do |zone|
-            # If the user specifies availability zone, we find the default subnet for that
-            # AZ because this duplicates the create logic
-            zone = zone.downcase
-            filters = [
-              {:name => 'availabilityZone', :values => [zone]},
-              {:name => 'defaultForAz', :values => ['true']}
-            ]
-            default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
-            if default_subnet.size != 1
-              raise "Could not find default subnet in availability zone #{zone}"
-            end
-            default_subnet = default_subnet[0]
-            desired_subnets_zones[default_subnet[:subnet_id]] = zone
+        # Only 1 of subnet or AZ will be populated b/c of our check earlier
+        desired_subnets_zones = {}
+        availability_zones.each do |zone|
+          # If the user specifies availability zone, we find the default subnet for that
+          # AZ because this duplicates the create logic
+          zone = zone.downcase
+          filters = [
+            {:name => 'availabilityZone', :values => [zone]},
+            {:name => 'defaultForAz', :values => ['true']}
+          ]
+          default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
+          if default_subnet.size != 1
+            raise "Could not find default subnet in availability zone #{zone}"
           end
-          unless subnets.empty?
-            subnet_query = ec2.client.describe_subnets(:subnet_ids => subnets)[:subnet_set]
-            # AWS raises an error on an unknown subnet, but not an unknown AZ
-            subnet_query.each do |subnet|
-              zone = subnet[:availability_zone].downcase
-              desired_subnets_zones[subnet[:subnet_id]] = zone
-            end
+          default_subnet = default_subnet[0]
+          desired_subnets_zones[default_subnet[:subnet_id]] = zone
+        end
+        unless subnets.empty?
+          subnet_query = ec2.client.describe_subnets(:subnet_ids => subnets)[:subnet_set]
+          # AWS raises an error on an unknown subnet, but not an unknown AZ
+          subnet_query.each do |subnet|
+            zone = subnet[:availability_zone].downcase
+            desired_subnets_zones[subnet[:subnet_id]] = zone
           end
+        end
 
-          # We only bother attaching subnets, because doing this automatically attaches the AZ
-          attach_subnets = (Set.new(desired_subnets_zones.keys) - Set.new(actual_zones_subnets.keys)).to_a
-          unless attach_subnets.empty?
-            action = "  attach subnets #{attach_subnets.join(', ')}"
-            enable_zones = (desired_subnets_zones.map {|s,z| z if attach_subnets.include?(s)}).compact
-            action += " (availability zones #{enable_zones.join(', ')})"
-            perform_action.call(action) do
-              begin
-                elb.client.attach_load_balancer_to_subnets(
-                  load_balancer_name: actual_elb.name,
-                  subnets: attach_subnets
-                )
-              rescue AWS::ELB::Errors::InvalidConfigurationRequest
-                raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
-                    "Amazon does not have an atomic operation which allows this.  You must create a new " +
-                    "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
-                    "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
-                    "existing ELB named #{actual_elb.name}"
-              end
-            end
-          end
-
-          detach_subnets = (Set.new(actual_zones_subnets.keys) - Set.new(desired_subnets_zones.keys)).to_a
-          unless detach_subnets.empty?
-            action = "  detach subnets #{detach_subnets.join(', ')}"
-            disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact
-            action += " (availability zones #{disable_zones.join(', ')})"
-            perform_action.call(action) do
-              elb.client.detach_load_balancer_from_subnets(
+        # We only bother attaching subnets, because doing this automatically attaches the AZ
+        attach_subnets = (Set.new(desired_subnets_zones.keys) - Set.new(actual_zones_subnets.keys)).to_a
+        unless attach_subnets.empty?
+          action = "  attach subnets #{attach_subnets.join(', ')}"
+          enable_zones = (desired_subnets_zones.map {|s,z| z if attach_subnets.include?(s)}).compact
+          action += " (availability zones #{enable_zones.join(', ')})"
+          perform_action.call(action) do
+            begin
+              elb.client.attach_load_balancer_to_subnets(
                 load_balancer_name: actual_elb.name,
-                subnets: detach_subnets
+                subnets: attach_subnets
               )
+            rescue AWS::ELB::Errors::InvalidConfigurationRequest
+              raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
+                  "Amazon does not have an atomic operation which allows this.  You must create a new " +
+                  "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
+                  "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
+                  "existing ELB named #{actual_elb.name}"
             end
+          end
+        end
+
+        detach_subnets = (Set.new(actual_zones_subnets.keys) - Set.new(desired_subnets_zones.keys)).to_a
+        unless detach_subnets.empty?
+          action = "  detach subnets #{detach_subnets.join(', ')}"
+          disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact
+          action += " (availability zones #{disable_zones.join(', ')})"
+          perform_action.call(action) do
+            elb.client.detach_load_balancer_from_subnets(
+              load_balancer_name: actual_elb.name,
+              subnets: detach_subnets
+            )
           end
         end
 

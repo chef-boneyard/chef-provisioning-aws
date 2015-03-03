@@ -165,7 +165,7 @@ module AWSDriver
 
           # Only 1 of subnet or AZ will be populated b/c of our check earlier
           desired_subnets_zones = {}
-          (availability_zones || []).each do |zone|
+          availability_zones.each do |zone|
             # If the user specifies availability zone, we find the default subnet for that
             # AZ because this duplicates the create logic
             zone = zone.downcase

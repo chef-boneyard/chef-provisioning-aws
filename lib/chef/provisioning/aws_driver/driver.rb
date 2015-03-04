@@ -131,8 +131,25 @@ module AWSDriver
 
         # Update security groups
         if security_group_ids.empty?
-            Chef::Log.debug("No Security Groups specified. Load_balancer[#{actual_elb.name}] cannot have " +
-            "empty Security Groups, so assuming it only currently has the default Security Group.  No action taken.")
+          Chef::Log.debug("No Security Groups specified but ELB cannot have 0 SGs. Reverting to default SG.")
+          filters = [{:name => 'isDefault', :values => ['true']}]
+          default_vpc = ec2.client.describe_vpcs(:filters => filters)[:vpc_set][0][:vpc_id]
+          # Apparently AWS creates multiple default security groups
+          # http://stackoverflow.com/questions/27829620/what-are-the-default-security-groups-created-when-i-set-up-aws-eb-for-the-first
+          filters = [
+            {:name => 'vpc-id', :values => [default_vpc]},
+            {:name => 'group-name', :values => ['default_elb*']}
+          ]
+          sgs = ec2.client.describe_security_groups(:filters => filters)
+          default_sg = sgs[:security_group_info][0][:group_id]
+          if [default_sg] != actual_elb.security_group_ids
+            perform_action.call("  applying default security group #{default_sg}") do
+              elb.client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.name,
+                security_groups: [default_sg]
+              )
+            end
+          end
         else
           current = Set.new(actual_elb.security_group_ids)
           desired = Set.new(security_group_ids)

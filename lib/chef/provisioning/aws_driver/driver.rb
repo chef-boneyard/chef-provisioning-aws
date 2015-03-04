@@ -171,7 +171,7 @@ module AWSDriver
       end
 
       # Update instance list, but only if there are machines specified
-      actual_instance_ids = Set.new(actual_elb.instances.map { |i| i.instance_id })
+      actual_instance_ids = actual_elb.instances.map { |i| i.instance_id }
 
       if machine_specs
         instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
@@ -187,7 +187,7 @@ module AWSDriver
   
         if instance_ids_to_remove.size > 0
           perform_action.call("  remove instances #{instance_ids_to_remove}") do
-            actual_elb.instances.remove(*instance_ids_to_remove.to_a())
+            actual_elb.instances.remove(instance_ids_to_remove)
           end
         end
       end

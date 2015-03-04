@@ -17,7 +17,6 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
-require 'set'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -151,8 +150,8 @@ module AWSDriver
             end
           end
         else
-          current = Set.new(actual_elb.security_group_ids)
-          desired = Set.new(security_group_ids)
+          current = actual_elb.security_group_ids
+          desired = security_group_ids
           if current != desired
             perform_action.call("  updating security groups to #{desired.to_a}") do
               elb.client.apply_security_groups_to_load_balancer(
@@ -207,7 +206,7 @@ module AWSDriver
         end
 
         # We only bother attaching subnets, because doing this automatically attaches the AZ
-        attach_subnets = (Set.new(desired_subnets_zones.keys) - Set.new(actual_zones_subnets.keys)).to_a
+        attach_subnets = desired_subnets_zones.keys - actual_zones_subnets.keys
         unless attach_subnets.empty?
           action = "  attach subnets #{attach_subnets.join(', ')}"
           enable_zones = (desired_subnets_zones.map {|s,z| z if attach_subnets.include?(s)}).compact
@@ -228,7 +227,7 @@ module AWSDriver
           end
         end
 
-        detach_subnets = (Set.new(actual_zones_subnets.keys) - Set.new(desired_subnets_zones.keys)).to_a
+        detach_subnets = actual_zones_subnets.keys - desired_subnets_zones.keys
         unless detach_subnets.empty?
           action = "  detach subnets #{detach_subnets.join(', ')}"
           disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact

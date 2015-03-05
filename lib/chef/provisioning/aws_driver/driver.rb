@@ -303,7 +303,7 @@ module AWSDriver
       # Something went wrong before we could moved instances from the old ELB to the new one
       # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
       unless old_elb.nil?
-        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.id} and #{actual_elb.id}. " +
+        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.name} and #{actual_elb.name}. " +
         "Determine which is correct and manually clean up the other.")
       end
     end

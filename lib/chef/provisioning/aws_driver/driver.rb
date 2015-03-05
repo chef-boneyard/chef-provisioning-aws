@@ -50,7 +50,8 @@ module AWSDriver
       @aws_config = AWS::Core::Configuration.new(
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
-        region: region || credentials[:region]
+        region: region || credentials[:region],
+        stub_requests: AWS.config.stub_requests
       )
     end
 

@@ -50,7 +50,7 @@ module AWSDriver
       @aws_config = AWS::Core::Configuration.new(
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
-        region: region
+        region: region || credentials[:region]
       )
     end
 
@@ -61,30 +61,44 @@ module AWSDriver
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options ||= {}
-      if lb_options[:security_group_id]
-        security_group = ec2.security_groups[:security_group_id]
-      elsif lb_options[:security_group_name]
-        security_group = ec2.security_groups.filter('group-name', lb_options[:security_group_name])
+      if lb_options[:security_group_ids]
+        security_groups = ec2.security_groups.filter('group-id', lb_options[:security_group_ids]).to_a
+      elsif lb_options[:security_group_names]
+        security_groups = ec2.security_groups.filter('group-name', lb_options[:security_group_names]).to_a
+      else
+        security_groups = []
       end
+      security_group_ids = security_groups.map { |sg| sg.id }
 
-      availability_zones = lb_options[:availability_zones]
+      availability_zones = lb_options[:availability_zones] || []
+      subnets = lb_options[:subnets] || []
       listeners = lb_options[:listeners]
+      scheme = lb_options[:scheme]
 
       validate_listeners(listeners)
+      if !availability_zones.empty? && !subnets.empty?
+        raise "You cannot specify both `availability_zones` and `subnets`"
+      end
 
       lb_optionals = {}
-      lb_optionals[:security_groups] = [security_group] if security_group
-      lb_optionals[:availability_zones] = availability_zones if availability_zones
+      lb_optionals[:security_groups] = security_group_ids unless security_group_ids.empty?
+      lb_optionals[:availability_zones] = availability_zones unless availability_zones.empty?
+      lb_optionals[:subnets] = subnets unless subnets.empty?
       lb_optionals[:listeners] = listeners if listeners
+      lb_optionals[:scheme] = scheme if scheme
 
+      old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
       if !actual_elb.exists?
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
 
+        security_group_names = security_groups.map { |sg| sg.name }.join(",")
+
         updates = [ "Create load balancer #{lb_spec.name} in #{aws_config.region}" ]
-        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
+        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones.size > 0
+        updates << "  attach subnets #{subnets.join(', ')}" if subnets.size > 0
         updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
-        updates << "  with security group #{security_group.name}" if security_group
+        updates << "  with security groups #{security_group_names}" if security_group_names
 
         action_handler.perform_action updates do
           actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
@@ -102,22 +116,110 @@ module AWSDriver
           action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
         end
 
-        # Update availability zones
-        enable_zones = (availability_zones || []).dup
-        disable_zones = []
-        actual_elb.availability_zones.each do |availability_zone|
-          if !enable_zones.delete(availability_zone.name)
-            disable_zones << availability_zone.name
+        # TODO: refactor this whole giant method into many smaller method calls
+        # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
+        # ELB and create a new one
+        if scheme && scheme.downcase != actual_elb.scheme
+          desc = ["  updating scheme to #{scheme}"]
+          desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
+          perform_action.call(desc) do
+            old_elb = actual_elb
+            actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
           end
         end
-        if enable_zones.size > 0
-          perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
-            actual_elb.availability_zones.enable(*enable_zones)
+
+        # Update security groups
+        if security_group_ids.empty?
+            Chef::Log.debug("No Security Groups specified. Load_balancer[#{actual_elb.name}] cannot have " +
+            "empty Security Groups, so assuming it only currently has the default Security Group.  No action taken.")
+        else
+          current = actual_elb.security_group_ids
+          desired = security_group_ids
+          if current != desired
+            perform_action.call("  updating security groups to #{desired.to_a}") do
+              elb.client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.name,
+                security_groups: desired.to_a
+              )
+            end
           end
         end
-        if disable_zones.size > 0
-          perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
-            actual_elb.availability_zones.disable(*disable_zones)
+
+        # A subnet always belongs to an availability zone.  When specifying a ELB spec, you can either
+        # specify subnets OR AZs but not both.  You cannot specify multiple subnets in the same AZ.
+        # You must specify at least 1 subnet or AZ.  On an update you cannot remove all subnets
+        # or AZs - it must belong to one.
+        if !availability_zones.empty? && !subnets.empty?
+          # We do this check here because there is no atomic call we can make to specify both
+          # subnets and AZs at the same time
+          raise "You cannot specify both `availability_zones` and `subnets`"
+        end
+        # Users can switch from availability zones to subnets or vice versa.  To ensure we do not
+        # unassign all (which causes an AWS error) we first add all available ones, then remove
+        # an unecessary ones
+        actual_zones_subnets = {}
+        actual_elb.subnets.each do |subnet|
+          actual_zones_subnets[subnet.id] = subnet.availability_zone.name
+        end
+
+        # Only 1 of subnet or AZ will be populated b/c of our check earlier
+        desired_subnets_zones = {}
+        availability_zones.each do |zone|
+          # If the user specifies availability zone, we find the default subnet for that
+          # AZ because this duplicates the create logic
+          zone = zone.downcase
+          filters = [
+            {:name => 'availabilityZone', :values => [zone]},
+            {:name => 'defaultForAz', :values => ['true']}
+          ]
+          default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
+          if default_subnet.size != 1
+            raise "Could not find default subnet in availability zone #{zone}"
+          end
+          default_subnet = default_subnet[0]
+          desired_subnets_zones[default_subnet[:subnet_id]] = zone
+        end
+        unless subnets.empty?
+          subnet_query = ec2.client.describe_subnets(:subnet_ids => subnets)[:subnet_set]
+          # AWS raises an error on an unknown subnet, but not an unknown AZ
+          subnet_query.each do |subnet|
+            zone = subnet[:availability_zone].downcase
+            desired_subnets_zones[subnet[:subnet_id]] = zone
+          end
+        end
+
+        # We only bother attaching subnets, because doing this automatically attaches the AZ
+        attach_subnets = desired_subnets_zones.keys - actual_zones_subnets.keys
+        unless attach_subnets.empty?
+          action = "  attach subnets #{attach_subnets.join(', ')}"
+          enable_zones = (desired_subnets_zones.map {|s,z| z if attach_subnets.include?(s)}).compact
+          action += " (availability zones #{enable_zones.join(', ')})"
+          perform_action.call(action) do
+            begin
+              elb.client.attach_load_balancer_to_subnets(
+                load_balancer_name: actual_elb.name,
+                subnets: attach_subnets
+              )
+            rescue AWS::ELB::Errors::InvalidConfigurationRequest
+              raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
+                  "Amazon does not have an atomic operation which allows this.  You must create a new " +
+                  "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
+                  "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
+                  "existing ELB named #{actual_elb.name}"
+            end
+          end
+        end
+
+        detach_subnets = actual_zones_subnets.keys - desired_subnets_zones.keys
+        unless detach_subnets.empty?
+          action = "  detach subnets #{detach_subnets.join(', ')}"
+          disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact
+          action += " (availability zones #{disable_zones.join(', ')})"
+          perform_action.call(action) do
+            elb.client.detach_load_balancer_from_subnets(
+              load_balancer_name: actual_elb.name,
+              subnets: detach_subnets
+            )
           end
         end
 
@@ -170,24 +272,39 @@ module AWSDriver
         end
       end
 
-      # Update instance list
-      actual_instance_ids = Set.new(actual_elb.instances.map { |i| i.instance_id })
+      # Update instance list, but only if there are machines specified
+      actual_instance_ids = actual_elb.instances.map { |i| i.instance_id }
 
-      instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
-      instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
-
-      if instances_to_add.size > 0
-        perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
-          instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
-          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
-          actual_elb.instances.add(instance_ids_to_add)
+      if machine_specs
+        instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
+        instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
+  
+        if instances_to_add.size > 0
+          perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
+            instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
+            actual_elb.instances.add(instance_ids_to_add)
+          end
+        end
+  
+        if instance_ids_to_remove.size > 0
+          perform_action.call("  remove instances #{instance_ids_to_remove}") do
+            actual_elb.instances.remove(instance_ids_to_remove)
+          end
         end
       end
 
-      if instance_ids_to_remove.size > 0
-        perform_action.call("  remove instances #{instance_ids_to_remove}") do
-          actual_elb.instances.remove(instance_ids_to_remove)
-        end
+      # We have successfully switched all our instances to the (possibly) new LB
+      # so it is safe to delete the old one.
+      unless old_elb.nil?
+        old_elb.delete
+      end
+    ensure
+      # Something went wrong before we could moved instances from the old ELB to the new one
+      # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
+      unless old_elb.nil?
+        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.name} and #{actual_elb.name}. " +
+        "Determine which is correct and manually clean up the other.")
       end
     end
 

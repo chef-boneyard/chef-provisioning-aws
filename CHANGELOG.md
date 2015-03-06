@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 (3/4/2015)
+
+- Add `driver` and `with_driver` support to AWS resources, remove `region` as a resource attribute and remove `with_data_center` (@jkeiser)
+- `load_balancer` can now be created without any associated machines (@christinedraper)
+- Set region from credentials if not specified in driver url (@christinedraper)
+- Added support for scheme and subnet attributes in the `load_balancer` resource (@erikvanbrakel & @tyler-ball)
+- Renamed `load_balancer_options` security_group_id to security_group_ids and security_group_name to security_group_names.  These now accept an array of Strings. (@erikvanbrakel & @tyler-ball)
+
+
 ## 0.3 (2/25/2015)
 
 - WinRM support! (@erikvanbrakel)

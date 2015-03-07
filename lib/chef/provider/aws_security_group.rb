@@ -5,7 +5,7 @@ require 'ipaddr'
 class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
 
   action :create do
-    sg = current_aws_object
+    sg = aws_object
     if !sg
       converge_by "Creating new SG #{new_resource.name} in #{region}" do
         options = { description: new_resource.description }
@@ -13,8 +13,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
         options = managed_aws.lookup_options(options)
         Chef::Log.debug("VPC: #{options[:vpc]}")
 
-        sg = new_driver.ec2.security_groups.create(new_resource.name, options)
-        save_entry(id: sg.id)
+        sg = aws_driver.ec2.security_groups.create(new_resource.name, options)
+        save_managed_entry(id: sg.id)
       end
     end
 
@@ -23,13 +23,13 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provider::AwsProvider
   end
 
   action :delete do
-    if current_aws_object
+    if aws_object
       converge_by "Deleting SG #{new_resource.name} in #{region}" do
-        current_aws_object.delete
+        aws_object.delete
       end
     end
 
-    delete_entry
+    delete_managed_entry
   end
 
   # TODO check existing rules and compare / remove?

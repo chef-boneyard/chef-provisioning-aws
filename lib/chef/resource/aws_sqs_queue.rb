@@ -9,7 +9,6 @@ class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
   attribute :name,    kind_of: String, name_attribute: true
   attribute :options, kind_of: Hash
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
   def aws_object
     get_aws_object(:sqs_queue, name)
   end

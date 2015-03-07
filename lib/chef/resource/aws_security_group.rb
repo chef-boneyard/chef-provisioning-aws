@@ -16,4 +16,11 @@ class Chef::Resource::AwsSecurityGroup < Chef::Resource::AwsResource
   def aws_object
     get_aws_object(:security_group, name)
   end
+
+  # Include this if your resource saves data about the AWS object in Chef (only
+  # if you need to look up IDs).
+  def managed_entry_id
+    [ self.class.resource_name.to_sym, name ]
+  end
+
 end

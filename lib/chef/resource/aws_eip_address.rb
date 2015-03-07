@@ -17,5 +17,11 @@ class Chef::Resource::AwsEipAddress < Chef::Resource::AwsResource
     get_aws_object(:eip_address, name)
   end
 
+  # Include this if your resource saves data about the AWS object in Chef (only
+  # if you need to look up IDs).
+  def managed_entry_id
+    [ self.class.resource_name.to_sym, name ]
+  end
+
   Chef::Provisioning::ChefManagedEntryStore.type_names_for_backcompat[:aws_eip_address] = 'eip_addresses'
 end

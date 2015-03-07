@@ -10,8 +10,13 @@ class Chef::Resource::AwsVpc < Chef::Resource::AwsResource
   attribute :cidr_block,       kind_of: String
   attribute :instance_tenancy, equal_to: [ :default, :dedicated ], default: :default
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
   def aws_object
     get_aws_object(:vpc, name)
+  end
+
+  # Include this if your resource saves data about the AWS object in Chef (only
+  # if you need to look up IDs).
+  def managed_entry_id
+    [ self.class.resource_name.to_sym, name ]
   end
 end

@@ -18,12 +18,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
   action :delete do
     if current_resource_exists?
-      new_driver.ec2.key_pairs[new_resource.name].delete
+      aws_driver.ec2.key_pairs[new_resource.name].delete
     end
   end
 
   def key_description
-    "#{new_resource.name} on #{new_driver.driver_url}"
+    "#{new_resource.name} on #{aws_driver.driver_url}"
   end
 
   @@use_pkcs8 = nil # For Ruby 1.9 and below, PKCS can be run
@@ -79,8 +79,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            new_driver.ec2.key_pairs[new_resource.name].delete
-            new_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            aws_driver.ec2.key_pairs[new_resource.name].delete
+            aws_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -92,12 +92,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        new_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        aws_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
 
-  def new_driver
+  def aws_driver
     run_context.chef_provisioning.driver_for(new_resource.driver)
   end
 
@@ -156,9 +156,9 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
     private_key_path = new_resource.private_key_path || new_resource.name
     if private_key_path.is_a?(Symbol)
       private_key_path
-    elsif Pathname.new(private_key_path).relative? && new_driver.config[:private_key_write_path]
+    elsif Pathname.new(private_key_path).relative? && aws_driver.config[:private_key_write_path]
       @should_create_directory = true
-      ::File.join(new_driver.config[:private_key_write_path], private_key_path)
+      ::File.join(aws_driver.config[:private_key_write_path], private_key_path)
     else
       private_key_path
     end

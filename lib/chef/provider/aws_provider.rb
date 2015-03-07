@@ -4,7 +4,6 @@ require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
 require 'chef/provisioning/aws_driver/managed_aws'
 
-
 class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
   use_inline_resources
 
@@ -17,51 +16,47 @@ class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
     true
   end
 
-  def entry_id
-    new_resource.name
+  def managed_entries
+    @managed_entries ||= new_resource.managed_entries
   end
 
-  def new_driver
-    run_context.chef_provisioning.driver_for(new_resource.driver)
+  def managed_entry
+    # If we don't find the managed entry the first time, don't keep looking for it.
+    @managed_entry = new_resource.managed_entry if !defined?(@managed_entry)
+    @managed_entry
   end
 
-  def current_driver
-    run_context.chef_provisioning.driver_for(entry.driver_url)
+  def save_managed_entry(reference)
+    type, id = new_resource.managed_entry_id
+    @managed_entry = managed_entries.new_entry(type, id)
+    managed_entry.reference = reference
+    managed_entry.driver_url = aws_driver.driver_url
+    managed_entry.save(action_handler)
+  end
+
+  def delete_managed_entry
+    type, id = new_resource.managed_entry_id
+    managed_entries.delete(type, id, action_handler)
+    @managed_entry = nil
+  end
+
+  def aws_driver
+    @aws_driver ||= begin
+      entry = managed_entry
+      run_context.chef_provisioning.driver_for(entry ? entry.driver_url : driver)
+    end
   end
 
   def managed_aws
     @managed_aws ||= Chef::Provisioning::AWSDriver::ManagedAWS.new(managed_entries, aws_driver)
   end
 
-  def managed_entries
-    new_resource.managed_entries
-  end
-
-  def entry
-    @entry ||= managed_entries.get(new_resource.class.resource_name, entry_id)
-  end
-
-  def save_entry(reference)
-    entry = managed_entries.new_entry(new_resource.class.resource_name, entry_id)
-    entry.reference = reference
-    entry.driver_url = new_driver.driver_url
-    entry.save(action_handler)
-  end
-
-  def delete_entry
-    managed_entries.delete(new_resource.class.resource_name, entry_id, action_handler)
-  end
-
   def region
-    new_driver.aws_config.region
+    aws_driver.aws_config.region
   end
 
-  def aws_driver
-    current_aws_object ? current_driver : new_driver
-  end
-
-  def current_aws_object
-    @current_aws_object = new_resource.aws_object if !defined?(@current_aws_object)
-    @current_aws_object
+  def aws_object
+    @aws_object = new_resource.aws_object if !defined?(@aws_object)
+    @aws_object
   end
 end

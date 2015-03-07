@@ -14,17 +14,47 @@ class Chef::Resource::AwsResource < Chef::Resource::LWRPBase
   end
 
   #
-  # Get the AWS driver
-  #
-  def aws_driver
-    run_context.chef_provisioning.driver_for(driver)
-  end
-
-  #
   # Get the managed entry store where ids are stored
   #
   def managed_entries
     Chef::Provisioning::ChefManagedEntryStore.new(chef_server)
+  end
+
+  #
+  # Get the managed entry for this particular object (if there is one)
+  #
+  def managed_entry
+    type, id = managed_entry_id
+    if type && id
+      managed_entries.get(type, id)
+    else
+      nil
+    end
+  end
+
+  #
+  # Get the AWS driver
+  #
+  def aws_driver
+    entry = managed_entry
+    run_context.chef_provisioning.driver_for(entry ? entry.driver_url : driver)
+  end
+
+  #
+  # Get the ManagedAWS object for this resource
+  #
+  def managed_aws
+    Chef::Provisioning::AWSDriver::ManagedAWS.new(managed_entries, aws_driver)
+  end
+
+  #
+  # Get the requested AWS object.
+  #
+  # @param type The type of AWS object to get.
+  # @param id The ID of the object.
+  #
+  def get_aws_object(type, id)
+    managed_aws.get_aws_object(type, id)
   end
 
   #
@@ -37,12 +67,11 @@ class Chef::Resource::AwsResource < Chef::Resource::LWRPBase
   end
 
   #
-  # Get the requested AWS object.
+  # Get the managed entry type and id for this object
   #
-  # @param type The type of AWS object to get.
-  # @param id The ID of the object.
+  # Returns `nil` if this object does not save itself back to Chef
   #
-  def get_aws_object(type, id)
-    Chef::Provisioning::AWSDriver::ManagedAWS.new(managed_entries, aws_driver).get_aws_object(type, id)
+  def managed_entry_id
+    nil
   end
 end

@@ -27,7 +27,7 @@ class Chef::Provider::AwsRdsDbSubnetGroup < Chef::Provider::AwsProvider
 
   action :delete do
     if existing_db_subnet_group
-      converge_by "Deleting RDS subnet group #{fqn} in #{new_driver.aws_config.region}" do      
+      converge_by "Deleting RDS subnet group #{new_resource.fqn} in #{new_driver.aws_config.region}" do      
         rds.client.delete_db_subnet_group(db_subnet_group_name: new_resource.name)
       end
     end

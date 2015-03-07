@@ -135,11 +135,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
   end
 
   def existing_keypair
-    @existing_keypair ||= begin
-      new_driver.ec2.key_pairs[fqn]
-    rescue
-      nil
-    end
+    @existing_keypair ||= new_resource.aws_object
   end
 
   def current_resource_exists?
@@ -175,8 +171,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
   def load_current_resource
     @current_resource = Chef::Resource::AwsKeyPair.new(new_resource.name, run_context)
 
-    current_key_pair = new_driver.ec2.key_pairs[new_resource.name]
-    if current_key_pair && current_key_pair.exists?
+    current_key_pair = new_resource.aws_object
+    if current_key_pair
       @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
     else
       current_resource.action :delete

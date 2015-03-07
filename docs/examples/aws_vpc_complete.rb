@@ -95,7 +95,7 @@ with_driver 'aws::us-east-1' do
     end
 
     availability_zones.each do |availability_zone|
-      class_c = (availability_zone[-1].ord - 'a'.ord)
+      class_c = (availability_zone[-1..-1].ord - 'a'.ord)
 
       # Remove the default subnet
       aws_subnet "default" do

@@ -1,5 +1,4 @@
 require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
 
 class Chef::Resource::AwsSnsTopic < Chef::Resource::AwsResource
   self.resource_name = 'aws_sns_topic'
@@ -8,13 +7,9 @@ class Chef::Resource::AwsSnsTopic < Chef::Resource::AwsResource
   default_action :create
 
   attribute :name, :kind_of => String, :name_attribute => true
-  attribute :topic_name, :kind_of => String
 
-  def initialize(*args)
-    super
-  end
-
-  def after_created
-    super
+  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
+  def aws_object
+    get_aws_object(:sns_topic, name)
   end
 end

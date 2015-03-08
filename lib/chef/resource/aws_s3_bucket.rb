@@ -1,7 +1,7 @@
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
-  self.resource_name = 'aws_s3_bucket'
+class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::S3::Bucket, id: :name
 
   actions :create, :delete, :nothing
   default_action :create
@@ -11,8 +11,7 @@ class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
   attribute :enable_website_hosting, :kind_of => [TrueClass, FalseClass], :default => false
   attribute :website_options, :kind_of => Hash
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
   def aws_object
-    get_aws_object(:aws_s3_bucket, name)
+    driver.s3.buckets[name]
   end
 end

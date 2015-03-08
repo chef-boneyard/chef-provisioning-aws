@@ -1,7 +1,7 @@
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsLaunchConfiguration < Chef::Resource::AwsResource
-  self.resource_name = 'aws_launch_configuration'
+class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::EC2::LaunchConfiguration, id: :name
 
   actions :create, :delete, :nothing
   default_action :create
@@ -11,8 +11,7 @@ class Chef::Resource::AwsLaunchConfiguration < Chef::Resource::AwsResource
   attribute :instance_type, kind_of: String
   attribute :options,       kind_of: Hash,   default: {}
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
   def aws_object
-    get_aws_object(:launch_configuration, name)
+    driver.ec2.launch_configurations[name]
   end
 end

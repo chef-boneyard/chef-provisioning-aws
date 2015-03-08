@@ -60,17 +60,15 @@ class Chef
         #         exist (it won't look in AWS in all cases).
         #
         def lookup_aws_id(type, id, required: false)
-          return nil if id.nil?
+          resource = get_resource(type, id)
+          return id if id.nil? || resource.nil?
+          resource.lookup_aws_argument(id)
+        end
 
           id = id.name if id.is_a?(Chef::Resource)
 
           case type
           when :eip_address
-            begin
-              IPAddr.new(id)
-            rescue IPAddr::InvalidAddressError
-              id = get_managed_id(:aws_eip_address, id, required: required)
-            end
           when :image
             unless id =~ /^ami-[A-Fa-f0-9]{8}$/
               image = driver.ec2.images.filter('name', id).first
@@ -118,6 +116,15 @@ class Chef
           lookup_aws_id(type, id, required: true)
         end
 
+        def get_resource(type, id)
+          type = self.class.aws_types[type]
+          if type
+            resource = type.new(id)
+            resource.managed_aws = self
+          end
+          resource
+        end
+
         #
         # Get an AWS object.
         #
@@ -132,48 +139,30 @@ class Chef
         #         may either return `nil` or an AWS object where `.exists?` is `false`.
         #
         def get_aws_object(type, id, required: false)
+          resource = get_resource(type, id)
+          if resource
+            resource.aws_object
+          end
           id = lookup_aws_id(type, id, required: required)
           if id
             aws_object = case type
             when :auto_scaling_group
-              driver.auto_scaling.groups[id]
             when :eip_address
-              driver.ec2.elastic_ips[id]
             when :image
               driver.ec2.images[id]
             when :instance
               driver.ec2.instances[id]
             when :key_pair
-              driver.ec2.key_pairs[id]
             when :launch_configuration
-              driver.ec2.launch_configurations[id]
             when :load_balancer
               driver.elb.load_balancers[id]
             when :s3_bucket
-              driver.s3.buckets[id]
             when :security_group
-              driver.ec2.security_groups[id]
             when :sns_topic
-              # TODO is this actually necessary?
-              begin
-                driver.sns.topics.named(name)
-              rescue
-                raise if required
-                nil
-              end
             when :sqs_queue
-              begin
-                driver.sqs.queues.named(name)
-              rescue
-                raise if required
-                nil
-              end
             when :subnet
-              driver.ec2.subnets[id]
             when :vpc
-              driver.ec2.vpcs[id]
             when :volume
-              driver.ec2.volumes[id]
             else
               raise "Unknown AWS object type #{type.inspect}"
             end
@@ -208,6 +197,10 @@ class Chef
           get_aws_object(type, id, required: true)
         end
 
+        def self.aws_types
+          @aws_types ||= {}
+        end
+
         protected
 
         def get_managed_id(type, id, key: 'id', required: false)
@@ -223,6 +216,22 @@ class Chef
             entry.reference[key]
           else
             nil
+          end
+        end
+
+        class Instance
+          def initialize(name)
+            @name = name
+          end
+          attr_reader :name
+          attr_accessor :managed_aws
+          def aws_object
+            entry = managed_entries.get(:machine, name)
+            if entry
+              managed_aws.driver
+              driver = run_context.chef_provisioning
+              entry.
+            end
           end
         end
       end

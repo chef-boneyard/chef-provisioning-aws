@@ -1,5 +1,5 @@
 require 'chef/provider/lwrp_base'
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
 require 'chef/provisioning/aws_driver/managed_aws'

@@ -1,7 +1,7 @@
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
-  self.resource_name = 'aws_sqs_queue'
+class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::SQS::Queue
 
   actions :create, :delete, :nothing
   default_action :create
@@ -10,6 +10,16 @@ class Chef::Resource::AwsSqsQueue < Chef::Resource::AwsResource
   attribute :options, kind_of: Hash
 
   def aws_object
-    get_aws_object(:sqs_queue, name)
+    begin
+      driver.sqs.queues.named(name)
+    rescue AWS::SQS::Errors::NonExistentQueue
+      nil
+    end
+  end
+
+  protected
+
+  def self.aws_object_id(aws_object)
+    aws_object.arn.split(':')[-1]
   end
 end

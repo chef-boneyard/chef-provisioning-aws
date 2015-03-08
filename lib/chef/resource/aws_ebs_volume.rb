@@ -1,7 +1,7 @@
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 
-class Chef::Resource::AwsEbsVolume < Chef::Resource::AwsResource
-  self.resource_name = 'aws_ebs_volume'
+class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  aws_sdk_type AWS::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
 
   actions :create, :delete, :nothing
   default_action :create
@@ -16,10 +16,13 @@ class Chef::Resource::AwsEbsVolume < Chef::Resource::AwsResource
   attribute :volume_type,       kind_of: Symbol
   attribute :encrypted,         kind_of: [ TrueClass, FalseClass ]
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
-  def aws_object
-    get_aws_object(:volume, name)
-  end
+  attribute :volume_id,         kind_of: String, aws_id_attribute: true, default {
+    name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
+  }
 
-  Chef::Provisioning::ChefManagedEntryStore.type_names_for_backcompat[:aws_ebs_volume] = 'ebs_volumes'
+  protected
+
+  def get_aws_object(driver, id)
+    driver.ec2.volumes[id]
+  end
 end

@@ -1,7 +1,7 @@
 require 'chef/provisioning'
 
-class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
-  self.resource_name = 'aws_key_pair'
+class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::EC2::KeyPair, id: :name
 
   actions :create, :delete, :nothing
   default_action :create
@@ -16,8 +16,7 @@ class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
   # TODO what is the right default for this?
   attribute :allow_overwrite, :kind_of => [TrueClass, FalseClass], :default => false
 
-  # Main code is in lib/chef/provisioning/aws_driver/managed_aws.rb
   def aws_object
-    get_aws_object(:key_pair, name)
+    driver.ec2.key_pairs[name]
   end
 end

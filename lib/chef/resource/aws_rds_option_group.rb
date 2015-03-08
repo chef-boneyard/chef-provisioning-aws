@@ -12,6 +12,8 @@ class Chef::Resource::AwsRdsOptionGroup < Chef::Resource::AwsResource
   attribute :description, :kind_of => String
   attribute :engine_name, :kind_of => String
   attribute :major_engine_version, :kind_of => String
+  attribute :options
+  attribute :apply_immediately, :default => false
 
   def initialize(*args)
     super

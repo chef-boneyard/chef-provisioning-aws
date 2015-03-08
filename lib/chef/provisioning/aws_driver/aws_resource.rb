@@ -76,6 +76,9 @@ class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
 
+    # Go ahead and require the provider since we're here anyway ...
+    require "chef/provider/#{resource_name}"
+
     aws_option_handlers[option_name] = self if option_name
     aws_option_handlers[:"#{option_name}_#{aws_sdk_class_id}"] = self if option_name && aws_sdk_class_id
   end

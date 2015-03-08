@@ -1,6 +1,6 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsLaunchConfiguration < Chef::Provider::AwsProvider
+class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSProvider
   action :create do
     if aws_object.nil?
       converge_by "Creating new Launch Configuration #{new_resource.name} in #{region}" do

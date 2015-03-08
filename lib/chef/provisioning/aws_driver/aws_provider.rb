@@ -4,7 +4,7 @@ require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
 require 'chef/provisioning/aws_driver/managed_aws'
 
-class Chef::Provider::AwsProvider < Chef::Provider::LWRPBase
+class Chef::Provisioning::AWSDriver::AWSProvider < Chef::Provider::LWRPBase
   use_inline_resources
 
   def action_handler

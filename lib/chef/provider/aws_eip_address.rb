@@ -1,8 +1,8 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'chef/provisioning/machine_spec'
 require 'cheffish'
 
-class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
+class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :delete do
     if aws_object

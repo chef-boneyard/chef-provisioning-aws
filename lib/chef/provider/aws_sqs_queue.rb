@@ -1,6 +1,6 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
+class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     if !aws_object

@@ -1,7 +1,7 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
-class Chef::Provider::AwsSubnet < Chef::Provider::AwsProvider
+class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     if !aws_object

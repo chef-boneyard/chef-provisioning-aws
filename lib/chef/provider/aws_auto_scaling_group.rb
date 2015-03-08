@@ -1,6 +1,6 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsAutoScalingGroup < Chef::Provider::AwsProvider
+class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     if aws_object.nil?

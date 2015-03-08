@@ -1,8 +1,8 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'cheffish'
 require 'date'
 
-class Chef::Provider::AwsEbsVolume < Chef::Provider::AwsProvider
+class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     if !aws_object

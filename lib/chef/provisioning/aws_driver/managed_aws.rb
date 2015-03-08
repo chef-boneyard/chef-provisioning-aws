@@ -62,13 +62,18 @@ class Chef
         def lookup_aws_id(type, id, required: false)
           resource = get_resource(type, id)
           return id if id.nil? || resource.nil?
-          resource.lookup_aws_argument(id)
+          resource.lookup_aws_id(id)
         end
 
           id = id.name if id.is_a?(Chef::Resource)
 
           case type
           when :eip_address
+            begin
+              IPAddr.new(id)
+            rescue IPAddr::InvalidAddressError
+              id = get_managed_id(:aws_eip_address, id, required: required)
+            end
           when :image
             unless id =~ /^ami-[A-Fa-f0-9]{8}$/
               image = driver.ec2.images.filter('name', id).first

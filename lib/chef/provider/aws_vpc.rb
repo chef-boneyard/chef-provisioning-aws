@@ -1,7 +1,7 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
-class Chef::Provider::AwsVpc < Chef::Provider::AwsProvider
+class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     fail "Can't create a VPC without a CIDR block" if new_resource.cidr_block.nil?

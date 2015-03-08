@@ -1,7 +1,7 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
-class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
+class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   action :create do
     bucket = aws_object
     if !bucket

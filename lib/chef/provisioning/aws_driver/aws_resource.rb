@@ -28,7 +28,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   #
   # The managed entry store.
   #
-  attribute :managed_entries, kind_of: Chef::Provisioning::ManagedEntryStore,
+  attribute :managed_entry_store, kind_of: Chef::Provisioning::ManagedEntryStore,
                               lazy_default: proc { Chef::Provisioning::ChefManagedEntryStore.new(chef_server) }
 
   #
@@ -55,15 +55,15 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     options
   end
 
-  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entries: nil)
+  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entry_store: nil)
     if resource
       run_context     ||= resource.run_context
       driver          ||= resource.driver
-      managed_entries ||= resource.managed_entries
+      managed_entry_store ||= resource.managed_entry_store
     end
     resource = new(value, run_context)
     resource.driver driver if driver
-    resource.managed_entries managed_entries if managed_entries
+    resource.managed_entry_store managed_entry_store if managed_entry_store
     resource.aws_object
   end
 

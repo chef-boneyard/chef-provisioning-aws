@@ -3,11 +3,11 @@ require 'chef/provisioning/aws_driver/aws_resource'
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
   def delete_managed_entry(action_handler)
-    managed_entries.delete(self.class.resource_name, name, action_handler)
+    managed_entry_store.delete(self.class.resource_name, name, action_handler)
   end
 
   def save_managed_entry(aws_object, action_handler)
-    managed_entry = managed_entries.new_entry(self.class.resource_name, name)
+    managed_entry = managed_entry_store.new_entry(self.class.resource_name, name)
     managed_entry.reference = { managed_entry_id_name => self.public_send(self.class.aws_id_attribute) }
     managed_entry.driver_url = driver.driver_url
     managed_entry.save(action_handler)
@@ -54,7 +54,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   end
 
   def get_id_from_managed_entry
-    entry = managed_entries.get(self.class.managed_entry_type, name)
+    entry = managed_entry_store.get(self.class.managed_entry_type, name)
     if entry
       # TODO some people don't send us run_context (like Drivers).  We might need
       # to exit early here if the driver_url doesn't match the provided driver.

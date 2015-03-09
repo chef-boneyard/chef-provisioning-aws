@@ -60,7 +60,7 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      lb_options = AWSResource.lookup_options(lb_options || {}, managed_entries: lb_spec.managed_entry_store, driver: self)
+      lb_options = AWSResource.lookup_options(lb_options || {}, managed_entry_store: lb_spec.managed_entry_store, driver: self)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -571,7 +571,7 @@ EOD
         Chef::Log.debug "Non-windows, not setting userdata"
       end
 
-      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entries: machine_spec.managed_entry_store, driver: self)
+      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options
     end

@@ -19,6 +19,14 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2.subnets[id] if id
-    result && result.exists? ? result : nil
+    if result
+      begin
+        # Try to access it to see if it exists
+        result.vpc_id
+      rescue AWS::EC2::Errors::InvalidSubnetID::NotFound
+        result = nil
+      end
+    end
+    result
   end
 end

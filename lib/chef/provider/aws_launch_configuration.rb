@@ -9,7 +9,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
         AWSResource.lookup_options(new_resource.options, resource: new_resource)
         driver.auto_scaling.launch_configurations.create(
           new_resource.name,
-          AwsImage.get_aws_object_id(new_resource.image, resource: new_resource),
+          Resource::AwsImage.get_aws_object_id(new_resource.image, resource: new_resource),
           new_resource.instance_type,
           new_resource.options || {}
         )

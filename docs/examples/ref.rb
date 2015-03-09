@@ -6,6 +6,14 @@ aws_vpc 'ref-vpc' do
   cidr_block '10.0.0.0/24'
   # internet_gateway true
   # internet_gateway_routes '0.0.0.0/0'
+
+  vpc = aws_object
+  if vpc
+    if !vpc.internet_gateway
+      vpc.internet_gateway = driver.ec2.internet_gateways.create
+    end
+    vpc.route_tables.main_route_table.create_route('0.0.0.0/0', internet_gateway: vpc.internet_gateway)
+  end
 end
 
 aws_security_group 'ref-sg1' do

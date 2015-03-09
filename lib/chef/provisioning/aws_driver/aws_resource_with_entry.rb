@@ -8,7 +8,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
 
   def save_managed_entry(aws_object, action_handler)
     managed_entry = managed_entry_store.new_entry(self.class.resource_name, name)
-    managed_entry.reference = { managed_entry_id_name => self.public_send(self.class.aws_id_attribute) }
+    managed_entry.reference = { self.class.managed_entry_id_name => aws_object.public_send(self.class.aws_sdk_class_id) }
     managed_entry.driver_url = driver.driver_url
     managed_entry.save(action_handler)
   end
@@ -24,7 +24,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
 
   # Add support for aws_id_attribute: true
   def self.attribute(name, validation_opts={})
-    @aws_id_attribute = validation_opts.delete(:aws_id_attribute)
+    @aws_id_attribute = name if validation_opts.delete(:aws_id_attribute)
     super
   end
 
@@ -33,11 +33,12 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   end
 
   def self.aws_sdk_type(sdk_class,
+                        id: :id,
                         managed_entry_type: nil,
                         managed_entry_id_name: 'id',
                         backcompat_data_bag_name: nil,
                         **options)
-    super(sdk_class, **options)
+    super(sdk_class, id: id, **options)
     @managed_entry_type = managed_entry_type || resource_name.to_sym
     @managed_entry_id_name = managed_entry_id_name
     if backcompat_data_bag_name

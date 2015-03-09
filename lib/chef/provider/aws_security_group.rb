@@ -72,7 +72,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
           IPAddr.new(s)
           s
         rescue
-          { group_id: AwsSecurityGroup.get_aws_object(s, resource: new_resource).id }
+          { group_id: Chef::Resource::AwsSecurityGroup.get_aws_object_id(s, resource: new_resource) }
         end
       else
         s

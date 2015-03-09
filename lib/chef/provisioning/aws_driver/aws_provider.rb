@@ -3,8 +3,11 @@ require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
 
-class Chef::Provisioning::AWSDriver::AWSProvider < Chef::Provider::LWRPBase
+module Chef::Provisioning::AWSDriver
+class AWSProvider < Chef::Provider::LWRPBase
   use_inline_resources
+
+  AWSResource = Chef::Provisioning::AWSDriver::AWSResource
 
   def action_handler
     @action_handler ||= Chef::Provisioning::ChefProviderActionHandler.new(self)
@@ -18,4 +21,9 @@ class Chef::Provisioning::AWSDriver::AWSProvider < Chef::Provider::LWRPBase
   def region
     new_resource.driver.aws_config.region
   end
+
+  def driver
+    new_resource.driver
+  end
+end
 end

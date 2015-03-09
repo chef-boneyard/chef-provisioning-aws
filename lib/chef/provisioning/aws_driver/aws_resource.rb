@@ -102,12 +102,9 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_class_id
   end
 
+  @@aws_option_handlers = {}
   def self.aws_option_handlers
-    if self == AWSResource
-      @aws_option_handlers = {}
-    else
-      AWSResource.aws_option_handlers
-    end
+    @@aws_option_handlers
   end
 end
 end

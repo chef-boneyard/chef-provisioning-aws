@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::EC2::LaunchConfiguration, id: :name
+  aws_sdk_type AWS::AutoScaling::LaunchConfiguration, id: :name
 
   actions :create, :delete, :nothing
   default_action :create
@@ -12,6 +12,7 @@ class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   attribute :options,       kind_of: Hash,   default: {}
 
   def aws_object
-    driver.ec2.launch_configurations[name]
+    result = driver.ec2.launch_configurations[name]
+    result && result.exists? ? result : nil
   end
 end

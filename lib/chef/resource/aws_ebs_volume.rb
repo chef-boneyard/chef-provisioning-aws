@@ -16,13 +16,13 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   attribute :volume_type,       kind_of: Symbol
   attribute :encrypted,         kind_of: [ TrueClass, FalseClass ]
 
-  attribute :volume_id,         kind_of: String, aws_id_attribute: true, default {
+  attribute :volume_id,         kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
 
-  protected
-
-  def get_aws_object(driver, id)
-    driver.ec2.volumes[id]
+  def aws_object
+    driver, id = get_driver_and_id
+    result = driver.ec2.volumes[id] if id
+    result && result.exists? ? result : nil
   end
 end

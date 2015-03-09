@@ -1,13 +1,15 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/resource/aws_image'
 
 class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSProvider
   action :create do
+    aws_object = new_resource.aws_object
     if aws_object.nil?
       converge_by "Creating new Launch Configuration #{new_resource.name} in #{region}" do
-        managed_aws.lookup_options(new_resource.options)
-        aws_driver.auto_scaling.launch_configurations.create(
+        AWSResource.lookup_options(new_resource.options, resource: new_resource)
+        driver.auto_scaling.launch_configurations.create(
           new_resource.name,
-          managed_aws.lookup_aws_id(:image, new_resource.image),
+          AwsImage.get_aws_object_id(new_resource.image, resource: new_resource),
           new_resource.instance_type,
           new_resource.options || {}
         )
@@ -16,6 +18,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   end
 
   action :delete do
+    aws_object = new_resource.aws_object
     if aws_object
       converge_by "Deleting Launch Configuration #{new_resource.name} in #{region}" do
         begin

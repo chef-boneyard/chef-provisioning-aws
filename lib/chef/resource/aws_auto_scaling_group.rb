@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::AutoScaling::Group, id: :name
+  aws_sdk_type AWS::AutoScaling::Group
 
   actions :create, :delete, :nothing
   default_action :create
@@ -15,6 +15,7 @@ class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSRe
   attribute :load_balancers,       kind_of: Array
 
   def aws_object
-    driver.auto_scaling.groups[name]
+    result = driver.auto_scaling.groups[name]
+    result && result.exists? ? result : nil
   end
 end

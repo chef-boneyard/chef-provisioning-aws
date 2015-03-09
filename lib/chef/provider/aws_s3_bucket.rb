@@ -3,10 +3,10 @@ require 'date'
 
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   action :create do
-    bucket = aws_object
-    if !bucket
+    bucket = new_resource.aws_object
+    if bucket.nil?
       converge_by "Creating new S3 bucket #{new_resource.name}" do
-        bucket = aws_driver.s3.buckets.create(new_resource.name)
+        bucket = driver.s3.buckets.create(new_resource.name)
         bucket.tags['Name'] = new_resource.name
       end
     end
@@ -26,19 +26,11 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   action :delete do
+    aws_object = new_resource.aws_object
     if aws_object
       converge_by "Deleting S3 bucket #{new_resource.name}" do
         aws_object.delete
       end
-    end
-  end
-
-  def aws_object
-    result = super
-    if result.exists?
-      result
-    else
-      nil
     end
   end
 

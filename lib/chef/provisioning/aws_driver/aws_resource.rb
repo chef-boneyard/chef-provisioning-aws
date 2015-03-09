@@ -1,20 +1,24 @@
-require 'chef/resource/lwrp_base'
+require 'aws'
+require 'chef/provisioning/aws_driver/super_lwrp'
 require 'chef/provisioning/chef_managed_entry_store'
-require 'chef/provisioning/aws_driver/managed_aws'
 
 # Common AWS resource - contains metadata that all AWS resources will need
-class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
-  def initialize(*args)
+module Chef::Provisioning::AWSDriver
+class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
+  def initialize(name, run_context=nil)
+    name = name.public_send(self.class.aws_sdk_class_id) if name.is_a?(self.class.aws_sdk_class)
     super
-    driver run_context.chef_provisioning.current_driver
-    chef_server run_context.cheffish.current_chef_server
+    if run_context
+      driver run_context.chef_provisioning.current_driver
+      chef_server run_context.cheffish.current_chef_server
+    end
   end
 
   #
   # The desired driver.
   #
   attribute :driver, kind_of: Chef::Provisioning::Driver,
-                     coerce { |value| run_context.chef_provisioning.driver_for(value) }
+                     coerce: proc { |value| run_context.chef_provisioning.driver_for(value) }
 
   #
   # The Chef server on which any IDs should be looked up.
@@ -25,17 +29,7 @@ class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   # The managed entry store.
   #
   attribute :managed_entries, kind_of: Chef::Provisioning::ManagedEntryStore,
-                              default { Chef::Provisioning::ChefManagedEntryStore.new(chef_server) }
-
-  def initialize(name, run_context=nil)
-    # Let the class handle special names
-    name = self.class.aws_object_id(name) if name.is_a?(self.class.aws_sdk_class)
-    super
-  end
-
-  def build_arn(service, resource)
-    "arn:aws:#{service}:#{driver.region}:#{driver.account_id}:#{resource}"
-  end
+                              lazy_default: proc { Chef::Provisioning::ChefManagedEntryStore.new(chef_server) }
 
   #
   # Get the current AWS object.
@@ -44,43 +38,60 @@ class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     raise NotImplementedError, :aws_object
   end
 
-  def self.lookup_options(options, run_context: nil, driver: nil, managed_entries: nil)
-    result = {}
+  def self.lookup_options(options, **handler_options)
+    options = options.dup
     options.each do |name, value|
-      if aws_option_handlers[name]
-        options[name] = aws_option_handlers[name].lookup_option(value, run_context: run_context, driver: driver, managed_entries: managed_entries)
+      if name.to_s.end_with?('s')
+        handler_name = :"#{name[0..-2]}"
+        if aws_option_handlers[handler_name]
+          options[name] = options[name].map { aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
+        end
+      else
+        if aws_option_handlers[name]
+          options[name] = aws_option_handlers[name].get_aws_object_id(value, **handler_options)
+        end
       end
-      result[name]
     end
-    result
+    options
+  end
+
+  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entries: nil)
+    if resource
+      run_context     ||= resource.run_context
+      driver          ||= resource.driver
+      managed_entries ||= resource.managed_entries
+    end
+    resource = new(value, run_context)
+    resource.driver driver if driver
+    resource.managed_entries managed_entries if managed_entries
+    resource.aws_object
+  end
+
+  def self.get_aws_object_id(value, **options)
+    aws_object = get_aws_object(value, **options)
+    aws_object.public_send(aws_sdk_class_id) if aws_object
   end
 
   protected
 
-  def self.lookup_option(value, run_context: nil, driver: nil, managed_entries: nil)
-    resource = new(value, run_context)
-    resource.driver driver
-    resource.managed_entries managed_entries
-    o = aws_object
-    aws_object_id(o) if o
-  end
-
-  def self.aws_object_id(aws_object)
-    aws_object.public_send(aws_sdk_class_id)
-  end
+  NOT_PASSED = Object.new
 
   def self.aws_sdk_type(sdk_class,
-                        option_name: :"#{resource_name[4..-1]}",
+                        option_name: NOT_PASSED,
+                        load_provider: true,
                         id: :name)
     self.resource_name = self.dsl_name
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
 
     # Go ahead and require the provider since we're here anyway ...
-    require "chef/provider/#{resource_name}"
+    require "chef/provider/#{resource_name}" if load_provider
 
-    aws_option_handlers[option_name] = self if option_name
-    aws_option_handlers[:"#{option_name}_#{aws_sdk_class_id}"] = self if option_name && aws_sdk_class_id
+    option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
+    if option_name
+      aws_option_handlers[option_name] = self
+      aws_option_handlers[:"#{option_name}_#{aws_sdk_class_id}"] = self if aws_sdk_class_id
+    end
   end
 
   def self.aws_sdk_class
@@ -90,4 +101,13 @@ class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   def self.aws_sdk_class_id
     @aws_sdk_class_id
   end
+
+  def self.aws_option_handlers
+    if self == AWSResource
+      @aws_option_handlers = {}
+    else
+      AWSResource.aws_option_handlers
+    end
+  end
+end
 end

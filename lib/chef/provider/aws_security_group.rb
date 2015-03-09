@@ -5,24 +5,26 @@ require 'ipaddr'
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
-    sg = aws_object
+    sg = new_resource.aws_object
     if !sg
       converge_by "Creating new SG #{new_resource.name} in #{region}" do
         options = { description: new_resource.description }
         options[:vpc] = new_resource.vpc if new_resource.vpc
-        options = managed_aws.lookup_options(options)
+        options = AWSResource.lookup_options(options, resource: new_resource)
         Chef::Log.debug("VPC: #{options[:vpc]}")
 
-        sg = aws_driver.ec2.security_groups.create(new_resource.name, options)
-        save_managed_entry(id: sg.id)
+        sg = driver.ec2.security_groups.create(new_resource.name, options)
       end
     end
+
+    new_resource.save_managed_entry(sg, action_handler)
 
     # Update rules
     apply_rules(sg)
   end
 
   action :delete do
+    aws_object = new_resource.aws_object
     if aws_object
       converge_by "Deleting SG #{new_resource.name} in #{region}" do
         aws_object.delete
@@ -70,7 +72,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
           IPAddr.new(s)
           s
         rescue
-          { group_id: managed_aws.get_aws_object(:security_group, s, required: true).id }
+          { group_id: AwsSecurityGroup.get_aws_object(s, resource: new_resource).id }
         end
       else
         s

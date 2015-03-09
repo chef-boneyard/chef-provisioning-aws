@@ -19,7 +19,8 @@ class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
 
   protected
 
-  def self.aws_object_id(aws_object)
-    aws_object.arn.split(':')[-1]
+  def self.get_aws_object_id(value, **options)
+    aws_object = get_aws_object(value, **options)
+    aws_object.arn.split(':')[-1] if aws_object
   end
 end

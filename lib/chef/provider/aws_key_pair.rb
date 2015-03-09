@@ -1,5 +1,4 @@
 require 'chef/provider/lwrp_base'
-require 'chef/provisioning/aws_driver'
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'aws-sdk-v1'
 
@@ -18,12 +17,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :delete do
     if current_resource_exists?
-      aws_driver.ec2.key_pairs[new_resource.name].delete
+      driver.ec2.key_pairs[new_resource.name].delete
     end
   end
 
   def key_description
-    "#{new_resource.name} on #{aws_driver.driver_url}"
+    "#{new_resource.name} on #{driver.driver_url}"
   end
 
   @@use_pkcs8 = nil # For Ruby 1.9 and below, PKCS can be run
@@ -79,8 +78,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            aws_driver.ec2.key_pairs[new_resource.name].delete
-            aws_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            driver.ec2.key_pairs[new_resource.name].delete
+            driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -92,12 +91,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        aws_driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
 
-  def aws_driver
+  def driver
     run_context.chef_provisioning.driver_for(new_resource.driver)
   end
 
@@ -156,9 +155,9 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
     private_key_path = new_resource.private_key_path || new_resource.name
     if private_key_path.is_a?(Symbol)
       private_key_path
-    elsif Pathname.new(private_key_path).relative? && aws_driver.config[:private_key_write_path]
+    elsif Pathname.new(private_key_path).relative? && driver.config[:private_key_write_path]
       @should_create_directory = true
-      ::File.join(aws_driver.config[:private_key_write_path], private_key_path)
+      ::File.join(driver.config[:private_key_write_path], private_key_path)
     else
       private_key_path
     end

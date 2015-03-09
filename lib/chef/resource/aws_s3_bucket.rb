@@ -12,6 +12,7 @@ class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   attribute :website_options, :kind_of => Hash
 
   def aws_object
-    driver.s3.buckets[name]
+    result = driver.s3.buckets[name]
+    result && result.exists? ? result : nil
   end
 end

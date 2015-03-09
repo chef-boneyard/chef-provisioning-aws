@@ -60,7 +60,7 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      lb_options = managed_aws(lb_spec).lookup_options(lb_options || {})
+      lb_options = AWSResource.lookup_options(lb_options || {}, managed_entries: lb_spec.managed_entry_store, driver: self)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -487,6 +487,14 @@ EOD
       @elb ||= AWS::ELB.new(config: aws_config)
     end
 
+    def iam
+      @iam
+    end
+
+    def s3
+      @s3 ||= AWS::S3.new(config: aws_config)
+    end
+
     def sns
       @sns ||= AWS::SNS.new(config: aws_config)
     end
@@ -495,15 +503,40 @@ EOD
       @sqs ||= AWS::SQS.new(config: aws_config)
     end
 
-    def s3
-      @s3 ||= AWS::S3.new(config: aws_config)
-    end
-
     def auto_scaling
       @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end
 
-    private
+    def build_arn(partition: 'aws', service: nil, region: region, account_id: account_id, resource: nil)
+      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
+    end
+
+    def parse_arn(arn)
+      parts = arn.split(':', 6)
+      {
+        partition: parts[1],
+        service: parts[2],
+        region: parts[3],
+        account_id: parts[4],
+        resource: parts[5]
+      }
+    end
+
+    def account_id
+      begin
+        # We've got an AWS account root credential or an IAM admin with access rights
+        current_user = iam.client.get_user
+        arn = current_user[:user][:arn]
+      rescue AWS::IAM::Errors::AccessDenied => e
+        # If we don't have access, the error message still tells us our account ID and user ...
+        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
+        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
+          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
+        end
+        arn = $1
+      end
+      parse_arn(arn)[:account_id]
+    end
 
     # For creating things like AWS keypairs exclusively
     @@chef_default_lock = Mutex.new
@@ -538,13 +571,9 @@ EOD
         Chef::Log.debug "Non-windows, not setting userdata"
       end
 
-      bootstrap_options = managed_aws(machine_spec).lookup_options(bootstrap_options)
+      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entries: machine_spec.managed_entry_store, driver: self)
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options
-    end
-
-    def managed_aws(entry)
-      ManagedAWS.new(entry.managed_entry_store, self)
     end
 
     def default_ssh_username

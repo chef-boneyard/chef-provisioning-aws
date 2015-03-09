@@ -12,13 +12,13 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   attribute :availability_zone, kind_of: String
   attribute :map_public_ip_on_launch, kind_of: [ TrueClass, FalseClass ]
 
-  attribute :subnet_id, kind_of: String, aws_id_attribute: true, default {
+  attribute :subnet_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^subnet-[a-f0-9]{8}$/ ? name : nil
   }
 
-  protected
-
-  def get_aws_object(driver, id)
-    driver.ec2.subnets[id]
+  def aws_object
+    driver, id = get_driver_and_id
+    result = driver.ec2.subnets[id] if id
+    result && result.exists? ? result : nil
   end
 end

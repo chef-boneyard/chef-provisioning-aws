@@ -5,17 +5,14 @@ class Chef
     module AWSDriver
       class SuperLWRP < Chef::Resource::LWRPBase
         #
-        # Add the :default_block and :coerce options to `attribute`
+        # Add the :lazy_default and :coerce validation_opts to `attribute`
         #
-        def self.attribute(attr_name, *validation_opts)
-          options = {}
-          validation_opts.each { |o| options.merge(o) }
-
-          lazy_default = options.delete(:lazy_default)
-          coerce = options.delete(:coerce)
-          if lazy_default || convert
+        def self.attribute(attr_name, validation_opts={})
+          lazy_default = validation_opts.delete(:lazy_default)
+          coerce = validation_opts.delete(:coerce)
+          if lazy_default || coerce
             define_method(attr_name) do |arg=nil|
-              arg = instance_exec(coerce, arg) if coerce && !arg.nil?
+              arg = instance_exec(arg, &coerce) if coerce && !arg.nil?
 
               result = set_or_return(attr_name.to_sym, arg, validation_opts)
 
@@ -35,14 +32,6 @@ class Chef
           else
             super
           end
-        end
-
-        def self.default(&block)
-          { lazy_default: block }
-        end
-
-        def self.coerce(&block)
-          { coerce: block }
         end
       end
     end

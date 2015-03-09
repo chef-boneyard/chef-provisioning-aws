@@ -1,93 +1,65 @@
-require 'chef/resource/lwrp_base'
-require 'chef/provisioning/chef_managed_entry_store'
-require 'chef/provisioning/aws_driver/managed_aws'
+require 'chef/provisioning/aws_driver/aws_resource'
 
 # Common AWS resource - contains metadata that all AWS resources will need
-class Chef::Resource::AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
-  def initialize(*args)
-    super
-    driver run_context.chef_provisioning.current_driver
-    chef_server run_context.cheffish.current_chef_server
+class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
+  def delete_managed_entry(action_handler)
+    managed_entries.delete(self.class.resource_name, name, action_handler)
   end
 
-  #
-  # The desired driver.
-  #
-  attribute :driver, kind_of: Chef::Provisioning::Driver,
-                     coerce { |value| run_context.chef_provisioning.driver_for(value) }
-
-  #
-  # The Chef server on which any IDs should be looked up.
-  #
-  attribute :chef_server, kind_of: Hash
-
-  #
-  # The managed entry store.
-  #
-  attribute :managed_entries, kind_of: Chef::Provisioning::ManagedEntryStore,
-                              default { Chef::Provisioning::ChefManagedEntryStore.new(chef_server) }
-
-  def initialize(name, run_context=nil)
-    # Let the class handle special names
-    name = self.class.aws_object_id(name) if name.is_a?(self.class.aws_sdk_class)
-    super
-  end
-
-  def build_arn(service, resource)
-    "arn:aws:#{service}:#{driver.region}:#{driver.account_id}:#{resource}"
-  end
-
-  #
-  # Get the current AWS object.
-  #
-  def aws_object
-    raise NotImplementedError, :aws_object
-  end
-
-  def self.lookup_options(options, run_context: nil, driver: nil, managed_entries: nil)
-    result = {}
-    options.each do |name, value|
-      if aws_option_handlers[name]
-        options[name] = aws_option_handlers[name].lookup_option(value, run_context: run_context, driver: driver, managed_entries: managed_entries)
-      end
-      result[name]
-    end
-    result
+  def save_managed_entry(aws_object, action_handler)
+    managed_entry = managed_entries.new_entry(self.class.resource_name, name)
+    managed_entry.reference = { managed_entry_id_name => self.public_send(self.class.aws_id_attribute) }
+    managed_entry.driver_url = driver.driver_url
+    managed_entry.save(action_handler)
   end
 
   protected
 
-  def self.lookup_option(value, run_context: nil, driver: nil, managed_entries: nil)
-    resource = new(value, run_context)
-    resource.driver driver
-    resource.managed_entries managed_entries
-    o = aws_object
-    aws_object_id(o) if o
+  def get_driver_and_id
+    driver, id = get_id_from_managed_entry
+    # If the value isn't already stored, look up the user-specified public_ip
+    driver, id = self.driver, self.public_send(self.class.aws_id_attribute) if !id
+    [ driver, id ]
   end
 
-  def self.aws_object_id(aws_object)
-    aws_object.public_send(aws_sdk_class_id)
+  # Add support for aws_id_attribute: true
+  def self.attribute(name, validation_opts={})
+    @aws_id_attribute = validation_opts.delete(:aws_id_attribute)
+    super
+  end
+
+  def self.aws_id_attribute
+    @aws_id_attribute
   end
 
   def self.aws_sdk_type(sdk_class,
-                        option_name: :"#{resource_name[4..-1]}",
-                        id: :name)
-    self.resource_name = self.dsl_name
-    @aws_sdk_class = sdk_class
-    @aws_sdk_class_id = id
-
-    # Go ahead and require the provider since we're here anyway ...
-    require "chef/provider/#{resource_name}"
-
-    aws_option_handlers[option_name] = self if option_name
-    aws_option_handlers[:"#{option_name}_#{aws_sdk_class_id}"] = self if option_name && aws_sdk_class_id
+                        managed_entry_type: nil,
+                        managed_entry_id_name: 'id',
+                        backcompat_data_bag_name: nil,
+                        **options)
+    super(sdk_class, **options)
+    @managed_entry_type = managed_entry_type || resource_name.to_sym
+    @managed_entry_id_name = managed_entry_id_name
+    if backcompat_data_bag_name
+      Chef::Provisioning::ChefManagedEntryStore.type_names_for_backcompat[resource_name] = backcompat_data_bag_name
+    end
   end
 
-  def self.aws_sdk_class
-    @aws_sdk_class
+  def self.managed_entry_type
+    @managed_entry_type
   end
 
-  def self.aws_sdk_class_id
-    @aws_sdk_class_id
+  def self.managed_entry_id_name
+    @managed_entry_id_name
+  end
+
+  def get_id_from_managed_entry
+    entry = managed_entries.get(self.class.managed_entry_type, name)
+    if entry
+      # TODO some people don't send us run_context (like Drivers).  We might need
+      # to exit early here if the driver_url doesn't match the provided driver.
+      driver = run_context.chef_provisioning.driver_for(entry.driver_url)
+      [ driver, entry.reference[self.class.managed_entry_id_name] ]
+    end
   end
 end

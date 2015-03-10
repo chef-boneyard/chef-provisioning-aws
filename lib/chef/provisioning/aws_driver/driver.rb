@@ -488,7 +488,7 @@ EOD
     end
 
     def iam
-      @iam
+      @iam ||= AWS::IAM.new(config: aws_config)
     end
 
     def s3
@@ -507,7 +507,7 @@ EOD
       @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end
 
-    def build_arn(partition: 'aws', service: nil, region: region, account_id: account_id, resource: nil)
+    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
       "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
     end
 

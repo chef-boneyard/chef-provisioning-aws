@@ -17,7 +17,9 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :delete do
     if current_resource_exists?
-      driver.ec2.key_pairs[new_resource.name].delete
+      converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
+        driver.ec2.key_pairs[new_resource.name].delete
+      end
     end
   end
 

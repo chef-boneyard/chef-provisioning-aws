@@ -2,6 +2,18 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::eu-west-1'
 
+aws_sqs_queue 'ref-sqs-queue' do
+  action :delete
+end
+
+aws_sns_topic 'ref-sns-topic' do
+  action :delete
+end
+
+aws_s3_bucket 'ref-s3-bucket' do
+  action :delete
+end
+
 aws_eip_address 'ref-elastic-ip' do
   action :delete
 end
@@ -48,6 +60,10 @@ aws_security_group 'ref-sg2' do
 end
 
 aws_security_group 'ref-sg1' do
+  action :delete
+end
+
+aws_key_pair 'ref-key-pair' do
   action :delete
 end
 

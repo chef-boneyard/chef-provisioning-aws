@@ -26,6 +26,9 @@ ruby_block 'attach internet gateway' do
   end
 end
 
+aws_key_pair 'ref-key-pair' do
+end
+
 aws_security_group 'ref-sg1' do
   vpc 'ref-vpc'
   inbound_rules [ { ports: 22, protocol: :tcp, sources: [ '0.0.0.0/0' ] } ]
@@ -64,7 +67,7 @@ machine_batch do
   end
   machine 'ref-machine2' do
     from_image 'ref-machine_image1'
-    machine_options bootstrap_options: { subnet_id: 'ref-subnet', security_group_ids: 'ref-sg1' }
+    machine_options bootstrap_options: { key_name: 'ref-key-pair', subnet_id: 'ref-subnet', security_group_ids: 'ref-sg1' }
   end
 end
 
@@ -88,9 +91,18 @@ aws_ebs_volume 'ref-volume' do
   size 1
 end
 
+# attach above volume to machine somehow ...
+
 aws_eip_address 'ref-elastic-ip' do
   machine 'ref-machine1'
   action :associate
 end
 
-# attach above volume to machine somehow ...
+aws_s3_bucket 'ref-s3-bucket' do
+end
+
+aws_sqs_queue 'ref-sqs-queue' do
+end
+
+aws_sns_topic 'ref-sns-topic' do
+end

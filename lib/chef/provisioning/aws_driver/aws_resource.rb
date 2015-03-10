@@ -84,6 +84,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   NOT_PASSED = Object.new
 
   def self.aws_sdk_type(sdk_class,
+                        option_names: nil,
                         option_name: NOT_PASSED,
                         load_provider: true,
                         id: :name)
@@ -95,9 +96,14 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     require "chef/provider/#{resource_name}" if load_provider
 
     option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
-    if option_name
+    option_names ||= begin
+      option_names = []
+      option_names << option_name
+      option_names << :"#{option_name}_#{aws_sdk_class_id}" if aws_sdk_class_id
+      option_names
+    end
+    option_names.each do |option_name|
       aws_option_handlers[option_name] = self
-      aws_option_handlers[:"#{option_name}_#{aws_sdk_class_id}"] = self if aws_sdk_class_id
     end
   end
 

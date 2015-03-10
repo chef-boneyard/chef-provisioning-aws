@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/resource/aws_instance'
 require 'chef/provisioning/machine_spec'
 require 'cheffish'
 
@@ -22,23 +23,28 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :associate do
     aws_object = new_resource.aws_object
+    instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
 
-    # TODO this is not test-and-set at all.  Whence the test?  Needs a reset
-    converge_by "Associating EIP Address #{new_resource.name} in #{region}" do
-      if !aws_object
-        converge_by "Creating new EIP address in #{region}" do
-          aws_object = driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
-          new_resource.save_managed_entry(aws_object, action_handler)
+    if !aws_object
+      converge_by "Creating new EIP address in #{region}" do
+        associate_to_vpc = new_resource.associate_to_vpc
+        if associate_to_vpc.nil?
+          associate_to_vpc = true if instance && instance.vpc_id
+        end
+        aws_object = driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
+      end
+    end
+
+    new_resource.save_managed_entry(aws_object, action_handler)
+
+    # Associate the EIP with the given machine
+    if instance
+      if !aws_object.instance_id || instance.id != aws_object.instance_id
+        converge_by "Associating EIP Address #{new_resource.name} (#{aws_object.public_ip}) with #{new_resource.machine} (#{instance.id})" do
+          aws_object.associate instance: instance.id
         end
       end
-
-      # Associate the EIP with the given machine
-      options = lookup_options(:instance => new_resource.instance_id)
-      if !aws_object.instance || options[:instance] != aws_object.instance.id
-        converge_by "Associating EIP Address #{new_resource.name} (#{aws_object.public_ip}) with #{options[:instance]}" do
-          aws_object.associate options
-        end
-      end
+    # TODO way to specify that you want NO machine associated with the eip
     end
   end
 

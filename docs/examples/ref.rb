@@ -68,7 +68,6 @@ machine_batch do
   end
 end
 
-
 load_balancer 'ref-load-balancer' do
   machines [ 'ref-machine2' ]
 end
@@ -83,3 +82,15 @@ aws_auto_scaling_group 'ref-auto-scaling-group' do
   load_balancers 'ref-load-balancer'
   options subnets: 'ref-subnet'
 end
+
+aws_ebs_volume 'ref-volume' do
+  availability_zone 'eu-west-1a'
+  size 1
+end
+
+aws_eip_address 'ref-elastic-ip' do
+  machine 'ref-machine1'
+  action :associate
+end
+
+# attach above volume to machine somehow ...

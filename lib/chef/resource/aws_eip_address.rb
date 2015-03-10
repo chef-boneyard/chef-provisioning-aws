@@ -2,17 +2,16 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 require 'ipaddr'
 
 class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type AWS::EC2::ElasticIp, option_name: :public_ip, managed_entry_id_name: 'public_ip', backcompat_data_bag_name: 'eip_addresses'
+  aws_sdk_type AWS::EC2::ElasticIp, option_names: [ :public_ip ], id: :public_ip, managed_entry_id_name: 'public_ip', backcompat_data_bag_name: 'eip_addresses'
 
-  actions :delete, :nothing, :associate, :disassociate
+  actions :delete, :nothing, :create, :associate, :disassociate
   default_action :associate
 
   attribute :name, kind_of: String, name_attribute: true
 
+  # TODO network interface
   attribute :machine,          kind_of: String
-  attribute :associate_to_vpc, kind_of: [TrueClass, FalseClass], lazy_default: proc {
-    AwsInstance.get_aws_object(machine)
-  }
+  attribute :associate_to_vpc, kind_of: [TrueClass, FalseClass]
 
   #
   # Desired public IP address to associate with this Chef resource.

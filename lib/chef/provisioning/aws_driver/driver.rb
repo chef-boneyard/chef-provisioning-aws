@@ -620,7 +620,7 @@ EOD
     end
 
     def image_for(image_spec)
-      AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store)
+      Chef::Resource::AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store)
     end
 
     def transport_for(machine_spec, machine_options, instance)

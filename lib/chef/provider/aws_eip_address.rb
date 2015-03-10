@@ -1,85 +1,59 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/resource/aws_instance'
 require 'chef/provisioning/machine_spec'
 require 'cheffish'
 
-class Chef::Provider::AwsEipAddress < Chef::Provider::AwsProvider
-
-  action :create do
-    if existing_ip == nil
-      converge_by "Creating new EIP address in #{new_driver.aws_config.region}" do
-        eip = new_driver.ec2.elastic_ips.create :vpc => new_resource.associate_to_vpc
-        new_resource.public_ip eip.public_ip
-        new_resource.domain eip.domain
-        new_resource.instance_id eip.instance_id
-      end
-    else
-      new_resource.public_ip existing_ip.public_ip
-      new_resource.domain existing_ip.domain
-      new_resource.instance_id existing_ip.instance_id
-    end
-    new_resource.save
-  end
+class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :delete do
-    if existing_ip
-      converge_by "Deleting EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
-        #if it's attached to something in a vpc, disassociate first
-        if existing_ip.instance_id != nil && existing_ip.domain == 'vpc'
-          existing_ip.disassociate
+    aws_object = new_resource.aws_object
+    if aws_object
+      #if it's attached to something in a vpc, disassociate first
+      if aws_object.instance_id != nil && aws_object.domain == 'vpc'
+        converge_by "Disassociating EIP Address #{new_resource.name} (#{aws_object.public_ip}) from #{aws_object.instance_id}" do
+          aws_object.disassociate
         end
-        existing_ip.delete
-        new_resource.delete
+      end
+      converge_by "Deleting EIP Address #{new_resource.name} (#{aws_object.public_ip}) in #{region}" do
+        aws_object.delete
       end
     end
+    new_resource.delete_managed_entry(action_handler)
   end
 
   action :associate do
-    converge_by "Associating EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
-      if existing_ip == nil
-        action_create
-      end
-        eip = new_driver.ec2.elastic_ips[new_resource.public_ip]
-      begin
-        spec = Chef::Provisioning::ChefMachineSpec.get(new_resource.machine)
-        if spec == nil
-          Chef::Application.fatal!("Could not find machine #{new_resource.machine}")
-        else
-          eip.associate :instance => spec.location['instance_id']
+    aws_object = new_resource.aws_object
+    instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
+
+    if !aws_object
+      converge_by "Creating new EIP address in #{region}" do
+        associate_to_vpc = new_resource.associate_to_vpc
+        if associate_to_vpc.nil?
+          associate_to_vpc = true if instance && instance.vpc_id
         end
-        new_resource.instance_id eip.instance_id
-      rescue => e
-        Chef::Application.fatal!("Error Associating EIP: #{e}")
+        aws_object = driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
       end
-      new_resource.save
+    end
+
+    new_resource.save_managed_entry(aws_object, action_handler)
+
+    # Associate the EIP with the given machine
+    if instance
+      if !aws_object.instance_id || instance.id != aws_object.instance_id
+        converge_by "Associating EIP Address #{new_resource.name} (#{aws_object.public_ip}) with #{new_resource.machine} (#{instance.id})" do
+          aws_object.associate instance: instance.id
+        end
+      end
+    # TODO way to specify that you want NO machine associated with the eip
     end
   end
 
   action :disassociate do
-    converge_by "Disassociating EIP Address #{new_resource.name} in #{new_driver.aws_config.region}" do
-      begin
-        if existing_ip != nil
-          existing_ip.disassociate
-          new_resource.instance_id nil
-          new_resource.save
-        else
-          Chef::Log.warn("No EIP found to disassociate")
-        end
-      rescue => e
-        Chef::Application.fatal!("Error Disassociating EIP: #{e}")
+    if aws_object && aws_object.instance_id
+      converge_by "Disassociating EIP Address #{new_resource.name} (#{aws_object}) from #{aws_object.instance_id} in #{region}" do
+        aws_object.disassociate
       end
     end
   end
-
-  def existing_ip
-    new_resource.hydrate
-    @existing_ip ||=  new_resource.public_ip == nil ? nil : begin
-      eip = new_driver.ec2.elastic_ips[new_resource.public_ip]
-      eip
-    rescue => e
-      Chef::Application.fatal!("Error looking for EIP Address: #{e}")
-      nil
-    end
-  end
-
 
 end

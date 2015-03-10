@@ -1,25 +1,18 @@
-require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsS3Bucket < Chef::Resource::AwsResource
-  self.resource_name = 'aws_s3_bucket'
-  self.databag_name = 's3_buckets'
+class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::S3::Bucket, id: :name
 
   actions :create, :delete, :nothing
   default_action :create
 
   attribute :name, :kind_of => String, :name_attribute => true
-  attribute :bucket_name, :kind_of => String
+  attribute :options, :kind_of => Hash, :default => {}
   attribute :enable_website_hosting, :kind_of => [TrueClass, FalseClass], :default => false
   attribute :website_options, :kind_of => Hash
 
-  stored_attribute :endpoint
-
-  def initialize(*args)
-    super
-  end
-
-  def after_created
-    super
+  def aws_object
+    result = driver.s3.buckets[name]
+    result && result.exists? ? result : nil
   end
 end

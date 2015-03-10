@@ -1,47 +1,30 @@
-require 'chef/provider/aws_provider'
-require 'date'
+require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsSqsQueue < Chef::Provider::AwsProvider
+class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
-    if existing_queue == nil
-      converge_by "Creating new SQS queue #{fqn} in #{new_driver.aws_config.region}" do
+    aws_object = new_resource.aws_object
+    if !aws_object
+      converge_by "Creating new SQS queue #{new_resource.name} in #{region}" do
         loop do
           begin
-            new_driver.sqs.queues.create(fqn)
+            driver.sqs.queues.create(new_resource.name, new_resource.options || {})
             break
           rescue AWS::SQS::Errors::QueueDeletedRecently
             sleep 5
           end
         end
-
-        new_resource.created_at DateTime.now.to_s
-        new_resource.save
       end
     end
   end
 
   action :delete do
-    if existing_queue
-      converge_by "Deleting SQS queue #{fqn} in #{new_driver.aws_config.region}" do
-        existing_queue.delete
+    aws_object = new_resource.aws_object
+    if aws_object
+      converge_by "Deleting SQS queue #{new_resource.name} in #{region}" do
+        aws_object.delete
       end
     end
-
-    new_resource.delete
-  end
-
-  def existing_queue
-    @existing_queue ||= begin
-      new_driver.sqs.queues.named(fqn)
-    rescue
-      nil
-    end
-  end
-
-  # Fully qualified queue name (i.e luigi:us-east-1)
-  def id
-    new_resource.queue_name
   end
 
 end

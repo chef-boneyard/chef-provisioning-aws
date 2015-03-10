@@ -1,20 +1,22 @@
-require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsSnsTopic < Chef::Resource::AwsResource
-  self.resource_name = 'aws_sns_topic'
+class Chef::Resource::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::SNS::Topic
 
   actions :create, :delete, :nothing
   default_action :create
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :topic_name, :kind_of => String
+  attribute :name, kind_of: String, name_attribute: true
+  attribute :arn,  kind_of: String, lazy_default: proc { driver.build_arn(service: 'sns', resource: name) }
 
-  def initialize(*args)
-    super
-  end
-
-  def after_created
-    super
+  def aws_object
+    result = driver.sns.topics[arn]
+    begin
+      # Test whether it exists or not by asking for a property
+      result.display_name
+    rescue AWS::SNS::Errors::NotFound
+      result = nil
+    end
+    result
   end
 end

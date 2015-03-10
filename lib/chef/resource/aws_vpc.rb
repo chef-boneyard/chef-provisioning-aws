@@ -1,23 +1,22 @@
-require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
+require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 
-class Chef::Resource::AwsVpc < Chef::Resource::AwsResource
-  self.resource_name = 'aws_vpc'
-  self.databag_name = 'aws_vpc'
+class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  aws_sdk_type AWS::EC2::VPC
 
   actions :create, :delete, :nothing
   default_action :create
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :cidr_block, :kind_of => String
+  attribute :name,             kind_of: String, name_attribute: true
+  attribute :cidr_block,       kind_of: String
+  attribute :instance_tenancy, equal_to: [ :default, :dedicated ], default: :default
 
-  stored_attribute :vpc_id
+  attribute :vpc_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+    name =~ /^vpc-[a-f0-9]{8}$/ ? name : nil
+  }
 
-  def initialize(*args)
-    super
-  end
-
-  def after_created
-    super
+  def aws_object
+    driver, id = get_driver_and_id
+    result = driver.ec2.vpcs[id] if id
+    result && result.exists? ? result : nil
   end
 end

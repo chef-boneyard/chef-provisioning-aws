@@ -1,39 +1,24 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
-class Chef::Provider::AwsSnsTopic < Chef::Provider::AwsProvider
+class Chef::Provider::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
-    if existing_topic == nil
-      converge_by "Creating new SNS topic #{fqn} in #{new_driver.aws_config.region}" do
-        new_driver.sns.topics.create(fqn)
-
-        new_resource.created_at DateTime.now.to_s
-        new_resource.save
+    aws_object = new_resource.aws_object
+    if !aws_object
+      converge_by "Creating new SNS topic #{new_resource.name} in #{region}" do
+        driver.sns.topics.create(new_resource.name)
       end
     end
   end
 
   action :delete do
-    if existing_topic
-      converge_by "Deleting SNS topic #{fqn} in #{new_driver.aws_config.region}" do
-        existing_topic.delete
+    aws_object = new_resource.aws_object
+    if aws_object
+      converge_by "Deleting SNS topic #{new_resource.name} in #{region}" do
+        aws_object.delete
       end
     end
-
-    new_resource.delete
-  end
-
-  def existing_topic
-    @existing_topic ||= begin
-      new_driver.sns.topics.named(fqn)
-    rescue
-      nil
-    end
-  end
-
-  def id
-    new_resource.topic_name
   end
 
 end

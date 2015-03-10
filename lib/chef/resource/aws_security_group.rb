@@ -1,26 +1,24 @@
-require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
+require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 
-class Chef::Resource::AwsSecurityGroup < Chef::Resource::AwsResource
-  self.resource_name = 'aws_security_group'
-  self.databag_name = 'aws_security_groups'
+class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  aws_sdk_type AWS::EC2::SecurityGroup
 
   actions :create, :delete, :nothing
   default_action :create
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :vpc_id, :kind_of => String
-  attribute :vpc_name, :kind_of => String
+  attribute :name,          kind_of: String, name_attribute: true
+  attribute :vpc,           kind_of: String
+  attribute :description,   kind_of: String
   attribute :inbound_rules
   attribute :outbound_rules
-  stored_attribute :security_group_id
-  stored_attribute :description
 
-  def initialize(*args)
-    super
-  end
+  attribute :security_group_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+    name =~ /^sg-[a-f0-9]{8}$/ ? name : nil
+  }
 
-  def after_created
-    super
+  def aws_object
+    driver, id = get_driver_and_id
+    result = driver.ec2.security_groups[id] if id
+    result && result.exists? ? result : nil
   end
 end

@@ -1,7 +1,10 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 
-class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::EC2::Image, load_provider: false
+class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  aws_sdk_type AWS::EC2::Image,
+               managed_entry_type:    :machine_image,
+               managed_entry_id_name: 'image_id',
+               load_provider:         false
 
   actions :create, :delete, :nothing
   default_action :create
@@ -13,11 +16,8 @@ class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResource
   }
 
   def aws_object
-    if image_id
-      result = driver.ec2.images[image_id]
-    else
-      result = driver.ec2.images.filter('name', name)
-    end
+    driver, id = get_driver_and_id
+    result = driver.ec2.images[id] if id
     result && result.exists? ? result : nil
   end
 end

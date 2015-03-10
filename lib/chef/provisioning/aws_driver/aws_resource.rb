@@ -18,7 +18,14 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   # The desired driver.
   #
   attribute :driver, kind_of: Chef::Provisioning::Driver,
-                     coerce: proc { |value| run_context.chef_provisioning.driver_for(value) }
+                     coerce: (proc do |value|
+                               case value
+                               when nil, Chef::Provisioning::Driver
+                                 value
+                               else
+                                 run_context.chef_provisioning.driver_for(value)
+                               end
+                             end)
 
   #
   # The Chef server on which any IDs should be looked up.
@@ -44,7 +51,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       if name.to_s.end_with?('s')
         handler_name = :"#{name[0..-2]}"
         if aws_option_handlers[handler_name]
-          options[name] = options[name].map { aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
+          options[name] = [options[name]].flatten.map { aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
         end
       else
         if aws_option_handlers[name]

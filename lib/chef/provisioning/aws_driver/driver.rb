@@ -620,9 +620,7 @@ EOD
     end
 
     def image_for(image_spec)
-      if image_spec.name
-        ec2.images.filter('name', image_spec.name).first
-      end
+      AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store)
     end
 
     def transport_for(machine_spec, machine_options, instance)

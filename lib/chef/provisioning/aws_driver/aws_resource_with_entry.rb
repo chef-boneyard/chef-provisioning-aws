@@ -57,9 +57,12 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   def get_id_from_managed_entry
     entry = managed_entry_store.get(self.class.managed_entry_type, name)
     if entry
-      # TODO some people don't send us run_context (like Drivers).  We might need
-      # to exit early here if the driver_url doesn't match the provided driver.
-      driver = run_context.chef_provisioning.driver_for(entry.driver_url)
+      driver = self.driver
+      if entry.driver_url != driver.driver_url
+        # TODO some people don't send us run_context (like Drivers).  We might need
+        # to exit early here if the driver_url doesn't match the provided driver.
+        driver = run_context.chef_provisioning.driver_for(entry.driver_url)
+      end
       [ driver, entry.reference[self.class.managed_entry_id_name] ]
     end
   end

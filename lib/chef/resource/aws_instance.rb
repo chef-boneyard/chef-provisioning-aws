@@ -1,7 +1,10 @@
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 
 class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type AWS::EC2::Instance, managed_entry_type: :machine, managed_entry_id_name: 'instance_id', load_provider: false
+  aws_sdk_type AWS::EC2::Instance,
+    managed_entry_type: :machine,
+    managed_entry_id_name: 'instance_id',
+    load_provider: false
 
   actions :create, :delete, :nothing
   default_action :create

@@ -5,14 +5,25 @@ with_driver 'aws::eu-west-1'
 aws_vpc 'ref-vpc' do
   cidr_block '10.0.0.0/24'
   # internet_gateway true
-  # internet_gateway_routes '0.0.0.0/0'
+  # main_routes '0.0.0.0/0' => :internet_gateway
+end
 
-  vpc = aws_object
-  if vpc
-    if !vpc.internet_gateway
-      vpc.internet_gateway = driver.ec2.internet_gateways.create
+
+# Remove these when aws_vpc.internet_gateway works
+ruby_block 'attach internet gateway' do
+  block do
+    vpc = Chef::Resource::AwsVpc.get_aws_object('ref-vpc', run_context: run_context)
+    if vpc
+      if !vpc.internet_gateway
+        driver = run_context.chef_provisioning.driver_for(run_context.chef_provisioning.current_driver)
+        vpc.internet_gateway = driver.ec2.internet_gateways.create
+      end
+      vpc.route_tables.main_route_table.create_route('0.0.0.0/0', internet_gateway: vpc.internet_gateway)
     end
-    vpc.route_tables.main_route_table.create_route('0.0.0.0/0', internet_gateway: vpc.internet_gateway)
+  end
+  only_if do
+    vpc = Chef::Resource::AwsVpc.get_aws_object('ref-vpc', run_context: run_context)
+    !vpc.internet_gateway
   end
 end
 
@@ -27,9 +38,9 @@ aws_security_group 'ref-sg2' do
   inbound_rules [
     {:ports => 2223, :protocol => :tcp, :sources => ['ref-sg1'] }
   ]
-  # outbound_rules [
-  #   {:ports => 2223, :protocol => :tcp, :destinations => ['ref-sg1'] }
-  # ]
+  outbound_rules [
+    {:ports => 2223, :protocol => :tcp, :destinations => ['ref-sg1'] }
+  ]
 end
 
 aws_subnet 'ref-subnet' do

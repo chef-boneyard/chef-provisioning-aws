@@ -20,7 +20,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         subnet.tags['Name'] = new_resource.name
         subnet.tags['VPC'] = new_resource.vpc
         new_resource.save_managed_entry(subnet, action_handler)
-        @aws_object = aws_object = subnet
+        aws_object = subnet
       end
     end
 

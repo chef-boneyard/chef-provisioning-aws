@@ -51,7 +51,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       if name.to_s.end_with?('s')
         handler_name = :"#{name[0..-2]}"
         if aws_option_handlers[handler_name]
-          options[name] = [options[name]].flatten.map { aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
+          options[name] = [options[name]].flatten.map { |value| aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
         end
       else
         if aws_option_handlers[name]

@@ -8,7 +8,6 @@ aws_vpc 'ref-vpc' do
   # main_routes '0.0.0.0/0' => :internet_gateway
 end
 
-
 # Remove these when aws_vpc.internet_gateway works
 ruby_block 'attach internet gateway' do
   block do
@@ -69,6 +68,18 @@ machine_batch do
   end
 end
 
+
 load_balancer 'ref-load-balancer' do
   machines [ 'ref-machine2' ]
+end
+
+aws_launch_configuration 'ref-launch-configuration' do
+  image 'ref-machine_image1'
+  options security_groups: 'ref-sg1'
+end
+
+aws_auto_scaling_group 'ref-auto-scaling-group' do
+  launch_configuration 'ref-launch-configuration'
+  load_balancers 'ref-load-balancer'
+  options subnets: 'ref-subnet'
 end

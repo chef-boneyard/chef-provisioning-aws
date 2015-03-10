@@ -11,6 +11,8 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
         value = new_resource.public_send(var)
         auto_scaling_opts[var] = value if value
       end
+      auto_scaling_opts[:min_size] ||= 1
+      auto_scaling_opts[:max_size] ||= 1
       auto_scaling_opts = AWSResource.lookup_options(auto_scaling_opts, resource: new_resource)
 
       converge_by "Creating new Auto Scaling group #{new_resource.name} in #{region}" do

@@ -6,12 +6,16 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     aws_object = new_resource.aws_object
     if aws_object.nil?
       converge_by "Creating new Launch Configuration #{new_resource.name} in #{region}" do
-        AWSResource.lookup_options(new_resource.options, resource: new_resource)
+        image = new_resource.image
+        image ||= driver.default_ami_for_region(driver.region)
+        image = Chef::Resource::AwsImage.get_aws_object_id(image, resource: new_resource)
+        instance_type = new_resource.instance_type || driver.default_instance_type
+        options = AWSResource.lookup_options(new_resource.options || options, resource: new_resource)
         driver.auto_scaling.launch_configurations.create(
           new_resource.name,
-          Resource::AwsImage.get_aws_object_id(new_resource.image, resource: new_resource),
-          new_resource.instance_type,
-          new_resource.options || {}
+          image,
+          instance_type,
+          options
         )
       end
     end

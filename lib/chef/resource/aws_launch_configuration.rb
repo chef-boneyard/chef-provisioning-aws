@@ -12,7 +12,7 @@ class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   attribute :options,       kind_of: Hash,   default: {}
 
   def aws_object
-    result = driver.ec2.launch_configurations[name]
+    result = driver.auto_scaling.launch_configurations[name]
     result && result.exists? ? result : nil
   end
 end

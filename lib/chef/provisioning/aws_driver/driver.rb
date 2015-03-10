@@ -1036,6 +1036,10 @@ EOD
       result
     end
 
+    def default_instance_type
+      't1.micro'
+    end
+
     PORT_DEFAULTS = {
       :http => 80,
       :https => 443,

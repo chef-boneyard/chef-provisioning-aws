@@ -13,7 +13,7 @@ class Chef::Resource::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSResour
   }
 
   def aws_object
-    result = driver.auto_scaling.load_balancers[name]
+    result = driver.elb.load_balancers[name]
     result && result.exists? ? result : nil
   end
 end

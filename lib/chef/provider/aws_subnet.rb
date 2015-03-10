@@ -1,5 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/provisioning/aws_driver/aws_resource'
 require 'date'
+require 'chef/resource/aws_vpc'
 
 class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
@@ -8,17 +10,17 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if !aws_object
       cidr_block = new_resource.cidr_block
       if !cidr_block
-        cidr_block = AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
+        cidr_block = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
       end
       converge_by "Creating new Subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} in #{region}" do
         opts = { :vpc => new_resource.vpc }
         opts[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
-        opts = AWSResource.lookup_options(opts, resource: new_resource)
+        opts = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(opts, resource: new_resource)
         subnet = driver.ec2.subnets.create(cidr_block, opts)
         subnet.tags['Name'] = new_resource.name
         subnet.tags['VPC'] = new_resource.vpc
         new_resource.save_managed_entry(subnet, action_handler)
-        @aws_object = subnet
+        @aws_object = aws_object = subnet
       end
     end
 

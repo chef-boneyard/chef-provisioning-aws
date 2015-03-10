@@ -31,7 +31,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
     end
 
-    delete_managed_entry
+    new_resource.delete_managed_entry(action_handler)
   end
 
   # TODO check existing rules and compare / remove?

@@ -11,6 +11,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       vpc = create_vpc
     end
 
+    # Update DNS attributes
+    update_vpc_attributes(vpc)
+
     #
     # Attach/detach internet gateway
     #
@@ -76,6 +79,29 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     end
     if new_resource.cidr_block && new_resource.cidr_block != vpc.cidr_block
       raise "CIDR block of VPC #{new_resource.vpc} is #{vpc.cidr_block}, but desired CIDR block is #{new_resource.cidr_block}.  VPC CIDR blocks cannot currently be changed!"
+    end
+  end
+
+  def update_vpc_attributes(vpc)
+    # Figure out what (if anything) we need to update
+    update_attributes = {}
+    %w(enable_dns_support enable_dns_hostnames).each do |name|
+      desired_value = new_resource.public_send(name)
+      if !desired_value.nil?
+        # enable_dns_support -> enableDnsSupport
+        aws_attr_name = name.gsub(/_./) { |v| v[1..1].upcase }
+        name = name.to_sym
+        actual_value = driver.ec2.client.describe_vpc_attribute(vpc_id: vpc.id, attribute: aws_attr_name)
+        if actual_value[name][:value] != desired_value
+          update_attributes[name] = { old_value: actual_value[name][:value], value: desired_value }
+        end
+      end
+    end
+
+    update_attributes.each do |name, update|
+      converge_by "update #{name} to #{update[:value].inspect} (was #{update[:old_value].inspect}) in VPC #{new_resource.name} (#{vpc.id})" do
+        driver.ec2.client.modify_vpc_attribute(:vpc_id => vpc.id, name => { value: update[:value] })
+      end
     end
   end
 

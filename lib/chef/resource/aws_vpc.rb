@@ -108,6 +108,27 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   attribute :dhcp_options, kind_of: [ AwsDhcpOptions, AWS::EC2::DHCPOptions, String ]
 
   #
+  # Indicates whether the DNS resolution is supported for the VPC. If this
+  # attribute is false, the Amazon provided DNS service in the VPC that resolves
+  # public DNS hostnames to IP addresses is not enabled. If this attribute is
+  # true, queries to the Amazon provided DNS server at the 169.254.169.253 IP
+  # address, or the reserved IP address at the base of the VPC network range
+  # "plus two" will succeed.
+  #
+  # For more information, see Amazon DNS Server:
+  # - http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html#AmazonDNS
+  #
+  attribute :enable_dns_support, equal_to: [ true, false ]
+
+  #
+  # Indicates whether the instances launched in the VPC get DNS hostnames. If
+  # this attribute is true, instances in the VPC get DNS hostnames; otherwise,
+  # they do not. If you want your instances to get DNS hostnames, you must also
+  # set enable_dns_support to true.
+  #
+  attribute :enable_dns_hostnames, equal_to: [ true, false ]
+
+  #
   # A list of tags to put on the VPC.
   #
   # The "Name" tag will always be set to the Chef name of the instance if you do

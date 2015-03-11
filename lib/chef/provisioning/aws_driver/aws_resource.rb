@@ -87,16 +87,18 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
                         option_names: nil,
                         option_name: NOT_PASSED,
                         load_provider: true,
-                        id: :name)
+                        id: :name,
+                        aws_id_prefix: nil)
     self.resource_name = self.dsl_name
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
+    @aws_id_prefix = aws_id_prefix
 
     # Go ahead and require the provider since we're here anyway ...
     require "chef/provider/#{resource_name}" if load_provider
 
-    option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
     option_names ||= begin
+      option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
       option_names = []
       option_names << option_name
       option_names << :"#{option_name}_#{aws_sdk_class_id}" if aws_sdk_class_id
@@ -115,9 +117,23 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_class_id
   end
 
+  def self.aws_id_prefix
+    @aws_id_prefix
+  end
+
   @@aws_option_handlers = {}
   def self.aws_option_handlers
     @@aws_option_handlers
+  end
+
+  # Add support for aws_id_attribute: true
+  def self.attribute(name, aws_id_attribute: false, **validation_opts)
+    @aws_id_attribute = name if aws_id_attribute
+    super(name, validation_opts)
+  end
+
+  def self.aws_id_attribute
+    @aws_id_attribute
   end
 end
 end

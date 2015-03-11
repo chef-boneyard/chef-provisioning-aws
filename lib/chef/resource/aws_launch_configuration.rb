@@ -7,7 +7,7 @@ class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   default_action :create
 
   attribute :name,          kind_of: String, name_attribute: true
-  attribute :image,         kind_of: String
+  attribute :image,         kind_of: [ String, AWS::EC2::Image ]
   attribute :instance_type, kind_of: String
   attribute :options,       kind_of: Hash,   default: {}
 

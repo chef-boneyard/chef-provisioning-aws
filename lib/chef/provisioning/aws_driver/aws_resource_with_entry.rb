@@ -22,16 +22,6 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
     [ driver, id ]
   end
 
-  # Add support for aws_id_attribute: true
-  def self.attribute(name, validation_opts={})
-    @aws_id_attribute = name if validation_opts.delete(:aws_id_attribute)
-    super
-  end
-
-  def self.aws_id_attribute
-    @aws_id_attribute
-  end
-
   def self.aws_sdk_type(sdk_class,
                         id: :id,
                         managed_entry_type: nil,
@@ -54,16 +44,22 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
     @managed_entry_id_name
   end
 
+  def should_have_managed_entry?
+    name != public_send(self.class.aws_id_attribute)
+  end
+
   def get_id_from_managed_entry
-    entry = managed_entry_store.get(self.class.managed_entry_type, name)
-    if entry
-      driver = self.driver
-      if entry.driver_url != driver.driver_url
-        # TODO some people don't send us run_context (like Drivers).  We might need
-        # to exit early here if the driver_url doesn't match the provided driver.
-        driver = run_context.chef_provisioning.driver_for(entry.driver_url)
+    if should_have_managed_entry?
+      entry = managed_entry_store.get(self.class.managed_entry_type, name)
+      if entry
+        driver = self.driver
+        if entry.driver_url != driver.driver_url
+          # TODO some people don't send us run_context (like Drivers).  We might need
+          # to exit early here if the driver_url doesn't match the provided driver.
+          driver = run_context.chef_provisioning.driver_for(entry.driver_url)
+        end
+        [ driver, entry.reference[self.class.managed_entry_id_name] ]
       end
-      [ driver, entry.reference[self.class.managed_entry_id_name] ]
     end
   end
 end

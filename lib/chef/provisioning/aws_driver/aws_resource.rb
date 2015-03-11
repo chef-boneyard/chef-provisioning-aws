@@ -62,16 +62,22 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     options
   end
 
-  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entry_store: nil)
+  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entry_store: nil, required: true)
+    return nil if value.nil?
+
     if resource
-      run_context     ||= resource.run_context
-      driver          ||= resource.driver
+      run_context         ||= resource.run_context
+      driver              ||= resource.driver
       managed_entry_store ||= resource.managed_entry_store
     end
     resource = new(value, run_context)
     resource.driver driver if driver
     resource.managed_entry_store managed_entry_store if managed_entry_store
-    resource.aws_object
+    result = resource.aws_object
+    if required && result.nil?
+      raise "#{self}[#{value}] does not exist!"
+    end
+    result
   end
 
   def self.get_aws_object_id(value, **options)

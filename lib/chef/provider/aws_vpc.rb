@@ -27,6 +27,11 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     if !new_resource.main_routes.nil?
       update_main_routes(vpc, main_route_table)
     end
+
+    # Update DHCP options
+    if !new_resource.dhcp_options.nil?
+      update_dhcp_options(vpc)
+    end
   end
 
   action :delete do
@@ -37,8 +42,10 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         converge_by "detach Internet Gateway #{ig.id} in #{region}" do
           aws_object.internet_gateway = nil
         end
-        converge_by "destroy Internet Gateway #{ig.id} in #{region}" do
-          ig.delete
+        if ig.tags['OwnedByVPC'] == aws_object.id
+          converge_by "destroy Internet Gateway #{ig.id} in #{region} (owned by VPC #{new_resource.name} (#{aws_object.id}))" do
+            ig.delete
+          end
         end
       end
       converge_by "delete VPC #{aws_object.id} in #{region}" do
@@ -73,43 +80,45 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_internet_gateway(vpc)
+    ig = vpc.internet_gateway
     case new_resource.internet_gateway
-    when String
-      internet_gateway = get_aws_object(:internet_gateway, new_resource.internet_gateway)
-      if !vpc.internet_gateway
+    when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
+      internet_gateway = AWSResource.get_aws_object(:internet_gateway, new_resource.internet_gateway)
+      if !ig
         converge_by "attach Internet Gateway #{new_resource.internet_gateway} to VPC #{vpc.id}" do
-          vpc.internet_gateway = internet_gateway
+          ig = internet_gateway
         end
-      elsif vpc.internet_gateway != internet_gateway
-        converge_by "replace Internet Gateway #{vpc.internet_gateway.id} on VPC #{vpc.id} with new Internet Gateway #{internet_gateway}" do
-          vpc.internet_gateway = internet_gateway
+      elsif ig != internet_gateway
+        converge_by "replace Internet Gateway #{ig.id} on VPC #{vpc.id} with new Internet Gateway #{internet_gateway}" do
+          ig = internet_gateway
         end
       end
     when true
-      if !vpc.internet_gateway
+      if !ig
         converge_by "attach new Internet Gateway to VPC #{vpc.id}" do
-          internet_gateway = driver.ec2.internet_gateways.create
-          action_handler.report_progress "create Internet Gateway #{internet_gateway.id}"
-          vpc.internet_gateway = internet_gateway
+          ig = driver.ec2.internet_gateways.create
+          action_handler.report_progress "create Internet Gateway #{ig.id}"
+          ig.tags['OwnedByVPC'] == vpc.id
+          action_handler.report_progress "tag Internet Gateway #{ig.id} as OwnedByVpc: #{vpc.id}"
+          vpc.internet_gateway = ig
         end
       end
     when false
-      if vpc.internet_gateway
-        converge_by "delete Internet Gateway #{vpc.internet_gateway.id} attached to VPC #{vpc.id}" do
-          vpc.internet_gateway.delete
+      if ig
+        converge_by "detach Internet Gateway #{ig.id} from VPC #{vpc.id}" do
+          ig = nil
         end
-      end
-    when :detach
-      if vpc.internet_gateway
-        converge_by "detach Internet Gateway #{vpc.internet_gateway.id} from VPC #{vpc.id}" do
-          vpc.internet_gateway = nil
+        if ig.tags['OwnedByVPC'] == vpc.id
+          converge_by "delete Internet Gateway #{ig.id} attached to VPC #{vpc.id}" do
+            ig.delete
+          end
         end
       end
     end
   end
 
   def update_main_route_table(vpc)
-    main_route_table = get_aws_object(:route_table, new_resource.main_route_table)
+    main_route_table = AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
     current_route_table = vpc.route_tables.main_route_table
     if route_table != main_route_table
       main_association = current_route_table.associations.select { |a| a.main? }.first
@@ -132,5 +141,15 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       routes new_resource.main_routes
     end
     main_route_table
+  end
+
+  def update_dhcp_options(vpc)
+    dhcp_options = vpc.dhcp_options
+    desired_dhcp_options = Chef::Resource::AwsDhcpOptions.get_aws_object(new_resource.dhcp_options, resource: new_resource)
+    if dhcp_options != desired_dhcp_options
+      converge_by "change DHCP options for VPC #{new_resource.name} (#{vpc.id}) to #{new_resource.dhcp_options} (#{desired_dhcp_options.id}) - was #{dhcp_options.id}" do
+        vpc.dhcp_options = desired_dhcp_options
+      end
+    end
   end
 end

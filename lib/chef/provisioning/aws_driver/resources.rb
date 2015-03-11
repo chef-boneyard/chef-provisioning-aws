@@ -1,6 +1,7 @@
 # Providers will be loaded automatically by AWSResource.aws_sdk_type
 
 require "chef/resource/aws_auto_scaling_group"
+require "chef/resource/aws_dhcp_options"
 require "chef/resource/aws_ebs_volume"
 require "chef/resource/aws_eip_address"
 require "chef/resource/aws_image"

@@ -592,35 +592,26 @@ EOD
     end
 
     def load_balancer_for(lb_spec)
-      if lb_spec.name
-        elb.load_balancers[lb_spec.name]
-      else
-        nil
-      end
+      Chef::Resource::AwsInstance.get_aws_object(lb_spec.name, driver: self, managed_entry_store: lb_spec.managed_entry_store, required: false)
     end
 
     def instance_for(machine_spec)
-      if machine_spec.reference && machine_spec.reference['instance_id']
-        ec2.instances[machine_spec.reference['instance_id']]
+      if machine_spec.reference
+        if machine_spec.reference['driver_url'] != driver_url
+          raise "Switching a machine's driver from #{machine_spec.reference['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+        end
+        Chef::Resource::AwsInstance.get_aws_object(machine_spec.reference['instance_id'], driver: self, managed_entry_store: machine_spec.managed_entry_store, required: false)
       end
     end
 
     def instances_for(machine_specs)
       result = {}
-      machine_specs.each do |machine_spec|
-        if machine_spec.reference && machine_spec.reference['instance_id']
-          if machine_spec.reference['driver_url'] != driver_url
-            raise "Switching a machine's driver from #{machine_spec.reference['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
-          end
-          #returns nil if not found
-          result[machine_spec] = ec2.instances[machine_spec.reference['instance_id']]
-        end
-      end
+      machine_specs.each { |machine_spec| result[machine_spec] = instance_for(machine_spec) }
       result
     end
 
     def image_for(image_spec)
-      Chef::Resource::AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store)
+      Chef::Resource::AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store, required: false)
     end
 
     def transport_for(machine_spec, machine_options, instance)

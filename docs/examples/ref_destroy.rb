@@ -74,3 +74,7 @@ end
 aws_vpc 'ref-vpc' do
   action :delete
 end
+
+aws_dhcp_options 'ref-dhcp-options' do
+  action :delete
+end

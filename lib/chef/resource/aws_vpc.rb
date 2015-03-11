@@ -28,6 +28,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::VPC
 
+  require 'chef/resource/aws_dhcp_options'
   require 'chef/resource/aws_route_table'
 
   actions :create, :delete, :nothing
@@ -63,8 +64,9 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # Whether this VPC should have an Internet Gateway or not.
   #
   # - `true` will create an Internet Gateway and attach it to the VPC, if one is not attached currently.
-  # - `false` will delete the Internet Gateway attached to the VPC, if any.
-  # - `:detach` will detach the Internet Gateway from the VPC, if there is one.
+  # - `false` will delete or detache the Internet Gateway attached to the VPC, if any.
+  #   It will delete if the tag "Owned": true is on the Internet Gateway; it will
+  #   detach if not.
   # - You may specify the AWS ID of an actual Internet Gateway
   #
   attribute :internet_gateway#, kind_of: [ String, AWS::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
@@ -99,6 +101,19 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # - Chef machine resource
   #
   attribute :main_routes, kind_of: Hash
+
+  #
+  # The DHCP options for this VPC.
+  #
+  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, AWS::EC2::DHCPOptions, String ]
+
+  #
+  # A list of tags to put on the VPC.
+  #
+  # The "Name" tag will always be set to the Chef name of the instance if you do
+  # not specify it.
+  #
+  attribute :tags, kind_of: Array
 
   attribute :vpc_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^vpc-[a-f0-9]{8}$/ ? name : nil

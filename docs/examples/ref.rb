@@ -2,10 +2,14 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::eu-west-1'
 
-vpc_resource = aws_vpc 'ref-vpc' do
+aws_dhcp_options 'ref-dhcp-options' do
+end
+
+aws_vpc 'ref-vpc' do
   cidr_block '10.0.0.0/24'
   internet_gateway true
   main_routes '0.0.0.0/0' => :internet_gateway
+  dhcp_options 'ref-dhcp-options'
 end
 
 aws_key_pair 'ref-key-pair' do

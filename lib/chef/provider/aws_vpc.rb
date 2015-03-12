@@ -43,7 +43,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       ig = aws_object.internet_gateway
       if ig
         converge_by "detach Internet Gateway #{ig.id} in #{region}" do
-          aws_object.internet_gateway = nil
+          ig.detach(vpc.id)
         end
         if ig.tags['OwnedByVPC'] == aws_object.id
           converge_by "destroy Internet Gateway #{ig.id} in #{region} (owned by VPC #{new_resource.name} (#{aws_object.id}))" do
@@ -106,37 +106,43 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_internet_gateway(vpc)
-    ig = vpc.internet_gateway
+    current_ig = vpc.internet_gateway
     case new_resource.internet_gateway
     when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
-      internet_gateway = AWSResource.get_aws_object(:internet_gateway, new_resource.internet_gateway)
-      if !ig
+      new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
+      if !current_ig
         converge_by "attach Internet Gateway #{new_resource.internet_gateway} to VPC #{vpc.id}" do
-          ig = internet_gateway
+          new_ig.attach(vpc.id)
         end
-      elsif ig != internet_gateway
-        converge_by "replace Internet Gateway #{ig.id} on VPC #{vpc.id} with new Internet Gateway #{internet_gateway}" do
-          ig = internet_gateway
+      elsif current_ig != new_ig
+        converge_by "replace Internet Gateway #{current_ig.id} on VPC #{vpc.id} with new Internet Gateway #{new_ig.id}" do
+          current_ig.detach(vpc.id)
+          new_ig.attach(vpc.id)
+        end
+        if current_ig.tags['OwnedByVPC'] == vpc.id
+          converge_by "destroy Internet Gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
+            current_ig.delete
+          end
         end
       end
     when true
-      if !ig
+      if !current_ig
         converge_by "attach new Internet Gateway to VPC #{vpc.id}" do
-          ig = driver.ec2.internet_gateways.create
-          action_handler.report_progress "create Internet Gateway #{ig.id}"
-          ig.tags['OwnedByVPC'] == vpc.id
-          action_handler.report_progress "tag Internet Gateway #{ig.id} as OwnedByVpc: #{vpc.id}"
-          vpc.internet_gateway = ig
+          current_ig = driver.ec2.internet_gateways.create
+          action_handler.report_progress "create Internet Gateway #{current_ig.id}"
+          current_ig.tags['OwnedByVPC'] = vpc.id
+          action_handler.report_progress "tag Internet Gateway #{current_ig.id} as OwnedByVpc: #{vpc.id}"
+          vpc.internet_gateway = current_ig
         end
       end
     when false
-      if ig
-        converge_by "detach Internet Gateway #{ig.id} from VPC #{vpc.id}" do
-          ig = nil
+      if current_ig
+        converge_by "detach Internet Gateway #{current_ig.id} from VPC #{vpc.id}" do
+          current_ig.detach(vpc.id)
         end
-        if ig.tags['OwnedByVPC'] == vpc.id
-          converge_by "delete Internet Gateway #{ig.id} attached to VPC #{vpc.id}" do
-            ig.delete
+        if current_ig.tags['OwnedByVPC'] == vpc.id
+          converge_by "destroy Internet Gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
+            current_ig.delete
           end
         end
       end
@@ -144,7 +150,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_main_route_table(vpc)
-    main_route_table = AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
+    main_route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
     current_route_table = vpc.route_tables.main_route_table
     if route_table != main_route_table
       main_association = current_route_table.associations.select { |a| a.main? }.first

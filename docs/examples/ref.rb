@@ -84,11 +84,19 @@ aws_auto_scaling_group 'ref-auto-scaling-group' do
 end
 
 aws_ebs_volume 'ref-volume' do
+  action [:create, :attach]
   availability_zone 'eu-west-1a'
   size 1
+  machine 'ref-machine1'
+  device '/dev/xvdf'
 end
 
-# attach above volume to machine somehow ...
+# TODO test elsewhere
+# aws_ebs_volume 'ebs-12345678' do
+#   action :attach
+#   machine 'ref-machine2'
+#   device '/dev/xvdf'
+# end
 
 aws_eip_address 'ref-elastic-ip' do
   machine 'ref-machine1'

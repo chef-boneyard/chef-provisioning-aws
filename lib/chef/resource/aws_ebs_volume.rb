@@ -20,6 +20,10 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
 
+  attribute :machine            kind_of: String
+
+  attribute :device             kind_of: String
+
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2.volumes[id] if id

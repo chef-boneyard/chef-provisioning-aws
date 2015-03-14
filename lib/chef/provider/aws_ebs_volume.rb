@@ -67,13 +67,17 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     status = aws_object ? aws_object.status : raise "EBS volume #{new_resource.name} does not currently exist!"
     case status
     when :in_use
+      # TODO Fix: since we are calling #attachments from the volume object, it 
+      # should only result a single element array.  This needs to be verified,
+      # but I believe it to be true.  This would simply the enumerable below.
       expected_attachment = aws_object.attachments.find do |attachment|
         attachment.instance == instance &&
         attachment.device == new_resource.device
       end
 
       if not expected_attachment
-        detach
+        detach # This will currently attempt to detach using new_resource attrs.  This will fail.
+        # Needs to detach using the actual data (see statement above.)
         attach
       end
     when :available
@@ -107,7 +111,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
-  def detach
+  def detach # will soon take some vars for detach_from vars
     options = {}
     options[:device] = new_resource.device if new_resource.device
 

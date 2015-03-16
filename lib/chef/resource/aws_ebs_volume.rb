@@ -3,7 +3,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
 
-  actions :create, :delete, :nothing
+  actions :create, :delete, :attach, :detach, :nothing
   default_action :create
 
   attribute :name,    kind_of: String, name_attribute: true
@@ -20,9 +20,9 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
 
-  attribute :machine            kind_of: String
+  attribute :machine,           kind_of: String
 
-  attribute :device             kind_of: String
+  attribute :device,            kind_of: String
 
   def aws_object
     driver, id = get_driver_and_id

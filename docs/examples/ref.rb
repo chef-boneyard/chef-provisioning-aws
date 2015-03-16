@@ -91,13 +91,6 @@ aws_ebs_volume 'ref-volume' do
   device '/dev/xvdf'
 end
 
-# TODO test elsewhere
-# aws_ebs_volume 'ebs-12345678' do
-#   action :attach
-#   machine 'ref-machine2'
-#   device '/dev/xvdf'
-# end
-
 aws_eip_address 'ref-elastic-ip' do
   machine 'ref-machine1'
   action :associate

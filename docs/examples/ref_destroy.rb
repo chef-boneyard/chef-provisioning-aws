@@ -34,6 +34,11 @@ load_balancer 'ref-load-balancer' do
   action :destroy
 end
 
+aws_ebs_volume 'ref-volume' do
+  action [:detach, :delete]
+  machine 'ref-machine1'
+end
+
 machine_batch do
   action :destroy
   machines 'ref-machine1', 'ref-machine2'

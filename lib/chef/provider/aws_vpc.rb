@@ -45,7 +45,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         converge_by "detach Internet Gateway #{ig.id} in #{region} from VPC #{new_resource.name} (#{aws_object.id}" do
           ig.detach(aws_object.id)
         end
-        if ig.tags['OwnedByVPC'] == aws_object.id
+        a = ig.tags['OwnedByVPC']
+        b = aws_object.id
+        if a == b
           converge_by "destroy Internet Gateway #{ig.id} in #{region} (owned by VPC #{new_resource.name} (#{aws_object.id}))" do
             ig.delete
           end

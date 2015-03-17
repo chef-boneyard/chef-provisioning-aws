@@ -60,14 +60,14 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   def update_subnet(subnet)
     # Verify unmodifiable attributes of existing subnet
     if new_resource.cidr_block && subnet.cidr_block != new_resource.cidr_block
-      raise "cidr_block for subnet #{new_resource.name} is #{new_resource.cidr_block}, but existing subnet (#{subnet.id})'s cidr_block is #{new_resource.cidr_block}.  Modification of subnet cidr_block is unsupported!"
+      raise "cidr_block for subnet #{new_resource.name} is #{new_resource.cidr_block}, but existing subnet (#{subnet.id})'s cidr_block is #{subnet.cidr_block}.  Modification of subnet cidr_block is unsupported!"
     end
     vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
     if vpc && subnet.vpc != vpc
       raise "vpc for subnet #{new_resource.name} is #{new_resource.vpc} (#{vpc.id}), but existing subnet (#{subnet.id})'s vpc is #{subnet.vpc.id}.  Modification of subnet vpc is unsupported!"
     end
     if new_resource.availability_zone && subnet.availability_zone != new_resource.availability_zone
-      raise "availability_zone for subnet #{new_resource.name} is #{new_resource.availability_zone}, but existing subnet (#{subnet.id})'s availability_zone is #{new_resource.availability_zone}.  Modification of subnet availability_zone is unsupported!"
+      raise "availability_zone for subnet #{new_resource.name} is #{new_resource.availability_zone.inspect}, but existing subnet (#{subnet.id})'s availability_zone is #{subnet.availability_zone.inspect}.  Modification of subnet availability_zone is unsupported!"
     end
   end
 

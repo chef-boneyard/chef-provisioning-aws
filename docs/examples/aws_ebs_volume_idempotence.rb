@@ -25,13 +25,6 @@ ebs_volume.run_action(:detach) # up to date
 ebs_volume.run_action(:delete)
 ebs_volume.run_action(:delete) # up to date
 
-# TODO test elsewhere
-# aws_ebs_volume 'ebs-12345678' do
-#   action :attach
-#   machine 'ref-machine2'
-#   device '/dev/xvdf'
-# end
-
 machine ref_machine1.name do
   action :destroy
 end
@@ -39,4 +32,3 @@ end
 aws_key_pair 'ref-key-pair-ebs' do
   action :delete
 end
-

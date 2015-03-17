@@ -42,21 +42,14 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     status = aws_object ? aws_object.status : nil
     case status
     when nil, :deleted, :deleting
+    when :in_use
+      current_attachment = aws_object.attachments.first
+      instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
+      Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{current_attachment.instance.id}. Detaching from instance #{instance.id}.")
+      detach(:instance => current_attachment.instance, :device => current_attachment.device)
+      delete
     else
-      converge_by "Deleting EBS volume #{new_resource.name} in #{region}" do
-        aws_object.delete
-      end
-
-      converge_by "Waiting for EBS volume #{new_resource.name} in #{region} to delete" do
-        log_callback = Proc.new do
-          Chef::Log.info("Waiting for volume to delete...")
-        end
-
-        Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError, :ensure => log_callback) do
-          raise TimeoutError,
-            "Timed out waiting for EBS volume #{new_resource.name} (#{aws_object.id}) to delete!" if aws_object.exists?
-        end
-      end
+      delete
     end
     new_resource.delete_managed_entry(action_handler)
   end
@@ -144,4 +137,21 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
+  def delete
+    aws_object = new_resource.aws_object
+    converge_by "Deleting EBS volume #{new_resource.name} in #{region}" do
+      aws_object.delete
+    end
+
+    converge_by "Waiting for EBS volume #{new_resource.name} in #{region} to delete" do
+      log_callback = Proc.new do
+        Chef::Log.info("Waiting for volume to delete...")
+      end
+
+      Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError, :ensure => log_callback) do
+        raise TimeoutError,
+          "Timed out waiting for EBS volume #{new_resource.name} (#{aws_object.id}) to delete!" if aws_object.exists?
+      end
+    end
+  end
 end

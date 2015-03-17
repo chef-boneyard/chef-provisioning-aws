@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require 'chef/resource/aws_vpc'
 
 class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::SecurityGroup
@@ -7,7 +8,7 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   default_action :create
 
   attribute :name,          kind_of: String, name_attribute: true
-  attribute :vpc,           kind_of: String
+  attribute :vpc,           kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
   attribute :description,   kind_of: String
   attribute :inbound_rules
   attribute :outbound_rules

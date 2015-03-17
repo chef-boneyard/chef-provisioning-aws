@@ -13,3 +13,6 @@ RSpec.configure do |rspec|
   rspec.expect_with(:rspec) { |c| c.syntax = :expect }
   rspec.before { allow($stdout).to receive(:write) }
 end
+
+AWS.stub!
+require 'cheffish/rspec/matchers'

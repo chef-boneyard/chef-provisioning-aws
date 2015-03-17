@@ -62,16 +62,22 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     options
   end
 
-  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entry_store: nil)
+  def self.get_aws_object(value, resource: nil, run_context: nil, driver: nil, managed_entry_store: nil, required: true)
+    return nil if value.nil?
+
     if resource
-      run_context     ||= resource.run_context
-      driver          ||= resource.driver
+      run_context         ||= resource.run_context
+      driver              ||= resource.driver
       managed_entry_store ||= resource.managed_entry_store
     end
     resource = new(value, run_context)
     resource.driver driver if driver
     resource.managed_entry_store managed_entry_store if managed_entry_store
-    resource.aws_object
+    result = resource.aws_object
+    if required && result.nil?
+      raise "#{self}[#{value}] does not exist!"
+    end
+    result
   end
 
   def self.get_aws_object_id(value, **options)
@@ -87,16 +93,18 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
                         option_names: nil,
                         option_name: NOT_PASSED,
                         load_provider: true,
-                        id: :name)
+                        id: :name,
+                        aws_id_prefix: nil)
     self.resource_name = self.dsl_name
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
+    @aws_id_prefix = aws_id_prefix
 
     # Go ahead and require the provider since we're here anyway ...
     require "chef/provider/#{resource_name}" if load_provider
 
-    option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
     option_names ||= begin
+      option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
       option_names = []
       option_names << option_name
       option_names << :"#{option_name}_#{aws_sdk_class_id}" if aws_sdk_class_id
@@ -115,9 +123,23 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_class_id
   end
 
+  def self.aws_id_prefix
+    @aws_id_prefix
+  end
+
   @@aws_option_handlers = {}
   def self.aws_option_handlers
     @@aws_option_handlers
+  end
+
+  # Add support for aws_id_attribute: true
+  def self.attribute(name, aws_id_attribute: false, **validation_opts)
+    @aws_id_attribute = name if aws_id_attribute
+    super(name, validation_opts)
+  end
+
+  def self.aws_id_attribute
+    @aws_id_attribute
   end
 end
 end

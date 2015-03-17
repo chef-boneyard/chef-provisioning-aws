@@ -2,25 +2,14 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::eu-west-1'
 
-vpc_resource = aws_vpc 'ref-vpc' do
-  cidr_block '10.0.0.0/24'
-  # internet_gateway true
-  # main_routes '0.0.0.0/0' => :internet_gateway
+aws_dhcp_options 'ref-dhcp-options' do
 end
 
-# Remove these when aws_vpc.internet_gateway works
-ruby_block 'attach internet gateway' do
-  block do
-    vpc = vpc_resource.aws_object
-    if !vpc.internet_gateway
-      driver = run_context.chef_provisioning.driver_for(run_context.chef_provisioning.current_driver)
-      vpc.internet_gateway = driver.ec2.internet_gateways.create
-    end
-    vpc.route_tables.main_route_table.create_route('0.0.0.0/0', internet_gateway: vpc.internet_gateway)
-  end
-  only_if do
-    !vpc_resource.aws_object.internet_gateway
-  end
+aws_vpc 'ref-vpc' do
+  cidr_block '10.0.0.0/24'
+  internet_gateway true
+  main_routes '0.0.0.0/0' => :internet_gateway
+  dhcp_options 'ref-dhcp-options'
 end
 
 aws_key_pair 'ref-key-pair' do
@@ -42,9 +31,15 @@ aws_security_group 'ref-sg2' do
   ]
 end
 
+aws_route_table 'ref-public' do
+  vpc 'ref-vpc'
+  routes '0.0.0.0/0' => :internet_gateway
+end
+
 aws_subnet 'ref-subnet' do
   vpc 'ref-vpc'
   map_public_ip_on_launch true
+  route_table 'ref-public'
 end
 
 machine_image 'ref-machine_image1' do

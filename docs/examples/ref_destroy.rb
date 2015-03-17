@@ -55,6 +55,10 @@ aws_subnet 'ref-subnet' do
   action :delete
 end
 
+aws_route_table 'ref-public' do
+  action :delete
+end
+
 aws_security_group 'ref-sg2' do
   action :delete
 end
@@ -67,19 +71,10 @@ aws_key_pair 'ref-key-pair' do
   action :delete
 end
 
-ruby_block 'destroy vpc children' do
-  block do
-    vpc = Chef::Resource::AwsVpc.get_aws_object('ref-vpc', run_context: run_context)
-    ig = vpc.internet_gateway
-    ig.detach(vpc)
-    ig.delete
-  end
-  only_if do
-    vpc = Chef::Resource::AwsVpc.get_aws_object('ref-vpc', run_context: run_context)
-    vpc && vpc.internet_gateway
-  end
+aws_vpc 'ref-vpc' do
+  action :delete
 end
 
-aws_vpc 'ref-vpc' do
+aws_dhcp_options 'ref-dhcp-options' do
   action :delete
 end

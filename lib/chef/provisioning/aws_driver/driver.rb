@@ -64,7 +64,8 @@ module AWSDriver
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb.exists?
+      puts "Actual #{actual_elb.inspect} for #{lb_spec.reference}"
+      if !actual_elb || !actual_elb.exists?
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
           lb_options[:subnets] = machine_specs.map { |s| ec2.instances[s.reference['instance_id']].subnet }.uniq
@@ -73,7 +74,7 @@ module AWSDriver
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
         Chef::Log.debug "AWS Load Balancer options: #{lb_options.inspect}"
 
-        updates = [ "Create load balancer #{lb_spec.name} in #{aws_config.region}" ]
+        updates = [ "create load balancer #{lb_spec.name} in #{aws_config.region}" ]
         updates << "  enable availability zones #{lb_options[:availability_zones]}" if lb_options[:availability_zones]
         updates << "  attach subnets #{lb_options[:subnets].join(', ')}" if lb_options[:subnets]
         updates << "  with listeners #{lb_options[:listeners]}" if lb_options[:listeners]
@@ -592,7 +593,7 @@ EOD
     end
 
     def load_balancer_for(lb_spec)
-      Chef::Resource::AwsInstance.get_aws_object(lb_spec.name, driver: self, managed_entry_store: lb_spec.managed_entry_store, required: false)
+      Chef::Resource::AwsLoadBalancer.get_aws_object(lb_spec.name, driver: self, managed_entry_store: lb_spec.managed_entry_store, required: false)
     end
 
     def instance_for(machine_spec)

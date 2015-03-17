@@ -45,9 +45,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         converge_by "detach Internet Gateway #{ig.id} in #{region} from VPC #{new_resource.name} (#{aws_object.id}" do
           ig.detach(aws_object.id)
         end
-        a = ig.tags['OwnedByVPC']
-        b = aws_object.id
-        if a == b
+        if ig.tags['OwnedByVPC'] == aws_object.id
           converge_by "destroy Internet Gateway #{ig.id} in #{region} (owned by VPC #{new_resource.name} (#{aws_object.id}))" do
             ig.delete
           end
@@ -79,10 +77,10 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_vpc(vpc)
     if new_resource.instance_tenancy && new_resource.instance_tenancy != vpc.instance_tenancy
-      raise "Tenancy of VPC #{new_resource.vpc} is #{vpc.instance_tenancy}, but desired tenancy is #{new_resource.instance_tenancy}.  Instance tenancy of VPCs cannot be changed!"
+      raise "Tenancy of VPC #{new_resource.name} is #{vpc.instance_tenancy}, but desired tenancy is #{new_resource.instance_tenancy}.  Instance tenancy of VPCs cannot be changed!"
     end
     if new_resource.cidr_block && new_resource.cidr_block != vpc.cidr_block
-      raise "CIDR block of VPC #{new_resource.vpc} is #{vpc.cidr_block}, but desired CIDR block is #{new_resource.cidr_block}.  VPC CIDR blocks cannot currently be changed!"
+      raise "CIDR block of VPC #{new_resource.name} is #{vpc.cidr_block}, but desired CIDR block is #{new_resource.cidr_block}.  VPC CIDR blocks cannot currently be changed!"
     end
   end
 

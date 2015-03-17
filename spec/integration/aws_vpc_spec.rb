@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'cheffish/rspec/chef_run_support'
+require 'chef/provisioning/aws_driver/credentials'
 
 describe 'Aws VPC' do
   extend Cheffish::RSpec::ChefRunSupport
@@ -14,6 +15,11 @@ describe 'Aws VPC' do
       Chef::Config.chef_server_url = URI.join(Chef::Config.chef_server_url, '/organizations/foo').to_s
       allow_any_instance_of(AWS.config.class).to receive(:ec2_client).and_return(ec2_client)
       allow(Chef::Provisioning::ChefManagedEntryStore).to receive(:new).and_return(entry_store)
+      allow_any_instance_of(Chef::Provisioning::AWSDriver::Credentials).to receive(:default)
+        .and_return({
+          :aws_access_key_id => 'na',
+          :aws_secret_access_key => 'na'
+        })
     end
 
     let(:vpc_id) { "foo" }

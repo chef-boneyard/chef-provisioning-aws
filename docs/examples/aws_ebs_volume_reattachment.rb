@@ -48,4 +48,3 @@ end
 aws_key_pair 'ref-key-pair-ebs' do
   action :delete
 end
-

@@ -7,7 +7,7 @@ aws_key_pair 'ref-key-pair-ebs'
 ref_machine1 = machine 'ref-machine-1'
 
 # use resource to create aws volume
-ebs_volume = aws_ebs_volume 'ref-volume-ebs' do
+aws_ebs_volume 'ref-volume-ebs' do
   action :create
   availability_zone 'us-west-2a'
   size 1

@@ -44,8 +44,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     when nil, :deleted, :deleting
     when :in_use
       current_attachment = aws_object.attachments.first
-      instance = current_attachment.instance
-      Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{instance.id}. Detaching from instance #{instance.id}.")
+      Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{current_attachment.instance.id}. Detaching from instance #{current_attachment.instance.id}.")
       detach(:instance => current_attachment.instance, :device => current_attachment.device)
       delete
     else

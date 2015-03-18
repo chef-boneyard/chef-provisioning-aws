@@ -2,40 +2,43 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::us-west-2'
 
-key = aws_key_pair 'ref-key-pair-ebs'
-key.run_action(:create)
+aws_key_pair 'ref-key-pair-ebs'
 
 ref_machine1 = machine 'ref-machine-1'
-ref_machine1.run_action(:converge)
 
 # create and attach to initial machine
-ebs_volume = aws_ebs_volume 'ref-volume' do
-  action :nothing
-  machine 'ref-machine-1'
+aws_ebs_volume 'ref-volume' do
+  action [:create, :attach]
+  machine ref_machine1.name
   device '/dev/xvdf'
   availability_zone 'us-west-2a'
   size 1
 end
 
-ebs_volume.run_action(:create)
-ebs_volume.run_action(:attach)
-
 ref_machine2 = machine 'ref-machine-2'
-ref_machine2.run_action(:converge)
 
 # attach to new machine
-ebs_volume.machine('ref-machine-2')
-ebs_volume.run_action(:attach)
+aws_ebs_volume 'ref-volume' do
+  action :attach
+  machine ref_machine2.name
+  device '/dev/xvdf'
+end
 
 # attach to new device
-ebs_volume.device('/dev/xvdg')
-ebs_volume.run_action(:attach)
+aws_ebs_volume 'ref-volume' do
+  action :attach
+  machine ref_machine2.name
+  device '/dev/xvdg'
+end
 
-# detach from machine without setting device
-ebs_volume.device(nil)
-ebs_volume.run_action(:detach)
+# detach from machine without setting device or machine
+aws_ebs_volume 'ref-volume' do
+  action :detach
+end
 
-ebs_volume.run_action(:delete)
+aws_ebs_volume 'ref-volume' do
+  action :delete
+end
 
 machine_batch do
   machines 'ref-machine-1', 'ref-machine-2'

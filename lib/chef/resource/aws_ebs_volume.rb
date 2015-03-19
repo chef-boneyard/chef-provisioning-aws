@@ -3,9 +3,6 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name,    kind_of: String, name_attribute: true
 
   attribute :availability_zone, kind_of: String
@@ -23,6 +20,6 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2.volumes[id] if id
-    result && result.exists? ? result : nil
+    result && result.exists? && ![:destroyd, :deleting].include?(result.status) ? result : nil
   end
 end

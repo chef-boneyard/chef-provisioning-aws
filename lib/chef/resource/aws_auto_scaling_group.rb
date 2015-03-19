@@ -3,9 +3,6 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::AutoScaling::Group
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name,                 kind_of: String,  name_attribute: true
   attribute :options,              kind_of: Hash,    default: {}
   attribute :availability_zones,   kind_of: Array

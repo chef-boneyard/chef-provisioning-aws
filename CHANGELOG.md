@@ -18,7 +18,7 @@
 - Delete snapshot when deleting image (@christinedraper)
 - Support bootstrap_options => { image_id: 'ami-234243225' } (@christinedraper)
 - Support load_balancers and desired_capacity in aws_auto_scaling_group (@christinedraper)
-- Get aws_security_group :delete working (@christinedraper)
+- Get aws_security_group :destroy working (@christinedraper)
 - Fixes for merged machine_options (add_machine_options, etc.) (@schisamo @jkeiser)
 
 ## 0.2.1 (1/27/2015)

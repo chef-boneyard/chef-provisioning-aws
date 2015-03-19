@@ -5,6 +5,9 @@ require 'chef/provisioning/chef_managed_entry_store'
 # Common AWS resource - contains metadata that all AWS resources will need
 module Chef::Provisioning::AWSDriver
 class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
+  actions :create, :destroy, :nothing
+  default_action :create
+
   def initialize(name, run_context=nil)
     name = name.public_send(self.class.aws_sdk_class_id) if name.is_a?(self.class.aws_sdk_class)
     super
@@ -12,6 +15,18 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       driver run_context.chef_provisioning.current_driver
       chef_server run_context.cheffish.current_chef_server
     end
+  end
+
+  # Backwards compatibility for action :destroy
+  def action(*args)
+    if args == [ :delete ]
+      super(:destroy)
+    else
+      super
+    end
+  end
+  def action=(value)
+    action(value)
   end
 
   #
@@ -45,6 +60,19 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     raise NotImplementedError, :aws_object
   end
 
+  #
+  # Look up an AWS options list, translating standard names using the appropriate
+  # classes.
+  #
+  # For example, `load_balancer_options` is passed into `lookup_options`, and if
+  # it looks like this: `{ subnets: `[ 'subnet1', 'subnet2' ] }`, then
+  # `AWSResource.lookup_options` will translate each ID with
+  # `AwsSubnet.get_aws_object('subnet1')`, which supports Chef names
+  # (`mysubnet`) as well as AWS subnet Ids (`subnet-1234abcd`) or AWS objects
+  # (`AWS::EC2::Subnet`).
+  #
+  # Keys that represent non-AWS-objects (such as `timeout`) are left alone.
+  #
   def self.lookup_options(options, **handler_options)
     options = options.dup
     options.each do |name, value|

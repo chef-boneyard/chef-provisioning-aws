@@ -5,41 +5,26 @@ require 'set'
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
-  action :create do
-    sg = new_resource.aws_object
-    if sg
-      update_security_group(sg)
-    else
-      sg = create_security_group
-    end
+  def action_create
+    sg = super
 
-    new_resource.save_managed_entry(sg, action_handler)
+    apply_rules(sg)
+  end
 
-    vpc = sg.vpc
+  protected
 
-    if !new_resource.outbound_rules.nil?
-      update_outbound_rules(sg, vpc)
-    end
+  def create_aws_object
+    converge_by "Creating new SG #{new_resource.name} in #{region}" do
+      options = { description: new_resource.description }
+      options[:vpc] = new_resource.vpc if new_resource.vpc
+      options = AWSResource.lookup_options(options, resource: new_resource)
+      Chef::Log.debug("VPC: #{options[:vpc]}")
 
-    if !new_resource.inbound_rules.nil?
-      update_inbound_rules(sg, vpc)
+      sg = new_resource.driver.ec2.security_groups.create(new_resource.name, options)
     end
   end
 
-  action :delete do
-    sg = new_resource.aws_object
-    if sg
-      converge_by "delete SG #{new_resource.name} (#{sg.id}) in #{region}" do
-        sg.delete
-      end
-    end
-
-    new_resource.delete_managed_entry(action_handler)
-  end
-
-  private
-
-  def update_security_group(sg)
+  def update_aws_object(sg)
     if !new_resource.description.nil? && new_resource.description != sg.description
       raise "Security Group descriptions cannot be changed after being created!  Desired description for #{new_resource.name} (#{sg.id}) was \"#{new_resource.description}\" and actual description is \"#{sg.description}\""
     end
@@ -49,19 +34,19 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         raise "Security Group VPC cannot be changed after being created!  Desired VPC for #{new_resource.name} (#{sg.id}) was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{sg.vpc_id}"
       end
     end
+    apply_rules(sg)
   end
 
-  def create_security_group
-    sg = nil
-    converge_by "create new SG #{new_resource.name} in #{region}" do
-      options = { description: new_resource.description }
-      options[:vpc] = new_resource.vpc if new_resource.vpc
-      options = AWSResource.lookup_options(options, resource: new_resource)
-      Chef::Log.debug("VPC: #{options[:vpc]}")
+  private
 
-      sg = driver.ec2.security_groups.create(new_resource.name, options)
+  def apply_rules(sg)
+    if !new_resource.outbound_rules.nil?
+      update_outbound_rules(sg, vpc)
     end
-    sg
+
+    if !new_resource.inbound_rules.nil?
+      update_inbound_rules(sg, vpc)
+    end
   end
 
   def update_inbound_rules(sg, vpc)

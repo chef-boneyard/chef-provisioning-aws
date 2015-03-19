@@ -6,9 +6,6 @@ class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWi
     managed_entry_id_name: 'instance_id',
     load_provider: false
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name, kind_of: String, name_attribute: true
 
   attribute :instance_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {

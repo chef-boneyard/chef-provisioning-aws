@@ -1,71 +1,62 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvider
+  protected
 
-  action :create do
-    dhcp_options = new_resource.aws_object
-    if dhcp_options
-      update_dhcp_options(dhcp_options)
-    else
-      dhcp_options = create_dhcp_options
-    end
-  end
-
-  action :delete do
-    aws_object = new_resource.aws_object
-    if aws_object
-      converge_by "delete dhcp_options #{new_resource.name} in #{region}" do
-        aws_object.delete
-      end
-    end
-
-    new_resource.delete_managed_entry(action_handler)
-  end
-
-  private
-
-  def create_dhcp_options
+  def create_aws_object
     options = desired_options
     if options.empty?
       options[:domain_name_servers] = "AmazonProvidedDNS"
     end
 
-    dhcp_options = nil
     converge_by "create new dhcp_options #{new_resource.name} in #{region}" do
-      dhcp_options = driver.ec2.dhcp_options.create(options)
+      dhcp_options = new_resource.driver.ec2.dhcp_options.create(options)
       dhcp_options.tags['Name'] = new_resource.name
+      dhcp_options
     end
-
-    new_resource.save_managed_entry(dhcp_options, action_handler)
-
-    dhcp_options
   end
 
-  #
-  # Because DHCP options are non-updateable, updating them requires creating a new
-  # set and updating all VPCs.
-  #
-  def update_dhcp_options(dhcp_options)
+  def update_aws_object(dhcp_options)
     # Verify unmodifiable attributes of existing dhcp_options
     config = dhcp_options.configuration
-    if desired_options.any? { |name, value| config[name] != value }
+    differing_options = desired_options.select { |name, value| config[name] != value }
+    if !differing_options.empty?
       old_dhcp_options = dhcp_options
-      converge_by "update dhcp_options #{new_resource.name} to #{dhcp_options.id} (was #{old_dhcp_options.id}) and updated VPCs in #{region}" do
-        # create new dhcp_options
-        dhcp_options = driver.ec2.dhcp_options.create(config.merge(desired_options))
-        action_handler.report_progress "create new dhcp_options #{dhcp_options.id} in #{region}"
-        # attach dhcp_options to existing vpcs
-        old_dhcp_options.vpcs.each do |vpc|
-          vpc.dhcp_options = dhcp_options
-          action_handler.report_progress "attach dhcp_options #{dhcp_options.id} to vpc #{vpc.id}"
-        end
-        # delete old dhcp_options
-        old_dhcp_options.delete
-        action_handler.report_progress "delete old dhcp_options #{old_dhcp_options.id}"
+      # Report what we are trying to change ...
+      action_handler.report_progress "update #{new_resource.to_s}"
+      differing_options.each do |name, value|
+        action_handler.report_progress "  set #{name} to #{value.inspect} (was #{config.has_key?(name) ? "not set" : config[name].inspect})"
       end
-      new_resource.save_managed_entry(dhcp_options, action_handler)
+
+      # create new dhcp_options
+      if action_handler.should_perform_actions
+        dhcp_options = AWS.ec2(config: dhcp_options.config).dhcp_options.create(config.merge(desired_options))
+      end
+      action_handler.report_progress "create new dhcp_options #{dhcp_options.id} with new attributes in #{region}"
+
+      # attach dhcp_options to existing vpcs
+      old_dhcp_options.vpcs.each do |vpc|
+        action_handler.perform_action "attach new dhcp_options #{dhcp_options.id} to vpc #{vpc.id}" do
+          vpc.dhcp_options = dhcp_options
+        end
+      end
+
+      # delete old dhcp_options
+      action_handler.perform_action "delete old dhcp_options #{old_dhcp_options.id}" do
+        old_dhcp_options.delete
+      end
+
+      [ :replaced_aws_object, dhcp_options ]
     end
   end
+
+  def destroy_aws_object(dhcp_options)
+    converge_by "delete dhcp_options #{new_resource.name} in #{region}" do
+      dhcp_options.delete
+    end
+  end
+
+  private
 
   def desired_options
     desired_options = {}

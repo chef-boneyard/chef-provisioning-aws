@@ -80,7 +80,6 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     else
       raise "EBS volume #{new_resource.name} (#{aws_object.id}) is in #{status} state!"
     end
-    new_resource.save_managed_entry(aws_object, action_handler)
   end
 
   action :detach do
@@ -92,7 +91,6 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     when :in_use
       detach
     end
-    new_resource.save_managed_entry(aws_object, action_handler)
   end
 
   private
@@ -110,11 +108,11 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
   def detach(options = {})
     aws_object = new_resource.aws_object
-    current_instance = options[:instance] || Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
-    current_device   = options[:device] || aws_object.attachments.first.device
+    instance = options[:instance] || Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
+    device   = options[:device] || aws_object.attachments.first.device
 
     converge_by "Detaching EBS volume #{new_resource.name} in #{region}" do
-      aws_object.detach_from(current_instance, current_device)
+      aws_object.detach_from(instance, device)
     end
 
     converge_by "Waiting for EBS volume #{new_resource.name} in #{region} to detach" do

@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require 'chef/resource/aws_instance'
 
 class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
@@ -20,7 +21,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
 
-  attribute :machine,           kind_of: String
+  attribute :machine,           kind_of: [ String, AwsInstance, AWS::EC2::Instance ]
 
   attribute :device,            kind_of: String
 

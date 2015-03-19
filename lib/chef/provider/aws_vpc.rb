@@ -145,20 +145,20 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_main_route_table(vpc)
-    main_route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
+    desired_route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
     current_route_table = vpc.route_tables.main_route_table
-    if route_table != main_route_table
+    if current_route_table != desired_route_table
       main_association = current_route_table.associations.select { |a| a.main? }.first
       if !main_association
-        raise "No main route table association found for VPC #{vpc.id}'s current main route table #{main_route_table.id}: error!  Probably a race condition."
+        raise "No main route table association found for VPC #{new_resource.name} (#{vpc.id})'s current main route table #{current_route_table.id}: error!  Probably a race condition."
       end
-      converge_by "change main route table for VPC #{vpc.id} to #{route_table.id} (was #{main_route_table.id})" do
+      converge_by "change main route table for VPC #{new_resource.name} (#{vpc.id}) to #{desired_route_table.id} (was #{current_route_table.id})" do
         vpc.client.replace_route_table_association(
           association_id: main_association.id,
-          route_table_id: main_route_table.id)
+          route_table_id: desired_route_table.id)
       end
     end
-    main_route_table
+    desired_route_table
   end
 
   def update_main_routes(vpc, main_route_table)

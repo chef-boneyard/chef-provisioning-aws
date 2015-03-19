@@ -25,7 +25,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
       # Report what we are trying to change ...
       action_handler.report_progress "update #{new_resource.to_s}"
       differing_options.each do |name, value|
-        action_handler.report_progress "  set #{name} to #{value.inspect} (was #{config.has_key?(name) ? "not set" : config[name].inspect})"
+        action_handler.report_progress "  set #{name} to #{value.inspect} (was #{config.has_key?(name) ? config[name].inspect : "not set"})"
       end
 
       # create new dhcp_options

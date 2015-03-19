@@ -16,7 +16,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     options = {}
     options[:vpc] = new_resource.vpc
     options = AWSResource.lookup_options(options, resource: new_resource)
-    self.vpc = Chef::Resource::AwsVpc.get_aws_object(options[:vpc])
+    self.vpc = Chef::Resource::AwsVpc.get_aws_object(options[:vpc], resource: new_resource)
 
     converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = new_resource.driver.ec2.route_tables.create(options)

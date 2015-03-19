@@ -5,14 +5,12 @@ require 'chef/provisioning/aws_driver/credentials'
 describe 'Aws VPC' do
   extend Cheffish::RSpec::ChefRunSupport
 
-  when_the_chef_12_server "exists" do
-    organization 'foo'
+  when_the_chef_server "exists", :osc_compat => false do
 
     let(:ec2_client) { double(AWS::EC2::Client) }
     let!(:entry_store) { Chef::Provisioning::ChefManagedEntryStore.new }
 
     before :each do
-      Chef::Config.chef_server_url = URI.join(Chef::Config.chef_server_url, '/organizations/foo').to_s
       allow_any_instance_of(AWS.config.class).to receive(:ec2_client).and_return(ec2_client)
       allow(Chef::Provisioning::ChefManagedEntryStore).to receive(:new).and_return(entry_store)
       allow_any_instance_of(Chef::Provisioning::AWSDriver::Credentials).to receive(:default)
@@ -22,7 +20,8 @@ describe 'Aws VPC' do
         })
     end
 
-    let(:vpc_id) { "foo" }
+    let(:vpc_id) { "vpc-12345" }
+    let(:vpc_name) { "my_vpc" }
 
     describe "action :create" do
 
@@ -47,15 +46,15 @@ describe 'Aws VPC' do
         expect(ec2_client).to receive(:create_vpc).with(create_hash).and_return(create_resp)
         expect(ec2_client).to receive(:create_tags).with({
           :resources=>[vpc_id],
-          :tags=>[{:key=>"Name", :value=>"my_vpc"}]
+          :tags=>[{:key=>"Name", :value=>vpc_name}]
         })
 
         expect(entry_store).to receive(:save_data).with(
           "aws_vpc",
-          "my_vpc",
+          vpc_name,
           {"reference"=>{"id"=>vpc_id}, "driver_url"=>"aws::us-west-2"},
           kind_of(Chef::Provisioning::ActionHandler)
-        )
+        ).and_call_original
       end
 
       after do

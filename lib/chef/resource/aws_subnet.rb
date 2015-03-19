@@ -19,9 +19,6 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   require 'chef/resource/aws_vpc'
   require 'chef/resource/aws_route_table'
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   #
   # The name of this subnet.
   #

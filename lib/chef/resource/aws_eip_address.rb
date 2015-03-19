@@ -4,13 +4,10 @@ require 'ipaddr'
 class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::ElasticIp, option_names: [ :public_ip ], id: :public_ip, managed_entry_id_name: 'public_ip', backcompat_data_bag_name: 'eip_addresses'
 
-  actions :delete, :nothing, :create, :associate, :disassociate
-  default_action :associate
-
   attribute :name, kind_of: String, name_attribute: true
 
   # TODO network interface
-  attribute :machine,          kind_of: String
+  attribute :machine,          kind_of: [String, FalseClass]
   attribute :associate_to_vpc, kind_of: [TrueClass, FalseClass]
 
   #
@@ -41,5 +38,17 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
     driver, public_ip = get_driver_and_id
     result = driver.ec2.elastic_ips[public_ip] if public_ip
     result && result.exists? ? result : nil
+  end
+
+  def action(*args)
+    # Backcompat for associate and disassociate
+    if args == [ :associate ]
+      super(:create)
+    elsif args == [ :disassociate ]
+      machine false
+      super(:create)
+    else
+      super
+    end
   end
 end

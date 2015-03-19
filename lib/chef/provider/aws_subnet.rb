@@ -5,15 +5,8 @@ require 'chef/resource/aws_vpc'
 
 class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
-  action :create do
-    subnet = new_resource.aws_object
-    if subnet
-      update_subnet(subnet)
-    else
-      subnet = create_subnet
-    end
-
-    new_resource.save_managed_entry(subnet, action_handler)
+  def action_create
+    subnet = super
 
     if new_resource.map_public_ip_on_launch != nil
       update_map_public_ip_on_launch(subnet)
@@ -24,20 +17,9 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
-  action :delete do
-    aws_object = new_resource.aws_object
-    if aws_object
-      converge_by "delete subnet #{new_resource.name} in VPC #{new_resource.vpc} in #{region}" do
-        aws_object.delete
-      end
-    end
+  protected
 
-    new_resource.delete_managed_entry(action_handler)
-  end
-
-  private
-
-  def create_subnet
+  def create_aws_object
     cidr_block = new_resource.cidr_block
     if !cidr_block
       cidr_block = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
@@ -46,18 +28,15 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
     options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(options, resource: new_resource)
 
-    subnet = nil
     converge_by "create new subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
-      subnet = driver.ec2.subnets.create(cidr_block, options)
+      subnet = new_resource.driver.ec2.subnets.create(cidr_block, options)
       subnet.tags['Name'] = new_resource.name
       subnet.tags['VPC'] = new_resource.vpc
-      aws_object = subnet
+      subnet
     end
-
-    subnet
   end
 
-  def update_subnet(subnet)
+  def update_aws_object(subnet)
     # Verify unmodifiable attributes of existing subnet
     if new_resource.cidr_block && subnet.cidr_block != new_resource.cidr_block
       raise "cidr_block for subnet #{new_resource.name} is #{new_resource.cidr_block}, but existing subnet (#{subnet.id})'s cidr_block is #{new_resource.cidr_block}.  Modification of subnet cidr_block is unsupported!"
@@ -71,19 +50,27 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
+  def destroy_aws_object(subnet)
+    converge_by "delete subnet #{new_resource.name} in VPC #{new_resource.vpc} in #{region}" do
+      subnet.delete
+    end
+  end
+
+  private
+
   def update_map_public_ip_on_launch(subnet)
     if !new_resource.map_public_ip_on_launch.nil?
-      subnet_desc = driver.ec2.client.describe_subnets(subnet_ids: [ subnet.id ])[:subnet_set].first
+      subnet_desc = subnet.client.describe_subnets(subnet_ids: [ subnet.id ])[:subnet_set].first
       if new_resource.map_public_ip_on_launch
         if !subnet_desc[:map_public_ip_on_launch]
           converge_by "turn on automatic public IPs for subnet #{subnet.id}" do
-            driver.ec2.client.modify_subnet_attribute(subnet_id: subnet.id, map_public_ip_on_launch: { value: true })
+            subnet.client.modify_subnet_attribute(subnet_id: subnet.id, map_public_ip_on_launch: { value: true })
           end
         end
       else
         if subnet_desc[:map_public_ip_on_launch]
           converge_by "turn off automatic public IPs for subnet #{subnet.id}" do
-            driver.ec2.client.modify_subnet_attribute(subnet_id: subnet.id, map_public_ip_on_launch: { value: false })
+            subnet.client.modify_subnet_attribute(subnet_id: subnet.id, map_public_ip_on_launch: { value: false })
           end
         end
       end

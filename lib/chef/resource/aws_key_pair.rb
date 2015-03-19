@@ -3,9 +3,6 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::EC2::KeyPair, id: :name
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   # Private key to use as input (will be generated if it does not exist)
   attribute :private_key_path, :kind_of => String
   # Public key to use as input (will be generated if it does not exist)

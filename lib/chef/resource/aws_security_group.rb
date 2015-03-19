@@ -4,9 +4,6 @@ require 'chef/resource/aws_vpc'
 class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::SecurityGroup
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name,          kind_of: String, name_attribute: true
   attribute :vpc,           kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
   attribute :description,   kind_of: String

@@ -13,9 +13,6 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::DHCPOptions
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   #
   # The Chef "idempotence name" of this DHCP options set.
   #

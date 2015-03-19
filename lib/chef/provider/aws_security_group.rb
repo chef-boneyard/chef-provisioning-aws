@@ -4,35 +4,37 @@ require 'ipaddr'
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
-  action :create do
-    sg = new_resource.aws_object
-    if !sg
-      converge_by "Creating new SG #{new_resource.name} in #{region}" do
-        options = { description: new_resource.description }
-        options[:vpc] = new_resource.vpc if new_resource.vpc
-        options = AWSResource.lookup_options(options, resource: new_resource)
-        Chef::Log.debug("VPC: #{options[:vpc]}")
-
-        sg = driver.ec2.security_groups.create(new_resource.name, options)
-      end
-    end
-
-    new_resource.save_managed_entry(sg, action_handler)
+  def action_create
+    sg = super
 
     # Update rules
     apply_rules(sg)
   end
 
-  action :delete do
-    aws_object = new_resource.aws_object
-    if aws_object
-      converge_by "Deleting SG #{new_resource.name} in #{region}" do
-        aws_object.delete
-      end
-    end
+  protected
 
-    new_resource.delete_managed_entry(action_handler)
+  def create_aws_object
+    converge_by "Creating new SG #{new_resource.name} in #{region}" do
+      options = { description: new_resource.description }
+      options[:vpc] = new_resource.vpc if new_resource.vpc
+      options = AWSResource.lookup_options(options, resource: new_resource)
+      Chef::Log.debug("VPC: #{options[:vpc]}")
+
+      sg = new_resource.driver.ec2.security_groups.create(new_resource.name, options)
+    end
   end
+
+  def update_aws_object(sg)
+    # TODO implement update
+  end
+
+  def destroy_aws_object(sg)
+    converge_by "Deleting SG #{new_resource.name} in #{region}" do
+      sg.delete
+    end
+  end
+
+  private
 
   # TODO check existing rules and compare / remove?
   def apply_rules(security_group)

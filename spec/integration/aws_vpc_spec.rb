@@ -230,7 +230,7 @@ describe 'Aws VPC' do
       end
     end
 
-    describe "action :delete" do
+    describe "action :destroy" do
       let(:ig_id) {"bar"}
 
       shared_examples "deletes VPC" do
@@ -238,16 +238,16 @@ describe 'Aws VPC' do
           resp = {"id"=>"my_vpc", "reference"=>{"id"=>"foo"}, "driver_url"=>"aws::us-west-2"}
           expect(entry_store).to receive(:get_data).with(:aws_vpc, "my_vpc").and_return(resp)
           expect(ec2_client).to receive(:describe_vpcs).with({:vpc_ids=>[vpc_id]}).and_return(true)
-          expect(ec2_client).to receive(:delete_vpc).with({:vpc_id=>vpc_id})
+          expect(ec2_client).to receive(:destroy_vpc).with({:vpc_id=>vpc_id})
 
           run_recipe do
             with_driver 'aws::us-west-2'
             aws_vpc 'my_vpc' do
-              action :delete
+              action :destroy
             end
           end
 
-          expect(chef_run).to have_updated('aws_vpc[my_vpc]', :delete)
+          expect(chef_run).to have_updated('aws_vpc[my_vpc]', :destroy)
         end
       end
 
@@ -295,7 +295,7 @@ describe 'Aws VPC' do
               {:name=>"resource-id", :values=>[ig_id]}
             ]
           }).and_return(resp)
-          expect(ec2_client).to receive(:delete_internet_gateway).with({:internet_gateway_id=>ig_id})
+          expect(ec2_client).to receive(:destroy_internet_gateway).with({:internet_gateway_id=>ig_id})
         end
         include_examples "deletes VPC"
       end

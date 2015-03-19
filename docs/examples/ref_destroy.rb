@@ -3,31 +3,31 @@ require 'chef/provisioning/aws_driver'
 with_driver 'aws::eu-west-1'
 
 aws_sqs_queue 'ref-sqs-queue' do
-  action :delete
+  action :destroy
 end
 
 aws_sns_topic 'ref-sns-topic' do
-  action :delete
+  action :destroy
 end
 
 aws_s3_bucket 'ref-s3-bucket' do
-  action :delete
+  action :destroy
 end
 
 aws_eip_address 'ref-elastic-ip' do
-  action :delete
+  action :destroy
 end
 
 aws_ebs_volume 'ref-volume' do
-  action :delete
+  action :destroy
 end
 
 aws_auto_scaling_group 'ref-auto-scaling-group' do
-  action :delete
+  action :destroy
 end
 
 aws_launch_configuration 'ref-launch-configuration' do
-  action :delete
+  action :destroy
 end
 
 load_balancer 'ref-load-balancer' do
@@ -52,29 +52,29 @@ machine_image 'ref-machine_image1' do
 end
 
 aws_subnet 'ref-subnet' do
-  action :delete
+  action :destroy
 end
 
 aws_route_table 'ref-public' do
-  action :delete
+  action :destroy
 end
 
 aws_security_group 'ref-sg2' do
-  action :delete
+  action :destroy
 end
 
 aws_security_group 'ref-sg1' do
-  action :delete
+  action :destroy
 end
 
 aws_key_pair 'ref-key-pair' do
-  action :delete
+  action :destroy
 end
 
 aws_vpc 'ref-vpc' do
-  action :delete
+  action :destroy
 end
 
 aws_dhcp_options 'ref-dhcp-options' do
-  action :delete
+  action :destroy
 end

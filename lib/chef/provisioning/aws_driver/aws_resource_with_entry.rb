@@ -10,7 +10,9 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   #        and dry run.
   #
   def delete_managed_entry(action_handler)
-    managed_entry_store.delete(self.class.resource_name, name, action_handler)
+    if should_have_managed_entry?
+      managed_entry_store.delete(self.class.resource_name, name, action_handler)
+    end
   end
 
   #
@@ -25,11 +27,13 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   #        not attempt to update it (this prevents us from retrieving it twice).
   #
   def save_managed_entry(aws_object, action_handler, existing_entry: nil)
-    managed_entry = existing_entry ||
-                    managed_entry_store.new_entry(self.class.resource_name, name)
-    updated = update_managed_entry(aws_object, managed_entry)
-    if updated || !existing_entry
-      managed_entry.save(action_handler)
+    if should_have_managed_entry?
+      managed_entry = existing_entry ||
+                      managed_entry_store.new_entry(self.class.resource_name, name)
+      updated = update_managed_entry(aws_object, managed_entry)
+      if updated || !existing_entry
+        managed_entry.save(action_handler)
+      end
     end
   end
 

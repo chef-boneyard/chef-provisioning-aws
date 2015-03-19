@@ -45,7 +45,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if vpc && subnet.vpc != vpc
       raise "vpc for subnet #{new_resource.name} is #{new_resource.vpc} (#{vpc.id}), but existing subnet (#{subnet.id})'s vpc is #{subnet.vpc.id}.  Modification of subnet vpc is unsupported!"
     end
-    if new_resource.availability_zone && subnet.availability_zone != new_resource.availability_zone
+    if new_resource.availability_zone && subnet.availability_zone_name != new_resource.availability_zone
       raise "availability_zone for subnet #{new_resource.name} is #{new_resource.availability_zone}, but existing subnet (#{subnet.id})'s availability_zone is #{new_resource.availability_zone}.  Modification of subnet availability_zone is unsupported!"
     end
   end

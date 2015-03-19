@@ -39,11 +39,14 @@ end
 
 # TODO not working - need to properly instantiate AwsInstance
 # verify chef::resource::awsinstance
-# aws_ebs_volume ref_volume.name do
-#   action [:attach, :detach]
-#   machine lazy { AwsInstance.new(node.default['instance_id']) }
-#   device '/dev/xvdf'
-# end
+aws_ebs_volume ref_volume.name do
+  action [:attach, :detach]
+  machine lazy { instance = AwsInstance.new
+                 instance.volume_id(node.default['instance_id'])
+                 instance
+               }
+  device '/dev/xvdf'
+end
 
 # reinitialize instance and destroy
 aws_instance ref_machine.name do

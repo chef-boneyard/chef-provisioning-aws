@@ -71,6 +71,10 @@ aws_key_pair 'ref-key-pair' do
   action :destroy
 end
 
+aws_route_table 'ref-main-route-table' do
+  action :destroy
+end
+
 aws_vpc 'ref-vpc' do
   action :destroy
 end

@@ -1,41 +1,25 @@
-require 'chef/resource/aws_resource'
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsRdsDbInstance < Chef::Provider::AwsProvider
+class Chef::Provider::AwsRdsDbInstance < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
-
-    if existing_db_instance == nil
-      options = {
-        :allocated_storage => new_resource.allocated_storage,
-        :db_instance_class => new_resource.db_instance_class,
-        :engine => new_resource.engine,
-        :master_username => new_resource.master_username,
-        :master_user_password => new_resource.master_user_password,
-        :db_subnet_group_name => new_resource.db_subnet_group_name
-      }
-
-      converge_by "Creating new RDS database with engine #{new_resource.engine}" do
-        dbInstance = new_driver.rds.db_instances.create(new_resource.name, options)
-        new_resource.db_instance_id dbInstance.id
-        new_resource.save
-      end
+    db_instance = new_resource.aws_object
+    
+    if db_instance == nil
+      create_db_instance
     end
   end
 
-  def existing_db_instance 
-    @existing_db_instance ||= begin
-      db_instance = new_driver.rds.db_instances[new_resource.name]
-
-      if db_instance.exists
-        db_instance
-      else
-        nil
-      end
-
-    rescue
-      nil
+  def create_db_instance
+    db_instance = nil
+    converge_by "Creating new RDS database with engine #{new_resource.engine}" do
+      options = {
+      }
+      options = AWSResource.lookup_options(options, resource: new_resource)
+      db_instance = driver.rds.db_instances.create(new_resource.db_instance_identifier, options)
+      new_resource.save_managed_entry(db_instance, action_handler)
     end
+    db_instance
   end
 
 end

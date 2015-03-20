@@ -26,10 +26,10 @@ describe 'Aws RDS DB instance' do
 
       before do
         resp = AWS::Core::Response.new
-        resp.data[:db_instances] = [{}]
+
         expect(rds_client).to receive(:describe_db_instances)
           .with({:db_instance_identifier=>'my-db-instance'})
-          .and_return(resp)
+          .and_raise(AWS::RDS::Errors::DBInstanceNotFound)
 
         resp = AWS::Core::Response.new
         resp.data = {

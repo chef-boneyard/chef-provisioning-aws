@@ -3,7 +3,8 @@ gemfile
 gemspec
 
 #gem 'chef-provisioning', path: '../chef-provisioning'
-gem 'chef-provisioning', :git => 'https://github.com/opscode/chef-provisioning.git', :branch => 'master'
-#gem 'cheffish', :git => 'https://github.com/chef/cheffish.git'#, :branch => 'tball/extract_spec_support'
+gem 'chef-provisioning', github: 'chef/chef-provisioning', branch: 'master'
+gem 'cheffish', github: 'chef/cheffish', branch: 'jk/org_and_scope'
+gem 'chef-zero', github: 'chef/chef-zero', branch: 'jk/org_and_scope'
 # gem "pry-byebug"
 # gem "pry-stack_explorer"

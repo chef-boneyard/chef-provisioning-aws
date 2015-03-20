@@ -2,6 +2,8 @@ require 'spec_helper'
 require 'cheffish/rspec/chef_run_support'
 require 'chef/provisioning/aws_driver/credentials'
 
+raise 'noooo'
+
 describe 'Aws VPC' do
   extend Cheffish::RSpec::ChefRunSupport
 

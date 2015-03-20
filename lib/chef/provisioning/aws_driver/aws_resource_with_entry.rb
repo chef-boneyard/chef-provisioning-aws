@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_resource'
+require 'chef/provisioning/aws_driver/resources'
 
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource

@@ -66,7 +66,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     # If we were told to associate the IP to a machine, do so
     #
     if desired_instance.is_a?(AWS::EC2::Instance)
-      if !elastic_ip.instance_id || desired_instance.id != elastic_ip.instance_id
+      if desired_instance.id != elastic_ip.instance_id
         converge_by "associate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) with #{new_resource.machine} (#{desired_instance.id})" do
           elastic_ip.associate instance: desired_instance.id
         end

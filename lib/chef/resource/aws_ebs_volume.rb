@@ -5,6 +5,8 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :name,    kind_of: String, name_attribute: true
 
+  attribute :machine,           kind_of: [String, FalseClass]
+
   attribute :availability_zone, kind_of: String
   attribute :size,              kind_of: Integer
   attribute :snapshot,          kind_of: String
@@ -20,6 +22,6 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2.volumes[id] if id
-    result && result.exists? && ![:destroyd, :deleting].include?(result.status) ? result : nil
+    result && result.exists? && ![:deleted, :deleting].include?(result.status) ? result : nil
   end
 end

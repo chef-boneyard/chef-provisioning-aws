@@ -5,7 +5,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :name,    kind_of: String, name_attribute: true
 
-  attribute :machine,           kind_of: [String, FalseClass]
+  attribute :machine#,           kind_of: [ String, FalseClass ] TODO Fix why false still being validated as String (even without kind_of:)
 
   attribute :availability_zone, kind_of: String
   attribute :size,              kind_of: Integer
@@ -18,6 +18,8 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   attribute :volume_id,         kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
+
+  attribute :device,            kind_of: String
 
   def aws_object
     driver, id = get_driver_and_id

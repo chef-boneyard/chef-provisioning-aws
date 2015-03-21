@@ -65,7 +65,6 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     case status
     when :in_use
       attachment = volume.attachments.first
-      Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{attachment.instance.id}. Detaching from instance #{attachment.instance.id}.")
       detach(:instance => attachment.instance, :device => attachment.device)
       delete(volume)
     else
@@ -74,6 +73,17 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   private
+
+  def desired_instance
+    if !defined?(@desired_instance)
+      if new_resource.machine == false
+        @desired_instance = nil
+      else
+        @desired_instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
+      end
+    end
+    @desired_instance
+  end
 
   def desired_options
     @desired_options ||= begin
@@ -91,47 +101,44 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_attachment(volume)
+    status = volume.status
     #
     # If we were told to attach the volume to a machine, do so
     #
-    # if desired_instance.is_a?(AWS::EC2::Instance)
-    #   status = aws_object.status
-    #   case status
-    #   when :in_use
-    #     attachment = aws_object.attachments.first
-    #     # wrong instance
-    #     if attachment.instance != desired_instance
-    #       Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{attachment.instance.id}. Reattaching to instance #{desired_instance.id} to device #{new_resource.device}.")
-    #       detach(:instance => attachment.instance, :device => attachment.device)
-    #       attach
-    #     # wrong device only
-    #     elsif attachment.instance == desired_instance && attachment.device != new_resource.device
-    #       Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is attached to instance #{attachment.instance.id} on device #{attachment.device}. Reattaching device to #{new_resource.device}.")
-    #       detach(:device => current_attachment.device)
-    #       attach
-    #     else
-    #       Chef::Log.info("EBS volume #{new_resource.name} (#{aws_object.id}) is properly attached to instance #{attachment.instance.id} on device #{attachment.device}.")
-    #     end
-    #   when :available
-    #     attach
-    #   when nil
-    #     raise "EBS volume #{new_resource.name} does not currently exist!"
-    #   else
-    #     raise "EBS volume #{new_resource.name} (#{aws_object.id}) is in #{status} state!"
-    #   end
+    if desired_instance.is_a?(AWS::EC2::Instance)
+      case status
+      when :in_use
+        attachment = volume.attachments.first
+        # wrong instance
+        if attachment.instance != desired_instance
+          detach(volume, :instance => attachment.instance, :device => attachment.device)
+          attach(volume)
+        # wrong device only
+        elsif attachment.instance == desired_instance && attachment.device != new_resource.device
+          detach(volume, :device => attachment.device)
+          attach(volume)
+        end
 
-    # #
-    # # If we were told to set the machine to false, detach it.
-    # #
-    # else
-    #   status = aws_object.status
-    #   case status
-    #   when nil
-    #     Chef::Log.warn "EBS volume #{new_resource.name} does not currently exist!"
-    #   when :in_use
-    #     detach
-    #   end
-    # end
+      when :available
+        attach(volume)
+      when nil
+        raise "EBS volume #{new_resource.name} does not currently exist!"
+      else
+        raise "EBS volume #{new_resource.name} (#{volume.id}) is in #{status} state!"
+      end
+
+    #
+    # If we were told to set the machine to false, detach it.
+    #
+    else
+      case status
+      when nil
+        Chef::Log.warn "EBS volume #{new_resource.name} does not currently exist!"
+      when :in_use
+        detach(volume, :instance => Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource))
+      end
+    end
+    volume
   end
     
   def wait_for_volume_status(volume, status)
@@ -145,32 +152,29 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
-  # def detach(options = {})
-  #   instance = options[:instance] || desired_instance
-  #   device   = options[:device] || aws_object.attachments.first.device
+  def detach(volume, options = {})
+    instance = options[:instance] || desired_instance
+    device   = options[:device] || volume.attachments.first.device
 
-  #   converge_by "Detaching EBS volume #{new_resource.name} in #{region}" do
-  #     aws_object.detach_from(instance, device)
-  #   end
+    converge_by "detach EBS volume #{new_resource.name} in #{region} from instance #{new_resource.machine} (#{instance.instance_id})" do
+      volume.detach_from(instance, device)
+    end
 
-  #   converge_by "Waiting for EBS volume #{new_resource.name} in #{region} to detach" do
-  #     wait_for_volume_status(:available)
-  #   end
-  # end
+    converge_by "wait for EBS volume #{new_resource.name} in #{region} to detach" do
+      wait_for_volume_status(volume, :available)
+    end
+  end
 
-  # def attach
-  #   aws_object = new_resource.aws_object
-  #   options = {}
-  #   options[:device] = new_resource.device if new_resource.device
+  def attach(volume)
+    converge_by "attach EBS volume #{new_resource.name} in #{region} to instance #{new_resource.machine} (#{desired_instance.instance_id})" do
+      volume.attach_to(desired_instance, new_resource.device)
+    end
 
-  #   converge_by "Attaching EBS volume #{new_resource.name} in #{region}" do
-  #     aws_object.attach_to(Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource), new_resource.device)
-  #   end
-
-  #   converge_by "Waiting for EBS volume #{new_resource.name} in #{region} to attach" do
-  #     wait_for_volume_status(:in_use)
-  #   end
-  # end
+    converge_by "wait for EBS volume #{new_resource.name} in #{region} to attach" do
+      wait_for_volume_status(volume, :in_use)
+      volume
+    end
+  end
 
   def delete(volume)
     converge_by "delete EBS volume #{new_resource.name} in #{region}" do
@@ -184,7 +188,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => TimeoutError, :ensure => log_callback) do
         raise TimeoutError,
-          "timed out waiting for EBS volume #{new_resource.name} (#{aws_object.id}) to delete!" if volume.exists?
+          "timed out waiting for EBS volume #{new_resource.name} (#{volume.id}) to delete!" if volume.exists?
       end
     end
   end

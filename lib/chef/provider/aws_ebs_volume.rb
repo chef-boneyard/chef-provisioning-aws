@@ -65,7 +65,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     case status
     when :in_use
       attachment = volume.attachments.first
-      detach(:instance => attachment.instance, :device => attachment.device)
+      detach(volume, :instance => attachment.instance, :device => attachment.device)
       delete(volume)
     else
       delete(volume)

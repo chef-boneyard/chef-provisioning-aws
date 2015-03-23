@@ -98,9 +98,13 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       driver              ||= resource.driver
       managed_entry_store ||= resource.managed_entry_store
     end
-    resource = new(value, run_context)
-    resource.driver driver if driver
-    resource.managed_entry_store managed_entry_store if managed_entry_store
+    if value.is_a?(self)
+      resource = value
+    else
+      resource = new(value, run_context)
+      resource.driver driver if driver
+      resource.managed_entry_store managed_entry_store if managed_entry_store
+    end
     result = resource.aws_object
     if required && result.nil?
       raise "#{self}[#{value}] does not exist!"

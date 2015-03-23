@@ -135,7 +135,8 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       when nil
         Chef::Log.warn "EBS volume #{new_resource.name} does not currently exist!"
       when :in_use
-        detach(volume, :instance => Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource))
+        attachment = volume.attachments.first
+        detach(volume, :instance => attachment.instance, :device => attachment.device)
       end
     end
     volume

@@ -5,7 +5,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :name,    kind_of: String, name_attribute: true
 
-  attribute :machine#,           kind_of: [ String, FalseClass ] TODO Fix why false still being validated as String (even without kind_of:)
+  attribute :machine,           kind_of: [ String, FalseClass ]
 
   attribute :availability_zone, kind_of: String
   attribute :size,              kind_of: Integer

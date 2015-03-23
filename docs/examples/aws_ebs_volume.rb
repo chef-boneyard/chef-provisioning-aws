@@ -25,14 +25,10 @@ aws_ebs_volume 'ref-volume-ebs' do
   device '/dev/xvdg'
 end
 
-# TODO: Fix validation issue
-# Chef::Exceptions::ValidationFailed
-#    ----------------------------------
-#    Option name must be a kind of String!  You passed false.
-# # detach
-# aws_ebs_volume 'ref-volume-ebs' do
-#   machine false
-# end
+# detach
+aws_ebs_volume 'ref-volume-ebs' do
+  machine false
+end
 
 # delete volume
 aws_ebs_volume 'ref-volume-ebs' do

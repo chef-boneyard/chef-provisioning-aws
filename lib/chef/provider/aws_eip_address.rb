@@ -5,55 +5,84 @@ require 'cheffish'
 
 class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
-  action :delete do
-    aws_object = new_resource.aws_object
-    if aws_object
-      #if it's attached to something in a vpc, disassociate first
-      if aws_object.instance_id != nil && aws_object.domain == 'vpc'
-        converge_by "Disassociating EIP Address #{new_resource.name} (#{aws_object.public_ip}) from #{aws_object.instance_id}" do
+  def action_create
+    elastic_ip = super
+
+    if !new_resource.machine.nil?
+      update_association(elastic_ip)
+    end
+  end
+
+  protected
+
+  def create_aws_object
+    converge_by "create new EIP address in #{region}" do
+      associate_to_vpc = new_resource.associate_to_vpc
+      if associate_to_vpc.nil?
+        if desired_instance.is_a?(AWS::EC2::Instance)
+          associate_to_vpc = !!desired_instance.vpc_id
+          Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? "is" : "is not"} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
+        end
+      end
+      new_resource.driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
+    end
+  end
+
+  def update_aws_object(elastic_ip)
+    if !new_resource.associate_to_vpc.nil?
+      if !!new_resource.associate_to_vpc != !!elastic_ip.vpc?
+        raise "#{new_resource.to_s}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{elastic_ip.vpc?}.  Cannot be modified!"
+      end
+    end
+  end
+
+  def destroy_aws_object(elastic_ip)
+    #if it's attached to something in a vpc, disassociate first
+    if elastic_ip.instance_id != nil && elastic_ip.domain == 'vpc'
+      converge_by "dissociate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
+        elastic_ip.disassociate
+      end
+    end
+    converge_by "delete Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
+      elastic_ip.delete
+    end
+  end
+
+  private
+
+  def desired_instance
+    if !defined?(@desired_instance)
+      if new_resource.machine == false
+        @desired_instance = false
+      else
+        @desired_instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
+      end
+    end
+    @desired_instance
+  end
+
+  def update_association(elastic_ip)
+    #
+    # If we were told to associate the IP to a machine, do so
+    #
+    if desired_instance.is_a?(AWS::EC2::Instance)
+      if desired_instance.id != elastic_ip.instance_id
+        converge_by "associate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) with #{new_resource.machine} (#{desired_instance.id})" do
+          elastic_ip.associate instance: desired_instance.id
+        end
+      end
+
+    #
+    # If we were told to set the association to false, disassociate it.
+    #
+    else
+      if elastic_ip.associated?
+        converge_by "disassociate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
           aws_object.disassociate
         end
       end
-      converge_by "Deleting EIP Address #{new_resource.name} (#{aws_object.public_ip}) in #{region}" do
-        aws_object.delete
-      end
-    end
-    new_resource.delete_managed_entry(action_handler)
-  end
-
-  action :associate do
-    aws_object = new_resource.aws_object
-    instance = Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource)
-
-    if !aws_object
-      converge_by "Creating new EIP address in #{region}" do
-        associate_to_vpc = new_resource.associate_to_vpc
-        if associate_to_vpc.nil?
-          associate_to_vpc = true if instance && instance.vpc_id
-        end
-        aws_object = driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
-      end
     end
 
-    new_resource.save_managed_entry(aws_object, action_handler)
-
-    # Associate the EIP with the given machine
-    if instance
-      if !aws_object.instance_id || instance.id != aws_object.instance_id
-        converge_by "Associating EIP Address #{new_resource.name} (#{aws_object.public_ip}) with #{new_resource.machine} (#{instance.id})" do
-          aws_object.associate instance: instance.id
-        end
-      end
-    # TODO way to specify that you want NO machine associated with the eip
-    end
-  end
-
-  action :disassociate do
-    if aws_object && aws_object.instance_id
-      converge_by "Disassociating EIP Address #{new_resource.name} (#{aws_object}) from #{aws_object.instance_id} in #{region}" do
-        aws_object.disassociate
-      end
-    end
   end
 
 end

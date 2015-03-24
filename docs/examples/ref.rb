@@ -77,9 +77,9 @@ end
 aws_ebs_volume 'ref-volume' do
   availability_zone 'eu-west-1a'
   size 1
+  machine 'ref-machine1'
+  device '/dev/xvdf'
 end
-
-# attach above volume to machine somehow ...
 
 aws_eip_address 'ref-elastic-ip' do
   machine 'ref-machine1'

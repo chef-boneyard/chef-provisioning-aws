@@ -3,9 +3,6 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::SQS::Queue
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name,    kind_of: String, name_attribute: true
   attribute :options, kind_of: Hash
 

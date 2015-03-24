@@ -53,6 +53,12 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
     end
   end
 
+  # Formatted output for logging statements - contains resource type, resource name and aws object id (if available)
+  def to_s
+    id = get_driver_and_id[1]
+    "#{declared_type}[#{@name}] (#{ id ? id : 'no AWS object id'})"
+  end
+
   protected
 
   #

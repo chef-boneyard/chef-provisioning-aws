@@ -1,6 +1,6 @@
-with_driver 'aws'
-
 require 'chef/provisioning/aws_driver'
+
+with_driver 'aws::eu-west-1'
 
 vpc = aws_vpc 'test-vpc' do
   cidr_block '10.0.0.0/24'
@@ -97,4 +97,24 @@ aws_security_group 'test-sg' do
                  { port: [ 80, 2048..4096 ], destinations: [ 'other-sg' ] },
                  { port: 2048..4096, destinations: [ 'other-sg', '127.0.0.1' ] },
                  { port: 1024..2048, destinations: [ { load_balancer: 'other-lb' } ] }]
+end
+
+load_balancer 'other-lb' do
+  action :destroy
+end
+
+aws_subnet 'test-subnet' do
+  action :delete
+end
+
+aws_security_group 'test-sg' do
+  action :delete
+end
+
+aws_security_group 'other-sg' do
+  action :delete
+end
+
+aws_vpc 'test-vpc' do
+  action :delete
 end

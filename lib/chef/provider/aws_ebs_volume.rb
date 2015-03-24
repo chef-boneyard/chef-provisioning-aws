@@ -119,8 +119,12 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     if expected_instance.is_a?(AWS::EC2::Instance)
       case status
       when :in_use
-        detach(volume)
-        attach(volume)
+        # We don't want to attempt to reattach to the same instance and device
+        attachment = current_attachment(volume)
+        if attachment.instance != expected_instance || attachment.device != new_resource.device
+          detach(volume)
+          attach(volume)
+        end
       when :available
         attach(volume)
       when nil
@@ -155,7 +159,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def detach(volume)
-    attachment = volume.attachments.first
+    attachment = current_attachment(volume)
     instance = attachment.instance
     device   = attachment.device
 
@@ -178,6 +182,10 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       wait_for_volume_status(volume, :in_use)
       volume
     end
+  end
+
+  def current_attachment(volume)
+    volume.attachments.first
   end
 
   def delete(volume)

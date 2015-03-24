@@ -170,7 +170,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def attach(volume)
-    converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id})" do
+    converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id}) to device #{new_resource.device}" do
       volume.attach_to(expected_instance, new_resource.device)
     end
 

@@ -155,8 +155,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def detach(volume)
-    instance = volume.attachments.first.instance
-    device   = volume.attachments.first.device
+    attachment = volume.attachments.first
+    instance = attachment.instance
+    device   = attachment.device
 
     converge_by "detach #{new_resource} from #{new_resource.machine} (#{instance.instance_id})" do
       volume.detach_from(instance, device)

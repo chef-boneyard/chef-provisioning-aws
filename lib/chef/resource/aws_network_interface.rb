@@ -1,5 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/provisioning/resource/aws_subnet'
+require 'chef/resource/aws_subnet'
 
 class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::EC2::NetworkInterface, load_provider: false, id: :id

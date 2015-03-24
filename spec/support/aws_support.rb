@@ -1,4 +1,5 @@
 require 'cheffish/rspec/chef_run_support'
+require 'cheffish/rspec/recipe_run_wrapper'
 require 'chef/provisioning/aws_driver'
 
 module AWSSupport
@@ -16,154 +17,195 @@ module AWSSupport
     context description, *tags do
       extend WithAWSClassMethods
       include WithAWSInstanceMethods
-      self.driver = aws_driver
+
+      @@driver = aws_driver
+      def self.driver
+        @@driver
+      end
 
       module_eval(&block)
-
-      after :example do
-        destroy_resources(created_during_test)
-      end
     end
   end
 
   module WithAWSClassMethods
-    attr_accessor :driver
-    attr_reader :created_during_context
-
-    def ensure_resources_get_destroyed
-      if !created_during_context
-        @created_during_context = []
-
-        context = self
-
-        after :context do
-          destroy_resources(context.created_during_context)
-        end
-      end
+    def chef_config
+      { driver: driver }
     end
 
-    #
-    # Support using aws_* resources directly (to predeclare things)
-    #
-    Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
-      resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
-      module_eval <<-EOM, __FILE__, __LINE__+1
-        attr_reader :#{resource_class.aws_sdk_option_name}
+    instance_eval do
+      #
+      # Create a context-level method for each AWS resource:
+      #
+      # with_aws do
+      #   context 'mycontext' do
+      #     aws_vpc 'myvpc' do
+      #       ...
+      #     end
+      #   end
+      # end
+      #
+      # Creates the AWS thing when the first example in the context runs.
+      # Destroys it after the last example in the context runs.  Objects created
+      # in the order declared, and destroyed in reverse order.
+      #
+      Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
+        resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
+        # def aws_vpc(name, &block)
+        define_method(resource_class.resource_name) do |name, &block|
+          # def myvpc
+          #   @@myvpc
+          # end
+          instance_eval do
+            define_method(name) { class_variable_get(:"@@#{name}") }
+          end
+          module_eval do
+            define_method(name) { self.class.class_variable_get(:"@@#{name}") }
+          end
 
-        def #{resource_class.resource_name}(*args, &block)
-          ensure_resources_get_destroyed
+          resource = nil
 
-          driver = self.driver
-          context = self
           before :context do
-            created_during_context = context.created_during_context
-            resource = nil
-            run_recipe do
-              with_driver driver
-              resource = #{resource_class.resource_name}(*args, &block)
-              if resource.action != :destroy && resource.action != :nothing
-                created_during_context << resource
-              end
+            resource = AWSResourceRunWrapper.new(self, resource_class.resource_name, name, &block)
+            # @myvpc = resource
+            begin
+              self.class.class_variable_set(:"@@#{name}", resource.resource)
+            rescue NameError
             end
-            @#{resource_class.aws_sdk_option_name} = resource
-            resource
+            resource.converge
+          end
+
+          after :context do
+            resource.destroy if resource
           end
         end
-      EOM
+      end
     end
   end
 
   module WithAWSInstanceMethods
+    def self.included(context)
+      context.module_eval do
+        # Destroy any objects we know got created during the test
+        after :example do
+          created_during_test.reverse_each do |resource_name, name|
+            (recipe do
+              public_send(resource_name, name) do
+                action :destroy
+              end
+            end).converge
+          end
+        end
+      end
+    end
+
+    def chef_config
+      { driver: driver }
+    end
+
     def created_during_test
       @created_during_test ||= []
+    end
+
+    def default_vpc
+      @default_vpc ||= driver.ec2.vpcs.filter('isDefault', 'true').first
     end
 
     def driver
       self.class.driver
     end
+  end
 
-    #
-    # Support using aws_* resources directly (to predeclare things)
-    #
-    Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
-      resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
-      module_eval <<-EOM, __FILE__, __LINE__+1
-        def #{resource_class.aws_sdk_option_name}
-          if defined?(@#{resource_class.aws_sdk_option_name})
-            @#{resource_class.aws_sdk_option_name}
-          else
-            self.class.#{resource_class.aws_sdk_option_name}
-          end
-        end
-
-        def #{resource_class.resource_name}(*args, &block)
-          created_during_test = self.created_during_test
-          driver = self.driver
-          resource = nil
-          run_recipe do
-            with_driver driver
-            resource = #{resource_class.resource_name}(*args, &block)
-            if resource.action != :destroy && resource.action != :nothing
-              created_during_test << resource
-            end
-          end
-          @#{resource_class.aws_sdk_option_name} = resource
-          resource
-        end
-      EOM
+  class AWSResourceRunWrapper < Cheffish::RSpec::RecipeRunWrapper
+    def initialize(rspec_context, resource_type, name, &properties)
+      super(rspec_context.chef_config) do
+        public_send(resource_type, name, &properties)
+      end
+      @rspec_context = rspec_context
+      @resource_type = resource_type
+      @name = name
+      @properties = properties
     end
 
-    def destroy_resources(resources)
-      if resources
-        while resource = resources.pop
-          begin
-            puts "Destroying #{resource} ..."
-            reset_chef_client
-            driver = self.driver
-            run_recipe do
-              with_driver driver
-              public_send(resource.resource_name, resource.name) { action :destroy }
-            end
-          rescue
-            puts "Error #{$!} destroying #{resource}!  Sleeping 1s and retrying ..."
-            sleep 1
-            retry
-          end
+    attr_reader :rspec_context
+    attr_reader :resource_type
+    attr_reader :name
+
+    def resource
+      resources.first
+    end
+
+    def to_s
+      "#{resource_type}[#{name}]"
+    end
+
+    def destroy
+      resource_type = self.resource_type
+      name = self.name
+      rspec_context.run_recipe do
+        public_send(resource_type, name) do
+          action :destroy
         end
       end
     end
+
+    def aws_object
+      resource.aws_object
+    end
   end
 end
 
-RSpec::Matchers.define :cause_an_update do
-  match do |block|
-    reset_chef_client
-    resource = block.call
-    expect(chef_run).to have_updated(resource.to_s, :create)
-    true
+
+#
+# Matchers for:
+#
+# - create_an_aws_security_group
+# - create_an_aws_vpc
+# etc.
+#
+# Checks if the object got created, then deletes the object at the end of the test.
+#
+Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
+  resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
+
+  RSpec::Matchers.define :"create_an_#{resource_class.resource_name}" do |name, expected_properties|
+    match do |recipe|
+      @recipe = recipe
+
+      # Converge
+      recipe.converge
+      expect(recipe).to be_updated
+
+      resource = resource_class.new(name, nil)
+      resource.driver driver
+      resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+      aws_object = resource.aws_object
+
+      # Check existence and properties
+      if aws_object.nil?
+        raise "#{resource.to_s} succeeded but was not created!"
+      end
+
+      created_during_test << [ resource_class.resource_name, name ]
+
+      # Check to see if properties have the expected values
+      @differences = {}
+      expected_properties.each do |name, value|
+        aws_value = aws_object.public_send(name)
+        if !(aws_value === expected_properties[name])
+          @differences[name] = aws_value
+        end
+      end
+
+      @differences.empty?
+    end
+
+    failure_message {
+      message = "#{@recipe} created an AWS object with unexpected values:\n"
+      @differences.each do |name, value|
+        message << "- expected #{name} to match #{expected_properties[name].inspect}, but the actual value was #{value.inspect}\n"
+      end
+      message << @recipe.output_for_failure_message
+      message
+    }
   end
-
-  supports_block_expectations
-end
-
-RSpec::Matchers.define :be_up_to_date do
-  match do |block|
-    reset_chef_client
-    resource = block.call
-    expect(chef_run).not_to have_updated(resource.to_s, :create)
-    true
-  end
-
-  supports_block_expectations
-end
-
-RSpec::Matchers.define :be_idempotent do
-  match do |block|
-    reset_chef_client
-    resource = block.call
-    expect(chef_run).not_to have_updated(resource.to_s, :create)
-    true
-  end
-
-  supports_block_expectations
 end

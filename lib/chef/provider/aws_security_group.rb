@@ -37,9 +37,16 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     apply_rules(sg)
   end
 
+  def destroy_aws_object(sg)
+    converge_by "Deleting SG #{new_resource.name} in #{region}" do
+      sg.delete
+    end
+  end
+
   private
 
   def apply_rules(sg)
+    vpc = sg.vpc
     if !new_resource.outbound_rules.nil?
       update_outbound_rules(sg, vpc)
     end
@@ -89,7 +96,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "revoke the ability of #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range} with protocol #{protocol}" do
           sg.revoke_ingress(protocol, port_range, *actors)
         end
-      end)
+      end
+    )
   end
 
   def update_outbound_rules(sg, vpc)
@@ -132,7 +140,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "revoke the ability of group #{new_resource.name} (#{sg.id}) to send traffic to #{names.join(', ')} on port_range #{port_range} with protocol #{protocol}" do
           sg.revoke_egress(*actors, ports: port_range, protocol: protocol)
         end
-      end)
+      end
+    )
   end
 
   def update_rules(desired_rules, actual_rules_list, authorize: nil, revoke: nil)

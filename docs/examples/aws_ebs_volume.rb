@@ -7,6 +7,11 @@ aws_key_pair 'ref-key-pair-ebs'
 with_machine_options :bootstrap_options => { :key_name => 'ref-key-pair-ebs' }
 
 machine 'ref-machine-1'
+machine 'ref-machine-2'
+
+# machine_batch do
+#   machines 'ref-machine-1', 'ref-machine-2'
+# end
 
 # create volume
 aws_ebs_volume 'ref-volume-ebs' do
@@ -25,17 +30,40 @@ aws_ebs_volume 'ref-volume-ebs' do
   device '/dev/xvdg'
 end
 
+# reattach to different machine
+aws_ebs_volume 'ref-volume-ebs' do
+  machine 'ref-machine-2'
+  device '/dev/xvdf'
+end
+
+# skip reattachment attempt
+aws_ebs_volume 'ref-volume-ebs' do
+  machine 'ref-machine-2'
+  device '/dev/xvdf'
+end
+
+# create and attach
+aws_ebs_volume 'ref-volume-ebs-2' do
+  availability_zone 'us-west-2a'
+  size 1
+  machine 'ref-machine-1'
+  device '/dev/xvdf'
+end
+
 # detach
 aws_ebs_volume 'ref-volume-ebs' do
   machine false
 end
 
-# delete volume
-aws_ebs_volume 'ref-volume-ebs' do
-  action :destroy
-end
+# delete volumes
+['ref-volume-ebs', 'ref-volume-ebs-2'].each { |volume|
+  aws_ebs_volume volume do
+    action :destroy
+  end
+}
 
-machine 'ref-machine-1' do
+machine_batch do
+  machines 'ref-machine-1', 'ref-machine-2'
   action :destroy
 end
 

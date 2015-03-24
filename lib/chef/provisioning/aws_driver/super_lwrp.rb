@@ -33,6 +33,12 @@ class Chef
             super
           end
         end
+
+        # FUUUUUU cloning
+        def load_prior_resource(*args)
+          Chef::Log.debug "Overloading #{self.resource_name} load_prior_resource with NOOP"
+        end
+
       end
     end
   end

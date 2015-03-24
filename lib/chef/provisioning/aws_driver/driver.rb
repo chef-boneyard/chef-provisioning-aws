@@ -64,7 +64,6 @@ module AWSDriver
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      puts "Actual #{actual_elb.inspect} for #{lb_spec.reference}"
       if !actual_elb || !actual_elb.exists?
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs

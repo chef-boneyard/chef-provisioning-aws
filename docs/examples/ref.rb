@@ -17,18 +17,14 @@ end
 
 aws_security_group 'ref-sg1' do
   vpc 'ref-vpc'
-  inbound_rules [ { ports: 22, protocol: :tcp, sources: [ '0.0.0.0/0' ] } ]
+  inbound_rules '0.0.0.0/0' => 22
 end
 
 aws_security_group 'ref-sg2' do
   vpc 'ref-vpc'
 
-  inbound_rules [
-    {:ports => 2223, :protocol => :tcp, :sources => ['ref-sg1'] }
-  ]
-  outbound_rules [
-    {:ports => 2223, :protocol => :tcp, :destinations => ['ref-sg1'] }
-  ]
+  inbound_rules 'ref-sg1' => 2224
+  outbound_rules 2224 => 'ref-sg1'
 end
 
 aws_route_table 'ref-public' do

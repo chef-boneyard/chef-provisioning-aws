@@ -11,7 +11,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
           bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
-      elsif modifies_website_configuration(bucket)
+      elsif modifies_website_configuration?(bucket)
         converge_by "Reconfiguring website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
           bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)

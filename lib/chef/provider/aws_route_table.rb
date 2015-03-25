@@ -93,8 +93,12 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when String, Chef::Resource::Machine, AWS::EC2::Instance
+    when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
+    when Chef::Resource::Machine
+      route_target = { instance: route_target.name }
+    when AWS::EC2::Instance
+      route_target = { instance: route_target.id }
     when Hash
       if route_target.size != 1
         raise "Route target #{route_target} must have exactly one key, either :internet_gateway, :instance or :network_interface!"

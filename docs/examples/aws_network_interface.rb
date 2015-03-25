@@ -25,7 +25,7 @@ end
 
 aws_security_group 'ref-sg2-eni' do
   vpc 'ref-vpc-eni'
-  inbound_rules 'ref-sg-eni1' => 2224
+  inbound_rules 'ref-sg1-eni' => 2224
   outbound_rules 2224 => 'ref-sg1-eni'
 end
 

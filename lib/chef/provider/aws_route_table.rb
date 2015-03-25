@@ -9,6 +9,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     if !new_resource.routes.nil?
       update_routes(vpc, route_table)
     end
+
+    update_virtual_private_gateways(route_table, new_resource.virtual_private_gateways)
   end
 
   protected
@@ -85,6 +87,30 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     current_routes.values.each do |current_route|
       action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_route.target.id}" do
         current_route.delete
+      end
+    end
+  end
+
+  def update_virtual_private_gateways(route_table, gateway_ids)
+    current_propagating_vgw_set = route_table.client.describe_route_tables(route_table_ids: [route_table.id]).route_table_set.first.propagating_vgw_set
+
+    # Add propagated routes
+    if gateway_ids
+      gateway_ids.each do |gateway_id|
+        if !current_propagating_vgw_set.reject! { |vgw_set| vgw_set[:gateway_id] == gateway_id }
+          action_handler.perform_action "enable route propagation for route table #{route_table.id} to virtual private gateway #{gateway_id}" do
+            route_table.client.enable_vgw_route_propagation(route_table_id: route_table.id, gateway_id: gateway_id)
+          end
+        end
+      end
+    end
+
+    # Delete anything that's left
+    if current_propagating_vgw_set
+      current_propagating_vgw_set.each do |vgw_set|
+        action_handler.perform_action "disabling route propagation for route table #{route_table.id} from virtual private gateway #{vgw_set[:gateway_id]}" do
+          route_table.client.disable_vgw_route_propagation(route_table_id: route_table.id, gateway_id: vgw_set[:gateway_id])
+        end
       end
     end
   end

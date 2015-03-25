@@ -35,6 +35,17 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   attribute :vpc,    kind_of: [ String, AwsVpc, AWS::EC2::VPC ], required: true
 
   #
+  # Enable route propagation from one or more virtual private gateways
+  #
+  # The value should be an array of virtual private gateway ID:
+  # ```ruby
+  # virtual_private_gateways ['vgw-abcd1234', 'vgw-abcd5678']
+  # ```
+  #
+  attribute :virtual_private_gateways, kind_of: [ String, Array ],
+            coerce: proc { |v| [v].flatten }
+
+  #
   # The routes for this route table.
   #
   # If specified, this must be a complete specification of all routes: it will

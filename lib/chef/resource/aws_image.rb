@@ -6,9 +6,6 @@ class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResourceWithE
                managed_entry_id_name: 'image_id',
                load_provider:         false
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   attribute :name, kind_of: String,  name_attribute: true
 
   attribute :image_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {

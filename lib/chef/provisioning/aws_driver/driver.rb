@@ -50,7 +50,8 @@ module AWSDriver
       @aws_config = AWS.config(
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
-        region: region || credentials[:region]
+        region: region || credentials[:region],
+        logger: Chef::Log.logger
       )
     end
 
@@ -811,7 +812,7 @@ EOD
       max_wait_time = 120
       if !yield(image)
         action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
-        while time_elapsed < 120 && !yield(image)
+        while time_elapsed < max_wait_time && !yield(image)
           action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
           sleep(sleep_time)
           time_elapsed += sleep_time
@@ -835,7 +836,7 @@ EOD
       if !yield(instance)
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
-          while time_elapsed < 120 && !yield(instance)
+          while time_elapsed < max_wait_time && !yield(instance)
             action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
             sleep(sleep_time)
             time_elapsed += sleep_time
@@ -857,7 +858,7 @@ EOD
       unless transport.available?
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
-          while time_elapsed < 120 && !transport.available?
+          while time_elapsed < max_wait_time && !transport.available?
             action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable ..."
             sleep(sleep_time)
             time_elapsed += sleep_time

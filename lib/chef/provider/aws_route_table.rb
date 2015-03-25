@@ -2,52 +2,49 @@ require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
-  action :create do
-    route_table = new_resource.aws_object
-    vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
-    if route_table
-      vpc = update_route_table(vpc, route_table)
-    else
-      vpc, route_table = create_route_table(vpc)
-    end
+  def action_create
+    route_table = super
 
     if !new_resource.routes.nil?
       update_routes(vpc, route_table)
     end
   end
 
-  action :delete do
-    route_table = new_resource.aws_object
-    if route_table
-      converge_by "delete route table #{new_resource.name} (#{route_table.id}) in #{region}" do
-        route_table.delete
+  protected
+
+  def create_aws_object
+    options = {}
+    options[:vpc] = new_resource.vpc
+    options = AWSResource.lookup_options(options, resource: new_resource)
+    self.vpc = Chef::Resource::AwsVpc.get_aws_object(options[:vpc], resource: new_resource)
+
+    converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
+      route_table = new_resource.driver.ec2.route_tables.create(options)
+      route_table.tags['Name'] = new_resource.name
+      route_table
+    end
+  end
+
+  def update_aws_object(route_table)
+    self.vpc = route_table.vpc
+
+    if new_resource.vpc
+      desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
+      if vpc != desired_vpc
+        raise "VPC of route table #{new_resource.name} (#{route_table.id}) is #{route_table.vpc.id}, but desired vpc is #{new_resource.vpc}!  Moving (or rather, recreating) a route table is not yet supported."
       end
     end
+  end
 
-    new_resource.delete_managed_entry(action_handler)
+  def destroy_aws_object(route_table)
+    converge_by "delete route table #{new_resource.name} (#{route_table.id}) in #{region}" do
+      route_table.delete
+    end
   end
 
   private
 
-  def create_route_table(vpc)
-    route_table = nil
-    converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} and region #{region}" do
-      options = {}
-      options[:vpc] = vpc if vpc
-      options = AWSResource.lookup_options(options, resource: new_resource)
-      route_table = driver.ec2.route_tables.create(options)
-      route_table.tags['Name'] = new_resource.name
-      new_resource.save_managed_entry(route_table, action_handler)
-    end
-    [ vpc, route_table ]
-  end
-
-  def update_route_table(vpc, route_table)
-    if vpc && route_table.vpc != vpc
-      raise "VPC of route table #{new_resource.name} (#{route_table.id}) is #{route_table.vpc.id}, but desired vpc is #{new_resource.vpc}!  Moving (or rather, recreating) a route table is not yet supported."
-    end
-    vpc || route_table.vpc
-  end
+  attr_accessor :vpc
 
   def update_routes(vpc, route_table)
     # Collect current routes
@@ -96,8 +93,12 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when String, Chef::Resource::Machine, AWS::EC2::Instance
+    when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
+    when Chef::Resource::Machine
+      route_target = { instance: route_target.name }
+    when AWS::EC2::Instance
+      route_target = { instance: route_target.id }
     when Hash
       if route_target.size != 1
         raise "Route target #{route_target} must have exactly one key, either :internet_gateway, :instance or :network_interface!"

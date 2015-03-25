@@ -13,9 +13,6 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::DHCPOptions
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   #
   # The Chef "idempotence name" of this DHCP options set.
   #
@@ -46,7 +43,7 @@ class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourc
   #
   # Value indicating the NetBIOS node type (1, 2, 4, or 8). For more information about the values, go to RFC 2132. We recommend you only use 2 at this time (broadcast and multicast are currently not supported).
   #
-  attribute :netbios_node_type, kind_of: String, coerce: proc { |value| value.to_s }
+  attribute :netbios_node_type, kind_of: Integer
 
   attribute :dhcp_options_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^dopt-[a-f0-9]{8}$/ ? name : nil

@@ -2,44 +2,50 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
-  action :create do
-    aws_object = new_resource.aws_object
-    if aws_object.nil?
-      converge_by "Creating new S3 bucket #{new_resource.name}" do
-        aws_object = driver.s3.buckets.create(new_resource.name)
-        aws_object.tags['Name'] = new_resource.name
-      end
-    end
+  def action_create
+    bucket = super
 
     if new_resource.enable_website_hosting
-      if !aws_object.website?
+      if !bucket.website?
         converge_by "Enabling website configuration for bucket #{new_resource.name}" do
-          aws_object.website_configuration = AWS::S3::WebsiteConfiguration.new(
+          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
-      elsif modifies_website_configuration(aws_object)
+      elsif modifies_website_configuration?(bucket)
         converge_by "Reconfiguring website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
-          aws_object.website_configuration = AWS::S3::WebsiteConfiguration.new(
+          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
       end
     else
-      if aws_object.website?
+      if bucket.website?
         converge_by "Disabling website configuration for bucket #{new_resource.name}" do
-          aws_object.website_configuration = nil
+          bucket.website_configuration = nil
         end
       end
     end
   end
 
-  action :delete do
-    aws_object = new_resource.aws_object
-    if aws_object
-      converge_by "Deleting S3 bucket #{new_resource.name}" do
-        aws_object.delete
-      end
+  protected
+
+  def create_aws_object
+    converge_by "create new S3 bucket #{new_resource.name}" do
+      bucket = new_resource.driver.s3.buckets.create(new_resource.name)
+      bucket.tags['Name'] = new_resource.name
+      bucket
     end
   end
+
+  def update_aws_object(bucket)
+  end
+
+  def destroy_aws_object(bucket)
+    converge_by "delete S3 bucket #{new_resource.name}" do
+      bucket.delete
+    end
+  end
+
+  private
 
   def modifies_website_configuration?(aws_object)
     # This is incomplete, routing rules have many optional values, so its

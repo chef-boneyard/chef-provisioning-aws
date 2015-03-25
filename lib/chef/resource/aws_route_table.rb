@@ -17,9 +17,6 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
 
   require 'chef/resource/aws_vpc'
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   #
   # The name of this route table.
   #

@@ -18,7 +18,7 @@ with_driver 'aws::us-west-2' do
 
     #Delete EIP - Will disassociate and release
     aws_eip_address "Web_IP_1" do
-        action :delete
+        action :destroy
     end
 end
 # You can create an EIP without associating it to a machine with the :create action

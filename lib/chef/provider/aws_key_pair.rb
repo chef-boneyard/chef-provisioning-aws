@@ -5,17 +5,11 @@ require 'aws-sdk-v1'
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
-  use_inline_resources
-
-  def whyrun_supported?
-    true
-  end
-
   action :create do
     create_key(:create)
   end
 
-  action :delete do
+  action :destroy do
     if current_resource_exists?
       converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
         driver.ec2.key_pairs[new_resource.name].delete
@@ -140,7 +134,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def current_resource_exists?
-    @current_resource.action != [ :delete ]
+    @current_resource.action != [ :destroy ]
   end
 
   def compare_public_key(new)
@@ -176,7 +170,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
     if current_key_pair
       @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
     else
-      current_resource.action :delete
+      current_resource.action :destroy
     end
 
     if new_private_key_path && ::File.exist?(new_private_key_path)

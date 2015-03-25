@@ -31,9 +31,6 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   require 'chef/resource/aws_dhcp_options'
   require 'chef/resource/aws_route_table'
 
-  actions :create, :delete, :nothing
-  default_action :create
-
   #
   # The name of this VPC.
   #

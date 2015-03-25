@@ -34,11 +34,11 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def update_aws_object(eni)
-    if initial_options.has_key?(:subnet)
-      if initial_options[:subnet] != eni.subnet
-        raise "#{new_resource}.subnet is #{new_resource.subnet}, but actual eni has subnet set to #{eni.subnet}.  Cannot be modified!"
-      end
-    end
+    # if initial_options.has_key?(:subnet)
+    #   if initial_options[:subnet] != eni.subnet
+    #     raise "#{new_resource}.subnet is #{new_resource.subnet}, but actual eni has subnet set to #{eni.subnet}.  Cannot be modified!"
+    #   end
+    # end
   end
 
   def destroy_aws_object(eni)

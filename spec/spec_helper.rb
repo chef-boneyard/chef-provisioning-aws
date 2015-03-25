@@ -1,3 +1,7 @@
+# Bring in the RSpec monkeypatch before we do *anything*, so that builtin matchers
+# will get the module.  Not strictly necessary, but cleaner that way.
+require 'aws_support/deep_matcher/rspec_monkeypatches'
+
 require 'chef/mixin/shell_out'
 require 'chef/dsl/recipe'
 require 'chef/provisioning'
@@ -5,7 +9,7 @@ require 'chef/provisioning/aws_driver'
 require 'chef/platform'
 require 'chef/run_context'
 require 'chef/event_dispatch/dispatcher'
-require 'support/aws_support'
+require 'aws_support'
 
 RSpec.configure do |rspec|
   rspec.run_all_when_everything_filtered = true
@@ -17,5 +21,4 @@ end
 
 #Chef::Log.level = :debug
 
-#AWS.stub!
 require 'cheffish/rspec/matchers'

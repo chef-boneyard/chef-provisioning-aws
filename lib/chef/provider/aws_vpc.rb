@@ -55,6 +55,17 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(vpc)
+    if purging
+      # TODO we need to destroy the associated data bags as well.
+      vpc.instances.each          { |o| o.delete }
+      vpc.instances.each          { |o| sleep 0.5 while o.status != :terminated }
+      vpc.network_acls.each       { |o| o.delete unless o.default? }
+      vpc.network_interfaces.each { |o| o.delete }
+      vpc.subnets.each            { |o| o.delete }
+      vpc.route_tables.each       { |o| o.delete unless o.main? }
+      vpc.security_groups.each    { |o| o.delete unless o.name == 'default' }
+    end
+
     # Detach or destroy the internet gateway
     ig = vpc.internet_gateway
     if ig

@@ -125,14 +125,6 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   attribute :enable_dns_hostnames, equal_to: [ true, false ]
 
-  #
-  # A list of tags to put on the VPC.
-  #
-  # The "Name" tag will always be set to the Chef name of the instance if you do
-  # not specify it.
-  #
-  attribute :tags, kind_of: Array
-
   attribute :vpc_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^vpc-[a-f0-9]{8}$/ ? name : nil
   }

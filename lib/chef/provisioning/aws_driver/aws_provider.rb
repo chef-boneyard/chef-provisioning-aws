@@ -124,6 +124,17 @@ class AWSProvider < Chef::Provider::LWRPBase
     aws_object
   end
 
+  action :purge do
+    @purging = true
+    begin
+      action_destroy
+    ensure
+      @purging = false
+    end
+  end
+
+  attr_reader :purging
+
   action :destroy do
     desired_driver = new_resource.driver
     desired_id = new_resource.public_send(new_resource.class.aws_id_attribute) if new_resource.class.aws_id_attribute

@@ -6,28 +6,8 @@
 
 require 'chef/provisioning/aws_driver'
 
-with_driver 'aws::eu-west-1' do
-  aws_sqs_queue "mariopipes"
+with_driver 'aws'
 
+machine 'bowser' do; action :destroy; end
   machine 'bowser' do
-    machine_options :bootstrap_options => {
-            :key_name => 'aws_key'
-      }
   end
-
-  load_balancer "webapp-elb" do
-    load_balancer_options :availability_zones => ['eu-west-1a'],
-                          :listeners => [{
-                               :port => 80,
-                               :protocol => :http,
-                               :instance_port => 80,
-                               :instance_protocol => :http,
-                           }]
-    machines ['bowser']
-  end
-end
-
-with_datacenter 'us-west-1' do
-  aws_sqs_queue 'luigipipe'
-  aws_sns_topic 'us_west_topic'
-end

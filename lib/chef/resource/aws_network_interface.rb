@@ -20,7 +20,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
 
   attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance ]
 
-  attribute :device_index,           kind_of: Integer
+  attribute :device_index,           kind_of: Integer, default: 1
 
   def aws_object
     driver, id = get_driver_and_id

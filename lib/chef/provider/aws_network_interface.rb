@@ -10,6 +10,18 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     end
   end
 
+  class NetworkInterfaceStatusTimeoutError < TimeoutError
+    def initialize(new_resource, initial_status, expected_status)
+      super("timed out waiting for #{new_resource} status to change from #{initial_status} to #{expected_status}!")
+    end
+  end
+
+  class NetworkInterfaceInvalidStatusError < RuntimeError
+    def initialize(new_resource, status)
+      super("#{new_resource} is in #{status} state!")
+    end
+  end
+
   def action_create
     eni = super
 
@@ -36,7 +48,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def update_aws_object(eni)
     # if initial_options.has_key?(:subnet)
     #   if initial_options[:subnet] != eni.subnet
-    #     raise "#{new_resource}.subnet is #{new_resource.subnet}, but actual eni has subnet set to #{eni.subnet}.  Cannot be modified!"
+    #     raise "#{new_resource} is #{new_resource.subnet}, but actual network interface has subnet set to #{eni.subnet_id}.  Cannot be modified!"
     #   end
     # end
   end
@@ -68,40 +80,40 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     end
   end
 
-  def update_attachment(eni)
-    # status = volume.status
-    # #
-    # # If we were told to attach the volume to a machine, do so
-    # #
-    # if expected_instance.is_a?(AWS::EC2::Instance)
-    #   case status
-    #   when :in_use
-    #     # We don't want to attempt to reattach to the same instance and device
-    #     attachment = current_attachment(volume)
-    #     if attachment.instance != expected_instance || attachment.device != new_resource.device
-    #       detach(volume)
-    #       attach(volume)
-    #     end
-    #   when :available
-    #     attach(volume)
-    #   when nil
-    #     raise VolumeNotFoundError.new(new_resource)
-    #   else
-    #     raise VolumeInvalidStatusError.new(new_resource, status)
-    #   end
+  def update_eni(eni)
+    status = eni.status
+    #
+    # If we were told to attach the volume to a machine, do so
+    #
+    if expected_instance.is_a?(AWS::EC2::Instance)
+      case status
+      when :available
+        attach(eni)
+      when :in_use
+        # We don't want to attempt to reattach to the same instance or device index
+        attachment = current_attachment(eni)
+        if attachment.instance != expected_instance || attachment.device_index != new_resource.device_index
+          detach(eni)
+          attach(eni)
+        end
+      when nil
+        raise NetworkInterfaceNotFoundError.new(new_resource)
+      else
+        raise NetworkInterfaceInvalidStatusError.new(new_resource, status)
+      end
 
-    # #
-    # # If we were told to set the machine to false, detach it.
-    # #
-    # else
-    #   case status
-    #   when nil
-    #     Chef::Log.warn VolumeNotFoundError.new(new_resource)
-    #   when :in_use
-    #     detach(volume)
-    #   end
-    # end
-    # volume
+    #
+    # If we were told to set the machine to false, detach it.
+    #
+    else
+      case status
+      when nil
+        Chef::Log.warn NetworkInterfaceNotFoundError.new(new_resource)
+      when :in_use
+        detach(eni)
+      end
+    end
+    eni
   end
     
   def wait_for_eni_status(eni, expected_status)
@@ -111,39 +123,41 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     }
 
     Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
-      raise NetworkInterfaceTimeoutError.new(new_resource, initial_status, expected_status) if eni.status != expected_status
+      raise NetworkInterfaceStatusTimeoutError.new(new_resource, initial_status, expected_status) if eni.status != expected_status
     end
   end
 
-  # def detach(volume)
-  #   attachment = current_attachment(volume)
-  #   instance = attachment.instance
-  #   device   = attachment.device
+  def detach(eni)
+    attachment = current_attachment(eni)
+    instance = attachment.instance
+    device   = attachment.device_index
 
-  #   converge_by "detach #{new_resource} from #{new_resource.machine} (#{instance.instance_id})" do
-  #     volume.detach_from(instance, device)
-  #   end
+    converge_by "detach #{new_resource} from #{new_resource.machine} (#{instance.instance_id})" do
+      eni.detach
+    end
 
-  #   converge_by "wait for #{new_resource} to detach" do
-  #     wait_for_volume_status(volume, :available)
-  #     volume
-  #   end
-  # end
+    converge_by "wait for #{new_resource} to detach" do
+      wait_for_eni_status(eni, :available)
+      eni
+    end
+  end
 
-  # def attach(volume)
-  #   converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id}) to device #{new_resource.device}" do
-  #     volume.attach_to(expected_instance, new_resource.device)
-  #   end
+  def attach(eni)
+    converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id})" do
+      options = {}
+      options[:device_index] = new_resource.device_index if !new_resource.device_index.nil?
+      eni.attach(expected_instance, options)
+    end
 
-  #   converge_by "wait for #{new_resource} to attach" do
-  #     wait_for_volume_status(volume, :in_use)
-  #     volume
-  #   end
-  # end
+    converge_by "wait for #{new_resource} to attach" do
+      wait_for_eni_status(eni, :in_use)
+      eni
+    end
+  end
 
-  # def current_attachment(volume)
-  #   volume.attachments.first
-  # end
+  def current_attachment(eni)
+    eni.attachment
+  end
 
   def delete(eni)
     converge_by "delete #{new_resource} in #{region}" do

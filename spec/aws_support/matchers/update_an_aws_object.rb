@@ -10,20 +10,20 @@ module AWSSupport
 
       require 'chef/provisioning'
 
-      def initialize(rspec_context, resource_class, name, expected_updates)
-        @rspec_context = rspec_context
+      def initialize(example, resource_class, name, expected_updates)
+        @example = example
         @resource_class = resource_class
         @name = name
         @expected_updates = expected_updates
 
         # Grab the "before" value
         resource = resource_class.new(name, nil)
-        resource.driver rspec_context.driver
+        resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         @had_initial_value = !resource.aws_object.nil?
       end
 
-      attr_reader :rspec_context
+      attr_reader :example
       attr_reader :resource_class
       attr_reader :name
       attr_reader :expected_updates
@@ -44,16 +44,15 @@ module AWSSupport
         begin
           recipe.converge
         rescue
-          differences += [ "error trying to create #{resource_name}[#{name}]!\n#{$!.backtrace.map { |line| "- #{line}\n" }.join("")}" ]
-          return differences
+          differences += [ "error trying to update #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
         end
 
         # Check if the recipe actually caused an update
-        differences += match_values_failure_messages(rspec_context.be_updated, recipe, "recipe")
+        differences += match_values_failure_messages(example.be_updated, recipe, "recipe")
 
         # Check if any properties that should have been updated, weren't
         resource = resource_class.new(name, nil)
-        resource.driver rspec_context.driver
+        resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         aws_object = resource.aws_object
 

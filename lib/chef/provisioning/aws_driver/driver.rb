@@ -812,7 +812,7 @@ EOD
       image ||= image_for(image_spec)
       time_elapsed = 0
       sleep_time = 10
-      max_wait_time = 120
+      max_wait_time = 300
       if !yield(image)
         action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
         while time_elapsed < max_wait_time && !yield(image)
@@ -821,7 +821,7 @@ EOD
           time_elapsed += sleep_time
         end
         unless yield(image)
-          raise "Image #{image.id} did not become ready within 120 seconds"
+          raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
         end
         action_handler.report_progress "Image #{image_spec.name} is now ready"
       end
@@ -845,7 +845,7 @@ EOD
             time_elapsed += sleep_time
           end
           unless yield(instance)
-            raise "Image #{instance.id} did not become ready within 120 seconds"
+            raise "Image #{instance.id} did not become ready within #{max_wait_time} seconds"
           end
           action_handler.report_progress "#{machine_spec.name} is now ready"
         end

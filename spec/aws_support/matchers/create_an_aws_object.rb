@@ -8,14 +8,14 @@ module AWSSupport
       include RSpec::Matchers::Composable
       include AWSSupport::DeepMatcher
 
-      def initialize(rspec_context, resource_class, name, expected_values)
-        @rspec_context = rspec_context
+      def initialize(example, resource_class, name, expected_values)
+        @example = example
         @resource_class = resource_class
         @name = name
         @expected_values = expected_values
       end
 
-      attr_reader :rspec_context
+      attr_reader :example
       attr_reader :resource_class
       attr_reader :name
       attr_reader :expected_values
@@ -28,21 +28,21 @@ module AWSSupport
 
         # We want to record that it was created BEFORE the converge, so that
         # even if it fails, we destroy it.
-        rspec_context.created_during_test << [ resource_name, name ]
+        example.created_during_test << [ resource_name, name ]
 
         # Converge
         begin
           recipe.converge
         rescue
-          differences += [ "error trying to create #{resource_name}[#{name}]!\n#{$!.backtrace.map { |line| "- #{line}\n" }.join("")}" ]
+          differences += [ "error trying to create #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
         end
 
         # Check whether the recipe caused an update or not
-        differences += match_values_failure_messages(rspec_context.be_updated, recipe, "recipe")
+        differences += match_values_failure_messages(example.be_updated, recipe, "recipe")
 
         # Check for object existence and properties
         resource = resource_class.new(name, nil)
-        resource.driver rspec_context.driver
+        resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         aws_object = resource.aws_object
 

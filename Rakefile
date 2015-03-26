@@ -10,3 +10,8 @@ RSpec::Core::RakeTask.new(:spec) do |spec|
   # TODO add back integration tests whenever we have strategy for keys
   spec.exclude_pattern = 'spec/integration/**/*_spec.rb'
 end
+
+desc "Run Integration Specs"
+RSpec::Core::RakeTask.new(:integration) do |spec|
+  spec.pattern = 'spec/integration/**/*_spec.rb'
+end

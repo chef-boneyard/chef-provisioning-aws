@@ -2,17 +2,21 @@ require 'cheffish/rspec/recipe_run_wrapper'
 
 module AWSSupport
   class AWSResourceRunWrapper < Cheffish::RSpec::RecipeRunWrapper
-    def initialize(rspec_context, resource_type, name, &properties)
-      super(rspec_context.chef_config) do
-        public_send(resource_type, name, &properties)
+    def initialize(example, resource_type, name, &properties)
+      super(example.chef_config) do
+        if properties && properties.parameters.size > 0
+          public_send(resource_type, name) { instance_exec(example, &properties) }
+        else
+          public_send(resource_type, name, &properties)
+        end
       end
-      @rspec_context = rspec_context
+      @example = example
       @resource_type = resource_type
       @name = name
       @properties = properties
     end
 
-    attr_reader :rspec_context
+    attr_reader :example
     attr_reader :resource_type
     attr_reader :name
 
@@ -27,11 +31,11 @@ module AWSSupport
     def destroy
       resource_type = self.resource_type
       name = self.name
-      rspec_context.run_recipe do
+      example.recipe do
         public_send(resource_type, name) do
           action :purge
         end
-      end
+      end.converge
     end
 
     def aws_object

@@ -71,7 +71,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     when Array
       # [ { port: X, protocol: Y, sources: [ ... ]}]
       new_resource.inbound_rules.each do |rule|
-        port_ranges = get_port_ranges(port_range: rule[:port], protocol: rule[:protocol])
+        port_ranges = get_port_ranges(rule)
         add_rule(desired_rules, port_ranges, get_actors(vpc, rule[:sources]))
       end
 
@@ -115,7 +115,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     when Array
       # [ { port: X, protocol: Y, sources: [ ... ]}]
       new_resource.outbound_rules.each do |rule|
-        port_ranges = get_port_ranges(port_range: rule[:port], protocol: rule[:protocol])
+        port_ranges = get_port_ranges(rule)
         add_rule(desired_rules, port_ranges, get_actors(vpc, rule[:destinations]))
       end
 
@@ -204,11 +204,16 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       [ { port_range: port_spec, protocol: :tcp } ]
     when Array
       port_spec.map { |p| get_port_ranges(p) }.flatten
+    when :icmp
+      { port_range: port_spec, protocol: :icmp }
     when Hash
+      port_range = port_spec[:port_range] || port_spec[:ports] || port_spec[:port]
+      port_range = port_range..port_range if port_range.is_a?(Integer)
       if port_spec[:protocol]
-        [ { port_range: port_spec[:port_range] || port_spec[:port], protocol: port_spec[:protocol].to_s.to_sym } ]
+        port_range ||= -1..-1
+        [ { port_range: port_range, protocol: port_spec[:protocol].to_s.to_sym || :tcp } ]
       else
-        get_port_ranges(port_spec[:port_range] || port_spec[:port])
+        get_port_ranges(port_range)
       end
       # The to_s.to_sym dance is because if you specify a protocol number, AWS symbolifies it,
       # but 26.to_sym doesn't work (so we have to to_s it first).

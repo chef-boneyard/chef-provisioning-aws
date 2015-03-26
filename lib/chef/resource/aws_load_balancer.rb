@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::ELB::LoadBalancer, load_provider: false
+  aws_sdk_type AWS::ELB::LoadBalancer
 
   attribute :name, kind_of: String,  name_attribute: true
 

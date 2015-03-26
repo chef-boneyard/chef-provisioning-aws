@@ -37,19 +37,19 @@ describe Chef::Resource::AwsSecurityGroup do
         ).and be_idempotent
       end
 
-      it "aws_security_group 'test_sg' with inbound rules works" do
+      it "aws_security_group 'test_sg' with inbound and outbound rules works" do
         expect_recipe {
           aws_security_group 'test_sg' do
             vpc 'test_vpc'
-            inbound_rules '0.0.0.0/0' => 22,
-                          [ { ports: 22, protocol: :tcp, sources: [ '10.0.0.0/0' ] } ]
+            inbound_rules '0.0.0.0/0' => 22
+            outbound_rules 22 => '0.0.0.0/0'
           end
         }.to create_an_aws_security_group('test_sg',
           vpc_id: test_vpc.aws_object.id,
           ip_permissions_list: [
-            { groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}],  ip_protocol: "tcp", from_port: 22, to_port: 22}
-            { groups: [], ip_ranges: [{cidr_ip: "10.0.0.0/0"}], ip_protocol: "tcp", from_port: 22, to_port: 22}],
-          ip_permissions_list_egress: [{groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}], ip_protocol: "-1"}]
+            { groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}],  ip_protocol: "tcp", from_port: 22, to_port: 22},
+          ],
+          ip_permissions_list_egress: [{groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}], ip_protocol: "tcp", from_port: 22, to_port: 22 }]
         ).and be_idempotent
       end
     end

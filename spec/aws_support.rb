@@ -12,6 +12,7 @@ module AWSSupport
   require 'chef/provisioning/aws_driver'
   require 'aws_support/matchers/create_an_aws_object'
   require 'aws_support/matchers/update_an_aws_object'
+  require 'aws_support/delayed_stream'
   require 'chef/provisioning/aws_driver/resources'
   require 'aws_support/aws_resource_run_wrapper'
 
@@ -22,9 +23,54 @@ module AWSSupport
   DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^AWS::EC2($|::)/ }
   DeepMatcher::MatchableArray.matchable_classes  << AWS::Core::Data::List
 
-  def with_aws(description, *tags, &block)
-    aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
+  def purge_all
+    before :all do
+      driver = self.driver
+      recipe do
+        driver.ec2.vpcs.with_tag('Name', 'test_vpc').each do |vpc|
+          aws_vpc vpc do
+            action :purge
+          end
+        end
+        aws_key_pair 'test_key_pair' do
+          action :purge
+        end
+      end.converge
+    end
+  end
 
+  def setup_public_vpc
+    aws_vpc 'test_vpc' do
+      cidr_block '10.0.0.0/24'
+      internet_gateway true
+      enable_dns_hostnames true
+      main_routes '0.0.0.0/0' => :internet_gateway
+    end
+
+    aws_key_pair 'test_key_pair' do
+      allow_overwrite true
+    end
+
+    before :context do
+      image = driver.ec2.images.filter('name', 'test_machine_image').first
+      image.delete if image
+
+      default_sg = test_vpc.aws_object.security_groups.filter('group-name', 'default').first
+      recipe do
+        aws_security_group default_sg do
+          inbound_rules '0.0.0.0/0' => 22
+        end
+      end.converge
+    end
+
+    aws_subnet 'test_public_subnet' do
+      vpc 'test_vpc'
+      map_public_ip_on_launch true
+    end
+  end
+
+  def with_aws(description, *tags, &block)
+    aws_driver = nil
     context_block = proc do
       extend WithAWSClassMethods
       include WithAWSInstanceMethods
@@ -38,7 +84,8 @@ module AWSSupport
     end
 
     if ENV['AWS_TEST_DRIVER']
-      context description, *tags, &context_block
+      aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
+      when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
     else
 #       warn <<EOM
 # --------------------------------------------------------------------------------------------------------------------------
@@ -52,10 +99,6 @@ module AWSSupport
   end
 
   module WithAWSClassMethods
-    def chef_config
-      { driver: driver }
-    end
-
     instance_eval do
       #
       # Create a context-level method for each AWS resource:
@@ -96,7 +139,13 @@ module AWSSupport
               self.class.class_variable_set(:"@@#{name}", resource.resource)
             rescue NameError
             end
-            resource.converge
+            begin
+              resource.converge
+            rescue
+              puts "ERROR #{$!}"
+              puts $!.backtrace.join("\n")
+              raise
+            end
           end
 
           after :context do
@@ -110,8 +159,11 @@ module AWSSupport
   module WithAWSInstanceMethods
     def self.included(context)
       context.module_eval do
-        # Destroy any objects we know got created during the test
         after :example do
+          # Close up delayed streams so they don't print out their garbage later in the run
+          delayed_streams.each { |s| s.close }
+
+          # Destroy any objects we know got created during the test
           created_during_test.reverse_each do |resource_name, name|
             (recipe do
               public_send(resource_name, name) do
@@ -130,16 +182,40 @@ module AWSSupport
     Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
       resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
       resource_name = resource_class.resource_name
-      define_method("update_an_#{resource_name}") do |name, expected_updates|
+      define_method("update_an_#{resource_name}") do |name, expected_updates={}|
         AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates)
       end
-      define_method("create_an_#{resource_name}") do |name, expected_values|
+      define_method("create_an_#{resource_name}") do |name, expected_values={}|
         AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values)
       end
     end
 
     def chef_config
-      { driver: driver }
+      @chef_config ||= {
+        driver:       driver,
+        stdout:       delayed_stream(delay_before_streaming, STDOUT),
+        stderr:       delayed_stream(delay_before_streaming, STDERR),
+        log_location: delayed_stream(delay_before_streaming_logs, STDOUT)
+      }
+    end
+
+    def delayed_streams
+      @delayed_streams ||= []
+    end
+
+    def delayed_stream(delay, stream)
+      stream = DelayedStream.new(delay, stream)
+      delayed_streams << stream
+      stream
+    end
+
+    # Override in tests if you want different numbers
+    def delay_before_streaming_logs
+      30
+    end
+
+    def delay_before_streaming
+      10
     end
 
     def created_during_test

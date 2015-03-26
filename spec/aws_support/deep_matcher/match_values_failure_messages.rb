@@ -41,7 +41,7 @@ module AWSSupport
         expected_hash.all? do |expected_key, expected_value|
           missing_value = false
           actual_value = actual_hash.fetch(expected_key) do
-            result << "expected #{identifier || "hash"}[#{expected_key.inspect}] to #{description_of(expected_value)}, but it was missing entirely from the hash"
+            result << "expected #{identifier || "hash"}.fetch(#{expected_key.inspect}) to #{description_of(expected_value)}, but it was missing entirely from the hash"
             missing_value = true
           end
           unless missing_value
@@ -70,7 +70,7 @@ module AWSSupport
             messages = [ change.new_element.inspect ]
             different = true
           when '-'
-            messages = [ change.old_element.description ]
+            messages = [ change.old_element.value.inspect ]
             different = true
           when '!'
             messages = change.old_element.failure_messages(change.new_element)
@@ -103,7 +103,7 @@ module AWSSupport
             actual_value = actual_object.send(expected_key)
           rescue NoMethodError
             if !actual_value.respond_to?(expected_key)
-              result << "#{identifier || "hash"}[#{expected_key.inspect}] is missing, expected value #{description_of(expected_value)}"
+              result << "#{identifier || "object"}.send(#{expected_key.inspect}) is missing, expected value #{description_of(expected_value)}"
               next
             else
               raise

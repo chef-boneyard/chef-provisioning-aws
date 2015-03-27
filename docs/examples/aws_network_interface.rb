@@ -4,8 +4,6 @@ with_driver 'aws::us-west-2'
 
 aws_key_pair 'ref-key-pair-eni'
 
-#common_machine_options = { :bootstrap_options => { :key_name => 'ref-key-pair-eni'}
-
 aws_dhcp_options 'ref-dhcp-options-eni' do
 end
 

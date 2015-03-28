@@ -168,7 +168,7 @@ module AWSDriver
               desired_subnets_zones[default_subnet[:subnet_id]] = zone
             end
           end
-          unless lb_options[:subnets] && lb_options[:subnets.empty?]
+          unless lb_options[:subnets].nil? || lb_options[:subnets].empty?
             subnet_query = ec2.client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnet_set]
             # AWS raises an error on an unknown subnet, but not an unknown AZ
             subnet_query.each do |subnet|

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0.rc.1 (3/31/2015)
+
+- Fix issue with load balancer failing on the second run
+
 ## 0.5.0 (3/26/2015)
 
 - Expanded `docs/examples` with many more references

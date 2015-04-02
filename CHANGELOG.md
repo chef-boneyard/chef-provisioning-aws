@@ -1,5 +1,6 @@
 # Changelog
 
+## 1.0.0 (4/2/2015)
 ## 1.0.0.rc.1 (3/31/2015)
 
 - Fix issue with load balancer failing on the second run

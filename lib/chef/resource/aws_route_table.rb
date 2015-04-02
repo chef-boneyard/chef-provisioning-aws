@@ -58,6 +58,26 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   #
   attribute :routes, kind_of: Hash
 
+  #
+  # Regex to ignore one or more route targets.
+  #
+  # This is helpful when configuring HA NAT instances. If a NAT instance fails
+  # a auto-scaling group may launch a new NAT instance and update the route
+  # table accordingly. Chef provisioning should not attempt to change or remove
+  # this route.
+  #
+  # This attribute is specified as a regex since the full ID of the
+  # instance/network interface is not known ahead of time. In most cases the
+  # NAT instance route will point at a network interface attached to the NAT
+  # instance. The ID prefix for network interfaces is 'eni'. The following
+  # example shows how to ignore network interface routes.
+  #
+  # ```ruby
+  # ignore_route_targets ['^eni-']
+  # ```
+  attribute :ignore_route_targets, kind_of: [ String, Array ], default: [],
+            coerce: proc { |v| [v].flatten }
+
   attribute :route_table_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^rtb-[a-f0-9]{8}$/ ? name : nil
   }

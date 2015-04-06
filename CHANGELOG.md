@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 (4/6/2015)
+
+- Use released 4.2.0 version of chef-zero instead of pointing towards github
+
+## 1.0.1 (4/6/2015)
+
+- Use released 1.0.0 version of chef-provisioning instead of pointing towards github
+
 ## 1.0.0 (4/2/2015)
 ## 1.0.0.rc.1 (3/31/2015)
 

@@ -10,8 +10,11 @@ require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
-require 'chef/provider/aws_key_pair'
 require 'chef/resource/aws_key_pair'
+require 'chef/resource/aws_instance'
+require 'chef/resource/aws_image'
+require 'chef/resource/aws_load_balancer'
+require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4 (4/7/2015)
+
+- Removed resource cloning again
+- Moved chef-zero to a development dependence because it is only used for testing
+
 ## 1.0.3 (4/7/2015)
 
 - Unpinning cheffish, using dependency from chef-provisioning

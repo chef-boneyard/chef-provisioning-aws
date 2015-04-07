@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3 (4/7/2015)
+
+- Unpinning cheffish, using dependency from chef-provisioning
+
 ## 1.0.2 (4/6/2015)
 
 - Use released 4.2.0 version of chef-zero instead of pointing towards github

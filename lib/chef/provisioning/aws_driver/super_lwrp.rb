@@ -33,6 +33,11 @@ module AWSDriver
         super
       end
     end
+
+    # FUUUUUU cloning - this works for Chef 11 or 12.1
+    def load_prior_resource(*args)
+      Chef::Log.debug "Overloading #{self.resource_name} load_prior_resource with NOOP"
+    end
   end
 end
 end
@@ -47,7 +52,13 @@ module NoResourceCloning
       super
     end
   end
+  def emit_cloned_resource_warning; end
+  def emit_harmless_cloning_debug; end
 end
 
-# Ruby 2.0.0 has prepend as a protected method
-Chef::ResourceBuilder.send(:prepend, NoResourceCloning)
+# Chef 12.2 changed `load_prior_resource` logic to be in the Chef::ResourceBuilder class
+# but that class only exists in 12.2 and up
+if defined? Chef::ResourceBuilder
+  # Ruby 2.0.0 has prepend as a protected method
+  Chef::ResourceBuilder.send(:prepend, NoResourceCloning)
+end

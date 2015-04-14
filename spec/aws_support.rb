@@ -149,7 +149,6 @@ module AWSSupport
           end
 
           after :context do
-            # TODO created_during_test
             resource.destroy if resource
           end
         end

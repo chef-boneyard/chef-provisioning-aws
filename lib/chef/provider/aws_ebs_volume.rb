@@ -146,7 +146,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     end
     volume
   end
-    
+
   def wait_for_volume_status(volume, expected_status)
     initial_status = volume.status
     log_callback = proc {

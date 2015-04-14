@@ -331,6 +331,7 @@ module AWSDriver
           image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
           Chef::Log.debug "AWS Image options: #{image_options.inspect}"
           image = ec2.images.create(image_options.to_hash)
+          image.add_tag('From-Instance', :value => image_options[:instance_id]) if image_options[:instance_id]
           image_spec.reference = {
             'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -812,7 +813,7 @@ EOD
       image ||= image_for(image_spec)
       time_elapsed = 0
       sleep_time = 10
-      max_wait_time = 120
+      max_wait_time = 300
       if !yield(image)
         action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
         while time_elapsed < max_wait_time && !yield(image)
@@ -821,7 +822,7 @@ EOD
           time_elapsed += sleep_time
         end
         unless yield(image)
-          raise "Image #{image.id} did not become ready within 120 seconds"
+          raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
         end
         action_handler.report_progress "Image #{image_spec.name} is now ready"
       end
@@ -845,7 +846,7 @@ EOD
             time_elapsed += sleep_time
           end
           unless yield(instance)
-            raise "Image #{instance.id} did not become ready within 120 seconds"
+            raise "Image #{instance.id} did not become ready within #{max_wait_time} seconds"
           end
           action_handler.report_progress "#{machine_spec.name} is now ready"
         end

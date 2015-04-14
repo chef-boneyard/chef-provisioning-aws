@@ -3,8 +3,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   aws_sdk_type AWS::EC2::Image,
                managed_entry_type:    :machine_image,
-               managed_entry_id_name: 'image_id',
-               load_provider:         false
+               managed_entry_id_name: 'image_id'
 
   attribute :name, kind_of: String,  name_attribute: true
 

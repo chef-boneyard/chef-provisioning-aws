@@ -5,7 +5,7 @@ require 'chef/provisioning/chef_managed_entry_store'
 # Common AWS resource - contains metadata that all AWS resources will need
 module Chef::Provisioning::AWSDriver
 class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
-  actions :create, :destroy, :nothing
+  actions :create, :destroy, :purge, :nothing
   default_action :create
 
   def initialize(name, run_context=nil)

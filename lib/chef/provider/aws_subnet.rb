@@ -51,8 +51,23 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(subnet)
+    if purging
+      # TODO possibly convert to http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Client.html#terminate_instances-instance_method
+      p = Chef::ChefFS::Parallelizer.new(5)
+      p.parallel_do(subnet.instances.to_a) do |instance|
+        Cheffish.inline_resource(self, action) do
+          aws_instance instance do
+            action :purge
+          end
+        end
+      end
+    end
     converge_by "delete subnet #{new_resource.name} in VPC #{new_resource.vpc} in #{region}" do
-      subnet.delete
+      # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available
+      begin
+        subnet.delete
+      rescue AWS::EC2::Errors::InvalidSubnetID::NotFound
+      end
     end
   end
 

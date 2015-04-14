@@ -6,6 +6,10 @@ with_driver 'aws::eu-west-1'
 # This recipe sets every single value of every single object
 #
 
+aws_vpc 'ref-vpc' do
+  action :purge
+end
+
 aws_dhcp_options 'ref-dhcp-options' do
   domain_name          'example.com'
   domain_name_servers  %w(8.8.8.8 8.8.4.4)
@@ -45,8 +49,7 @@ end
 
 aws_security_group 'ref-sg1' do
   vpc 'ref-vpc'
-  inbound_rules '0.0.0.0/0' => 22
-  inbound_rules '0.0.0.0/0' => 80
+  inbound_rules '0.0.0.0/0' => [ 22, 80 ]
   outbound_rules [
     {:ports => 22..22, :protocol => :tcp, :destinations => ['0.0.0.0/0'] }
   ]

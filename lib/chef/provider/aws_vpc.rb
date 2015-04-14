@@ -55,6 +55,22 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(vpc)
+    if purging
+      vpc.subnets.each do |s|
+        Cheffish.inline_resource(self, action) do # if action isn't defined, we want :purge
+          aws_subnet s do
+            action :purge
+          end
+        end
+      end
+      # If any of the below resources start needing complicated delete logic (dependent resources needing to
+      # be deleted) move that logic into `delete_aws_resource` and add the purging logic to the resource
+      vpc.network_acls.each       { |o| o.delete unless o.default? }
+      vpc.network_interfaces.each { |o| o.delete }
+      vpc.route_tables.each       { |o| o.delete unless o.main? }
+      vpc.security_groups.each    { |o| o.delete unless o.name == 'default' }
+    end
+
     # Detach or destroy the internet gateway
     ig = vpc.internet_gateway
     if ig

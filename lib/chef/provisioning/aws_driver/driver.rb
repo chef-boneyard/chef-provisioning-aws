@@ -331,6 +331,7 @@ module AWSDriver
           image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
           Chef::Log.debug "AWS Image options: #{image_options.inspect}"
           image = ec2.images.create(image_options.to_hash)
+          image.add_tag('From-Instance', :value => image_options[:instance_id]) if image_options[:instance_id]
           image_spec.reference = {
             'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,

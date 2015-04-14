@@ -56,36 +56,17 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   def destroy_aws_object(vpc)
     if purging
-      # TODO we need to destroy the associated data bags as well.
-      instances = vpc.instances.map do |instance|
-        interfaces = instance.network_interfaces.to_a
-        instance.delete
-        [ instance, interfaces ]
-      end
-
-      # Wait for the instances to be removed (and their associated network
-      # interfaces detached)
-      while !instances.empty?
-        instances.select! do |instance, interfaces|
-          still_exists = false
-          begin
-            still_exists ||= instance.status != :terminated
-          rescue AWS::EC2::Errors::InvalidInstanceID::NotFound
+      vpc.subnets.each do |s|
+        Cheffish.inline_resource(self, action) do # if action isn't defined, we want :purge
+          aws_subnet s do
+            action :purge
           end
-          interfaces.each do |interface|
-            begin
-              still_exists ||= interface.instance == instance
-            rescue AWS::EC2::Errors::InvalidNetworkInterfaceID::NotFound
-            end
-          end
-          still_exists
         end
-        sleep 0.5
       end
-
+      # If any of the below resources start needing complicated delete logic (dependent resources needing to
+      # be deleted) move that logic into `delete_aws_resource` and add the purging logic to the resource
       vpc.network_acls.each       { |o| o.delete unless o.default? }
       vpc.network_interfaces.each { |o| o.delete }
-      vpc.subnets.each            { |o| o.delete }
       vpc.route_tables.each       { |o| o.delete unless o.main? }
       vpc.security_groups.each    { |o| o.delete unless o.name == 'default' }
     end

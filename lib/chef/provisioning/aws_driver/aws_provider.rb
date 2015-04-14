@@ -3,12 +3,19 @@ require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
+require 'retryable'
 
 module Chef::Provisioning::AWSDriver
 class AWSProvider < Chef::Provider::LWRPBase
   use_inline_resources
 
   AWSResource = Chef::Provisioning::AWSDriver::AWSResource
+
+  class StatusTimeoutError < TimeoutError
+    def initialize(aws_object, initial_status, expected_status)
+      super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
+    end
+  end
 
   def action_handler
     @action_handler ||= Chef::Provisioning::ChefProviderActionHandler.new(self)
@@ -124,6 +131,7 @@ class AWSProvider < Chef::Provider::LWRPBase
     aws_object
   end
 
+  # TODO having a @purging flag feels weird
   action :purge do
     @purging = true
     begin
@@ -211,6 +219,25 @@ class AWSProvider < Chef::Provider::LWRPBase
 
   def destroy_aws_object(obj)
     raise NotImplementedError, :destroy_aws_object
+  end
+
+  def wait_for_status(aws_object, expected_status, acceptable_errors = [])
+    acceptable_errors = [acceptable_errors].flatten
+    expected_status = [expected_status].flatten
+    current_status = aws_object.status
+    log_callback = proc {
+      Chef::Log.info("waiting for #{aws_object.id} status to change to #{expected_status.inspect}...")
+    }
+
+    Retryable.retryable(:tries => 60, :sleep => 5, :on => StatusTimeoutError, :ensure => log_callback) do
+      begin
+        current_status = aws_object.status
+        unless expected_status.include?(current_status)
+          raise StatusTimeoutError.new(aws_object, current_status, expected_status)
+        end
+      rescue *acceptable_errors
+      end
+    end
   end
 
 end

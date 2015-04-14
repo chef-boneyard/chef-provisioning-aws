@@ -149,6 +149,7 @@ module AWSSupport
           end
 
           after :context do
+            # TODO created_during_test
             resource.destroy if resource
           end
         end
@@ -195,7 +196,8 @@ module AWSSupport
         driver:       driver,
         stdout:       delayed_stream(delay_before_streaming, STDOUT),
         stderr:       delayed_stream(delay_before_streaming, STDERR),
-        log_location: delayed_stream(delay_before_streaming_logs, STDOUT)
+        log_location: delayed_stream(delay_before_streaming_logs, STDOUT),
+        log_level:    :info
       }
     end
 

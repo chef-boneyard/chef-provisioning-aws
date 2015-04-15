@@ -17,6 +17,23 @@ describe Chef::Resource::AwsEbsVolume do
         ).and be_idempotent
       end
 
+      describe 'action :delete' do
+        with_converge {
+          aws_ebs_volume "test_volume" do
+            availability_zone 'a'
+            size 8
+          end
+        }
+        it "deletes the ebs volume" do
+          expect_recipe {
+            aws_ebs_volume "test_volume" do
+              action :destroy
+            end
+          }.to destroy_an_aws_ebs_volume('test_volume')
+           .and be_idempotent
+        end
+      end
+
       it "aws_ebs_volume 'test_volume_az' creates an ebs volume when provided proper full AZ" do
         expect_recipe {
           aws_ebs_volume "test_volume_az" do
@@ -26,6 +43,7 @@ describe Chef::Resource::AwsEbsVolume do
         }.to create_an_aws_ebs_volume('test_volume_az')
          .and be_idempotent
       end
+
     end
   end
 end

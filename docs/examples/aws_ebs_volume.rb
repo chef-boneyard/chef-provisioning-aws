@@ -15,7 +15,7 @@ machine 'ref-machine-2'
 
 # create volume
 aws_ebs_volume 'ref-volume-ebs' do
-  availability_zone 'us-west-2a'
+  availability_zone 'a'
   size 1
 end
 
@@ -44,7 +44,7 @@ end
 
 # create and attach
 aws_ebs_volume 'ref-volume-ebs-2' do
-  availability_zone 'us-west-2a'
+  availability_zone 'a'
   size 1
   machine 'ref-machine-1'
   device '/dev/xvdf'

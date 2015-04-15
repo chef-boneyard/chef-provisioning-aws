@@ -48,7 +48,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   def update_aws_object(volume)
     if initial_options.has_key?(:availability_zone)
       if initial_options[:availability_zone] != volume.availability_zone_name
-        raise "#{new_resource}.availability_zone is #{new_resource.availability_zone}, but actual volume has availability_zone_name set to #{volume.availability_zone_name}.  Cannot be modified!"
+        raise "#{new_resource}.availability_zone is #{availability_zone}, but actual volume has availability_zone_name set to #{volume.availability_zone_name}.  Cannot be modified!"
       end
     end
     if initial_options.has_key?(:size)
@@ -99,7 +99,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   def initial_options
     @initial_options ||= begin
       options = {}
-      options[:availability_zone] = new_resource.availability_zone if !new_resource.availability_zone.nil?
+      options[:availability_zone] = availability_zone              if !new_resource.availability_zone.nil?
       options[:size]              = new_resource.size              if !new_resource.size.nil?
       options[:snapshot_id]       = new_resource.snapshot          if !new_resource.snapshot.nil?
       options[:iops]              = new_resource.iops              if !new_resource.iops.nil?
@@ -203,5 +203,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       end
       volume
     end
+  end
+
+  def availability_zone
+    "#{region}#{new_resource.availability_zone}"
   end
 end

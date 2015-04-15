@@ -75,7 +75,7 @@ aws_auto_scaling_group 'ref-auto-scaling-group' do
 end
 
 aws_ebs_volume 'ref-volume' do
-  availability_zone 'eu-west-1a'
+  availability_zone 'a'
   size 1
   machine 'ref-machine1'
   device '/dev/xvdf'

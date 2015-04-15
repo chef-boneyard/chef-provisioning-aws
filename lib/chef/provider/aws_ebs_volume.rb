@@ -207,11 +207,11 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
   def availability_zone
     az = new_resource.availability_zone
-    # resource attribute has already validated the value with regex
-    if az.length > 1
+    if /^#{region}/ =~ az
       Chef::Log.warn("availability_zone attribute should only be set to the letter designation. Attempting to use '#{az[-1]}' to correct the issue.")
-      az = az[-1]
+    elsif az.length == 1
+      az = "#{region}#{az[-1]}"
     end
-    "#{region}#{az}"
+    az
   end
 end

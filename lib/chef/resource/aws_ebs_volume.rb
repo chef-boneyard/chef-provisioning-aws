@@ -8,7 +8,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance ]
 
-  attribute :availability_zone, kind_of: String, :regex => [ /^[a-z]{2}-[a-z]+-\d[a-z]$/i, /^[a-z]$/ ]
+  attribute :availability_zone, kind_of: String
   attribute :size,              kind_of: Integer
   attribute :snapshot,          kind_of: String
 

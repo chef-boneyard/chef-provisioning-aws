@@ -16,23 +16,14 @@ describe Chef::Resource::AwsEbsVolume do
          .and be_idempotent
       end
 
-      it "aws_ebs_volume 'test_volume_az' creates an ebs volume with proper AZ" do
+      it "aws_ebs_volume 'test_volume_az' creates an ebs volume when provided proper full AZ" do
         expect_recipe {
           aws_ebs_volume "test_volume_az" do
-            availability_zone 'us-abcd-1a'
+            availability_zone "#{driver.aws_config.region}a"
             size 8
           end
         }.to create_an_aws_ebs_volume('test_volume_az')
          .and be_idempotent
-      end
-
-      it "aws_ebs_volume fails with an invalid AZ pattern", :skip => true do
-        expect_recipe {
-          aws_ebs_volume "test_volume_az0" do
-            availability_zone 'usa-abcd-1'
-            size 8
-          end
-        }.to raise_error(Chef::Exceptions::ValidationFailed, /availability_zone/)
       end
     end
   end

@@ -54,6 +54,8 @@ module AWSDriver
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
         region: region || credentials[:region],
+        stub_requests: AWS.config.stub_requests
+        region: region || credentials[:region],
         logger: Chef::Log.logger
       )
     end
@@ -508,6 +510,9 @@ EOD
       @sqs ||= AWS::SQS.new(config: aws_config)
     end
 
+    def rds
+      @rds ||= AWS::RDS.new(config: aws_config)
+    end
     def auto_scaling
       @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end

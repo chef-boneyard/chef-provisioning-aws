@@ -12,8 +12,9 @@ describe Chef::Resource::AwsEbsVolume do
             availability_zone 'a'
             size 8
           end
-        }.to create_an_aws_ebs_volume('test_volume')
-         .and be_idempotent
+        }.to create_an_aws_ebs_volume('test_volume',
+          :size => 8
+        ).and be_idempotent
       end
 
       it "aws_ebs_volume 'test_volume_az' creates an ebs volume when provided proper full AZ" do

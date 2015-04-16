@@ -19,7 +19,7 @@ class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "delete image #{new_resource} in #{region}" do
       image.delete
     end
-    if purging && instance_id
+    if instance_id
       # As part of the image creation process, the source instance was automatically
       # destroyed - we just need to make sure that has completed successfully
       instance = new_resource.driver.ec2.instances[instance_id]

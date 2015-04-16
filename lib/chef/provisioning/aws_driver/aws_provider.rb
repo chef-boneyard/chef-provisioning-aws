@@ -221,15 +221,21 @@ class AWSProvider < Chef::Provider::LWRPBase
     raise NotImplementedError, :destroy_aws_object
   end
 
-  def wait_for_status(aws_object, expected_status, acceptable_errors = [])
+  # Wait until aws_object obtains one of expected_status
+  #
+  # @param aws_object Aws SDK Object to check status on
+  # @param expected_status [Symbol,Array<Symbol>] Final status(s) to look for
+  # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
+  # @param tries [Integer] Number of times to check status
+  # @param sleep [Integer] Time to wait between checking status
+  #
+  def wait_for_status(aws_object, expected_status, acceptable_errors = [], tries=60, sleep=5)
     acceptable_errors = [acceptable_errors].flatten
     expected_status = [expected_status].flatten
     current_status = aws_object.status
-    log_callback = proc {
-      Chef::Log.info("waiting for #{aws_object.id} status to change to #{expected_status.inspect}...")
-    }
 
-    Retryable.retryable(:tries => 60, :sleep => 5, :on => StatusTimeoutError, :ensure => log_callback) do
+    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} status to change to #{expected_status.inspect}..."
       begin
         current_status = aws_object.status
         unless expected_status.include?(current_status)

@@ -115,7 +115,7 @@ end
 
 aws_ebs_volume 'ref-volume' do
   machine 'ref-machine1'
-  availability_zone 'eu-west-1a'
+  availability_zone 'a'
   size 100
   #snapshot
   iops 3000

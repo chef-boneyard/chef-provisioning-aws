@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (4/16/2015)
+
+- Added `aws_network_interface` resource (@patrick-wright #167)
+- Added integration tests which automatically destroy AWS resources after use (@jkeiser #152)
+- Added `action :purge` support on aws resources, will delete all dependent resources in addition to the current resource (@jkeiser @tyler-ball #152 #187)
+  - EG, `action :purge` on the VPC will delete the subnet, machines, etc.
+- Update `docs/examples` to be consistent with current codebase (@msonnabaum #181 #179)
+- Added version constraint for aws-sdk to support required features (@msonnabaum #178)
+- Updated `aws_ebs_volume` `:availability_zone` attribute to only require letter instead of full region and letter (@patrick-wright #185)
+  - IE, use `availability_zone 'a'` instead of `availability_zone 'us-east-1a'`
+- Added AWS Proxy & Session Token Support (@afiune #177)
+
 ## 1.0.4 (4/7/2015)
 
 - Removed resource cloning again

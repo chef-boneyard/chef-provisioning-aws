@@ -51,7 +51,7 @@ aws_security_group 'ref-sg1' do
   vpc 'ref-vpc'
   inbound_rules '0.0.0.0/0' => [ 22, 80 ]
   outbound_rules [
-    {:ports => 22..22, :protocol => :tcp, :destinations => ['0.0.0.0/0'] }
+    {:port => 22..22, :protocol => :tcp, :destinations => ['0.0.0.0/0'] }
   ]
 end
 

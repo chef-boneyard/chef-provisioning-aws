@@ -429,9 +429,7 @@ EOD
     end
 
     def allocate_machines(action_handler, specs_and_options, parallelizer)
-      #Chef::Log.warn("#{specs_and_options}")
       create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, server|
-    #Chef::Log.warn("#{machine_spec}")
         yield machine_spec
       end
       specs_and_options.keys

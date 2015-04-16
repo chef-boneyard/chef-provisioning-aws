@@ -72,6 +72,28 @@ describe Chef::Provisioning::AWSDriver::Credentials do
       @ini
     end
 
+    let(:enterprise_config_ini_file) do
+      @ini ||= begin
+        ini = Tempfile.new('enterprise_config_ini')
+        ini.write(
+          ['[profile enterprise]',
+           'region = us-west-2',
+           'aws_access_key_id = AKIAENTERPRISEKEY',
+           'aws_secret_access_key = enterprisesecretaccesskey',
+           'aws_session_token = MIIEpAIBAAKCAQEAth95Ci0sdvK222gG2wZEeBXZXeTIynOqJT1fcRnZ/dqVsoUm',
+           'proxy_uri = https://user:password@my.proxy:443/path?query',
+           '[profile work_iam]',
+           'region = us-east-1',
+           'aws_access_key_id = AKIAWORKIAMKEY',
+           'aws_secret_access_key = workiamsecretaccesskey'
+          ].join("\n")
+        )
+        ini.rewind
+        ini
+      end
+      @ini
+    end
+
     context 'unified config ini file' do
       %w(work_iam personal).each do |profile|
         it "loads the '#{profile}' profile from a unified config file" do
@@ -93,6 +115,37 @@ describe Chef::Provisioning::AWSDriver::Credentials do
       end
     end
 
+    context 'enterprise config ini file' do
+      let(:credentials) { described_class.new }
+      %w(work_iam enterprise).each do |profile|
+        it "loads the '#{profile}' profile from a enterprise config file" do
+          ENV['AWS_DEFAULT_PROFILE'] = profile
+          ENV['AWS_CREDENTIAL_FILE'] = nil
+          ENV['AWS_CONFIG_FILE'] = enterprise_config_ini_file.path
+          allow(File)
+            .to receive(:file?)
+            .with(File.expand_path('~/.aws/credentials'))
+            .and_return(false)
+          allow(File)
+            .to receive(:file?)
+            .with(File.expand_path(enterprise_config_ini_file.path))
+            .and_return(true)
+
+          if profile.eql?('enterprise')
+            expect(credentials[profile][:proxy_uri])
+              .to eq('https://user:password@my.proxy:443/path?query')
+            expect(credentials[profile][:aws_session_token])
+              .to eq('MIIEpAIBAAKCAQEAth95Ci0sdvK222gG2wZEeBXZXeTIynOqJT1fcRnZ/dqVsoUm')
+          else
+            expect(credentials[profile][:proxy_uri])
+              .to eq(nil)
+            expect(credentials[profile][:aws_session_token])
+              .to eq(nil)
+          end
+        end
+      end
+    end
+
     context 'separate config and credential ini files' do
       %w(work_iam personal).each do |profile|
         it "loads the '#{profile}' profile from a separate config files" do
@@ -105,5 +158,6 @@ describe Chef::Provisioning::AWSDriver::Credentials do
         end
       end
     end
+
   end
 end

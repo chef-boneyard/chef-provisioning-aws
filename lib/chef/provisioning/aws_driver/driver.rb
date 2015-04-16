@@ -54,6 +54,8 @@ module AWSDriver
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
         region: region || credentials[:region],
+        proxy_uri: credentials[:proxy_uri] || nil,
+        session_token: credentials[:aws_session_token] || nil,
         logger: Chef::Log.logger
       )
     end

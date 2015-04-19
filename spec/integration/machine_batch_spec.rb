@@ -20,14 +20,17 @@ describe Chef::Resource::MachineBatch do
                 machine_options bootstrap_options: {
                   subnet_id: 'test_public_subnet',
                   key_name: 'test_key_pair'
-                }
+                }, source_dest_check: false
                 action :allocate
               end
             end
           end
-        }.to create_an_aws_instance('test_machine1'
-        ).and create_an_aws_instance('test_machine2'
-        ).and create_an_aws_instance('test_machine3'
+        }.to create_an_aws_instance('test_machine1',
+          source_dest_check: false
+        ).and create_an_aws_instance('test_machine2',
+          source_dest_check: false
+        ).and create_an_aws_instance('test_machine3',
+          source_dest_check: false
         ).and be_idempotent
       end
     end

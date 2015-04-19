@@ -12,6 +12,7 @@ describe Chef::Resource::Machine do
 
       purge_all
       setup_public_vpc
+
       it "machine with few options allocates a machine", :super_slow do
         expect_recipe {
           machine 'test_machine' do
@@ -35,6 +36,20 @@ describe Chef::Resource::Machine do
             action :allocate
           end
         }.to create_an_aws_instance('test_machine'
+        ).and be_idempotent
+      end
+
+      it "machine with source_dest_check false creates a machine with no source dest check", :super_slow do
+        expect_recipe {
+          machine 'test_machine' do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            }, source_dest_check: false
+            action :allocate
+          end
+        }.to create_an_aws_instance('test_machine',
+          source_dest_check: false
         ).and be_idempotent
       end
     end

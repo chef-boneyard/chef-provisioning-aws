@@ -414,7 +414,7 @@ EOD
           sleep 5 while instance.status == :pending
           # TODO add other tags identifying user / node url (same as fog)
           instance.tags['Name'] = machine_spec.name
-          instance.source_dest_check = machine_options[:source_dest_check] unless machine_options[:source_dest_check].nil?
+          instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
           machine_spec.reference = {
               'driver_url' => driver_url,
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -950,7 +950,7 @@ EOD
               'instance_id' => instance.id
             }
             instance.tags['Name'] = machine_spec.name
-            instance.source_dest_check = machine_options[:source_dest_check] unless machine_options[:source_dest_check].nil?
+            instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
             machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
             %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
               machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]

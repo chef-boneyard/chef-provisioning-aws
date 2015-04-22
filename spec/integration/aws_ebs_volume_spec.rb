@@ -8,10 +8,7 @@ describe Chef::Resource::AwsEbsVolume do
 
       it "aws_ebs_volume 'test_volume' creates an ebs volume" do
         expect_recipe {
-          aws_ebs_volume "test_volume" do
-            availability_zone 'a'
-            size 8
-          end
+          aws_ebs_volume "test_volume"
         }.to create_an_aws_ebs_volume('test_volume',
           :size => 8
         ).and be_idempotent
@@ -38,7 +35,6 @@ describe Chef::Resource::AwsEbsVolume do
         expect_recipe {
           aws_ebs_volume "test_volume_az" do
             availability_zone "#{driver.aws_config.region}a"
-            size 8
           end
         }.to create_an_aws_ebs_volume('test_volume_az')
          .and be_idempotent

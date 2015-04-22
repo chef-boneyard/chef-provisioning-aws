@@ -6,6 +6,9 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
 
   attribute :name, kind_of: String, name_attribute: true
 
+  # AWS really sucks - every other AWSResourceWithEntry accepts tags EXCEPT this one
+  undef_method(:aws_tags)
+
   # TODO network interface
   attribute :machine,          kind_of: [String, FalseClass]
   attribute :associate_to_vpc, kind_of: [TrueClass, FalseClass]

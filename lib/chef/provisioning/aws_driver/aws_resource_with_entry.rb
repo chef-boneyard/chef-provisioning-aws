@@ -3,6 +3,10 @@ require 'chef/provisioning/aws_driver/resources'
 
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
+
+  # TODO do some validation and any transformation we need to do in the resource rather than the provider
+  attribute :aws_tags, kind_of: Hash
+
   #
   # Dissociate the ID of this object from Chef.
   #

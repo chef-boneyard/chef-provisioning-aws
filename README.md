@@ -94,3 +94,53 @@ you!
 If you find the tests leaving behind resources during normal conditions (IE, not when there is an
 unexpected exception) please file a bug.  Most objects can be cleaned up by deleting the `test_vpc`
 from within the AWS browser console.
+
+# Tagging Resources
+
+## Aws Resources
+
+All resources which extend Chef::Provisioning::AWSDriver::AWSResourceWithEntry support the ability
+to add tags, except AwsEipAddress.  AWS does not support tagging on AwsEipAddress.  To add a tag
+to any aws resource, us the `aws_tags` attribute and provide it a hash:
+
+```ruby
+aws_ebs_volume 'ref-volume' do
+  aws_tags company: 'my_company', 'key_as_string' => :value_as_symbol
+end
+
+aws_vpc 'ref-vpc' do
+  aws_tags 'Name' => 'custom-vpc-name'
+end
+```
+
+The hash of tags can use symbols or strings for both keys and values.  The tags will be converged
+idempotently, meaning no write will occur if no tags are changing.
+
+We will not touch the `'Name'` tag UNLESS you specifically pass it.  If you do not pass it, we
+leave it alone.
+
+Because base resources from chef-provisioning do not have the `aws_tag` attribute, they must be
+tagged in their options:
+
+```ruby
+machine 'ref-machine-1' do
+  machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
+end
+
+machine_batch "ref-batch" do
+  machine 'ref-machine-2' do
+    machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
+    converge false
+  end
+  machine 'ref-machine-3' do
+    machine_options :aws_tags => {:othercustomtags => 'byebye'}
+    converge false
+  end
+end
+
+load_balancer 'ref-elb' do
+  load_balancer_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
+end
+```
+
+See `docs/examples/aws_tags.rb` for further examples.

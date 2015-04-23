@@ -1,6 +1,10 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
+  def create_aws_object(instance); end
+
+  def update_aws_object(instance); end
+
   def destroy_aws_object(instance)
     converge_by "delete instance #{new_resource} in VPC #{instance.vpc.id} in #{region}" do
       instance.delete

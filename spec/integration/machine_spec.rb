@@ -74,6 +74,19 @@ describe Chef::Resource::Machine do
         ).and create_an_aws_key_pair('test_key_pair'
         ).and be_idempotent
       end
+
+      # Tests https://github.com/chef/chef-provisioning-aws/issues/189
+      it "correctly finds the driver_url when switching between machine and aws_instance", :super_slow do
+        expect { recipe {
+          machine 'test-machine-driver' do
+            action :allocate
+          end
+          aws_instance 'test-machine-driver'
+          machine 'test-machine-driver' do
+            action :destroy
+          end
+        }.converge }.to_not raise_error
+      end
     end
   end
 end

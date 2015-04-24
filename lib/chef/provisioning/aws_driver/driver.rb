@@ -90,10 +90,10 @@ module AWSDriver
           actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
 
           lb_spec.reference = {
-            'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
           }
+          lb_spec.driver_url = driver_url
         end
       else
         # Header gets printed the first time we make an update
@@ -335,11 +335,11 @@ module AWSDriver
           image = ec2.images.create(image_options.to_hash)
           image.add_tag('From-Instance', :value => image_options[:instance_id]) if image_options[:instance_id]
           image_spec.reference = {
-            'driver_url' => driver_url,
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'image_id' => image.id,
             'allocated_at' => Time.now.to_i
           }
+          image_spec.driver_url = driver_url
         end
       end
     end
@@ -416,13 +416,13 @@ EOD
           instance.tags['Name'] = machine_spec.name
           instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
           machine_spec.reference = {
-              'driver_url' => driver_url,
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
               'image_id' => bootstrap_options[:image_id],
               'instance_id' => instance.id
           }
+          machine_spec.driver_url = driver_url
           machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
           %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
             machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
@@ -603,8 +603,8 @@ EOD
 
     def instance_for(machine_spec)
       if machine_spec.reference
-        if machine_spec.reference['driver_url'] != driver_url
-          raise "Switching a machine's driver from #{machine_spec.reference['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+        if machine_spec.driver_url != driver_url
+          raise "Switching a machine's driver from #{machine_spec.driver_url} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
         end
         Chef::Resource::AwsInstance.get_aws_object(machine_spec.reference['instance_id'], driver: self, managed_entry_store: machine_spec.managed_entry_store, required: false)
       end
@@ -942,13 +942,13 @@ EOD
             machine_spec = machine_specs.pop
             machine_options = specs_and_options[machine_spec]
             machine_spec.reference = {
-              'driver_url' => driver_url,
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
               'image_id' => bootstrap_options[:image_id],
               'instance_id' => instance.id
             }
+            machine_spec.driver_url = driver_url
             instance.tags['Name'] = machine_spec.name
             instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
             machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]

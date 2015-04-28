@@ -1,12 +1,18 @@
 # Changelog
 
+## 1.1.1 (4/28/2015)
+
+- Fixed bug where refering to the same `machine` an an `aws_instance` would would raise a RuntimeError ([@patrick-wright][], [@tyler-ball][] [#191][])
+- Added new `destroy_an_aws_object` matcher for use in integration tests ([@patrick-wright][] [#186][])
+- Add ability to turn off source/dest check ([@dblessing][])
+
 ## 1.1.0 (4/16/2015)
 
 - Added `aws_network_interface` resource ([@patrick-wright][] [#167][])
 - Added integration tests which automatically destroy AWS resources after use ([@jkeiser][] [#152][])
-- Added `action :purge` support on aws resources, will delete all dependent resources in addition to the current resource ([@jkeiser][] @tyler-ball [#152][] #187)
+- Added `action :purge` support on aws resources, will delete all dependent resources in addition to the current resource ([@jkeiser][] [@tyler-ball][] [#152][] [#187][])
   - EG, `action :purge` on the VPC will delete the subnet, machines, etc.
-- Update `docs/examples` to be consistent with current codebase ([@msonnabaum][] [#181][] #179)
+- Update `docs/examples` to be consistent with current codebase ([@msonnabaum][] [#181][] [#179][])
 - Added version constraint for aws-sdk to support required features ([@msonnabaum][] [#178][])
 - Updated `aws_ebs_volume` `:availability_zone` attribute to only require letter instead of full region and letter ([@patrick-wright][] [#185][])
   - IE, use `availability_zone 'a'` instead of `availability_zone 'us-east-1a'`
@@ -108,10 +114,13 @@ end
 [#179]: https://github.com/chef/chef-provisioning-aws/issues/179
 [#181]: https://github.com/chef/chef-provisioning-aws/issues/181
 [#185]: https://github.com/chef/chef-provisioning-aws/issues/185
+[#186]: https://github.com/chef/chef-provisioning-aws/issues/186
 [#187]: https://github.com/chef/chef-provisioning-aws/issues/187
+[#191]: https://github.com/chef/chef-provisioning-aws/issues/191
 [@afiune]: https://github.com/afiune
 [@bbbco]: https://github.com/bbbco
 [@christinedraper]: https://github.com/christinedraper
+[@dblessing]: https://github.com/dblessing
 [@erikvanbrakel]: https://github.com/erikvanbrakel
 [@jdmundrawala]: https://github.com/jdmundrawala
 [@jkeiser]: https://github.com/jkeiser

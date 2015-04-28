@@ -359,22 +359,12 @@ module AWSDriver
     end
 
     def destroy_image(action_handler, image_spec, image_options)
-      actual_image = image_for(image_spec)
-      if actual_image.nil? || !actual_image.exists?
-        Chef::Log.warn "Image #{image_spec.name} doesn't exist"
-      else
-        snapshots = actual_image.block_device_mappings.map do |dev, opts|
-          ec2.snapshots[opts[:snapshot_id]]
-        end
-        action_handler.perform_action "De-registering image #{image_spec.name}" do
-          actual_image.deregister
-        end
-        if snapshots.any?
-          action_handler.perform_action "Deleting image #{image_spec.name} snapshots" do
-            snapshots.each do |snap|
-              snap.delete
-            end
-          end
+      # TODO the driver should automatically be set by `inline_resource`
+      d = self
+      Provisioning.inline_resource(action_handler) do
+        aws_image image_spec.name do
+          action :destroy
+          driver d
         end
       end
     end
@@ -470,17 +460,15 @@ EOD
     end
 
     def destroy_machine(action_handler, machine_spec, machine_options)
-      instance = instance_for(machine_spec)
-      if instance && instance.exists?
-        # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
-        action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
-          instance.terminate
-          machine_spec.reference = nil
+      d = self
+      Provisioning.inline_resource(action_handler) do
+        aws_instance machine_spec.name do
+          action :destroy
+          driver d
         end
-      else
-        Chef::Log.warn "Instance #{machine_spec.reference['instance_id']} doesn't exist for #{machine_spec.name}"
       end
 
+      # TODO move this into the aws_instance provider somehow
       strategy = convergence_strategy_for(machine_spec, machine_options)
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
@@ -563,6 +551,7 @@ EOD
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+      bootstrap_options[:instance_type] ||= default_instance_type
       image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
       if !bootstrap_options[:key_name]
@@ -650,23 +639,23 @@ EOD
 
       case region
         when 'ap-northeast-1'
-          'ami-c786dcc6'
+          'ami-6cbca76d'
         when 'ap-southeast-1'
-          'ami-eefca7bc'
+          'ami-04c6ec56'
         when 'ap-southeast-2'
-          'ami-996706a3'
+          'ami-c9eb9ff3'
         when 'eu-west-1'
-          'ami-4ab46b3d'
+          'ami-5f9e1028'
         when 'eu-central-1'
-          'ami-7c3c0a61'
+          'ami-56c2f14b'
         when 'sa-east-1'
-          'ami-6770d87a'
+          'ami-81f14e9c'
         when 'us-east-1'
-          'ami-d2ff23ba'
+          'ami-12793a7a'
         when 'us-west-1'
-          'ami-73717d36'
+          'ami-6ebca42b'
         when 'us-west-2'
-          'ami-f1ce8bc1'
+          'ami-b9471c89'
         else
           raise 'Unsupported region!'
       end
@@ -1035,7 +1024,7 @@ EOD
     end
 
     def default_instance_type
-      't1.micro'
+      't2.micro'
     end
 
     PORT_DEFAULTS = {

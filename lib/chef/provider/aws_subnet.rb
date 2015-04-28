@@ -62,7 +62,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         end
       end
     end
-    converge_by "delete subnet #{new_resource.name} in VPC #{new_resource.vpc} in #{region}" do
+    converge_by "delete #{new_resource.to_s} in VPC #{new_resource.vpc} in #{region}" do
       # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available
       begin
         subnet.delete

@@ -38,7 +38,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   end
 
   def destroy_aws_object(sg)
-    converge_by "Deleting SG #{new_resource.name} in #{region}" do
+    converge_by "delete #{new_resource.to_s} in #{region}" do
       sg.delete
     end
   end

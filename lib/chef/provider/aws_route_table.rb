@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'retryable'
 
 class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
@@ -20,7 +21,9 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = new_resource.driver.ec2.route_tables.create(options)
-      route_table.tags['Name'] = new_resource.name
+      Retryable.retryable(:tries => 15, :sleep => 1, :on => AWS::EC2::Errors::InvalidRouteTableID::NotFound) do
+        route_table.tags['Name'] = new_resource.name
+      end
       route_table
     end
   end
@@ -31,14 +34,18 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.vpc
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
       if vpc != desired_vpc
-        raise "VPC of route table #{new_resource.name} (#{route_table.id}) is #{route_table.vpc.id}, but desired vpc is #{new_resource.vpc}!  Moving (or rather, recreating) a route table is not yet supported."
+        raise "VPC of route table #{new_resource.to_s} is #{route_table.vpc.id}, but desired vpc is #{new_resource.vpc}!  The AWS SDK does not support updating the main route table except by creating a new route table."
       end
     end
   end
 
   def destroy_aws_object(route_table)
-    converge_by "delete route table #{new_resource.name} (#{route_table.id}) in #{region}" do
-      route_table.delete
+    converge_by "delete #{new_resource.to_s} in #{region}" do
+      begin
+        route_table.delete
+      rescue AWS::EC2::Errors::DependencyViolation
+        raise "#{new_resource.to_s} could not be deleted because it is the main route table for #{route_table.vpc.id} or it is being used by a subnet"
+      end
     end
   end
 

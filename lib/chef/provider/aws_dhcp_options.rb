@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'retryable'
 
 class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvider
   protected
@@ -11,7 +12,9 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
 
     converge_by "create new dhcp_options #{new_resource.name} in #{region}" do
       dhcp_options = new_resource.driver.ec2.dhcp_options.create(options)
-      dhcp_options.tags['Name'] = new_resource.name
+      Retryable.retryable(:tries => 15, :sleep => 1, :on => AWS::EC2::Errors::InvalidDhcpOptionsID::NotFound) do
+        dhcp_options.tags['Name'] = new_resource.name
+      end
       dhcp_options
     end
   end

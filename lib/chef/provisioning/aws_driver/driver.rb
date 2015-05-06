@@ -561,7 +561,7 @@ EOD
 
       if machine_options[:is_windows]
         Chef::Log.debug "Setting WinRM userdata..."
-        bootstrap_options[:user_data] = user_data
+        bootstrap_options[:user_data] ||= user_data
       else
         Chef::Log.debug "Non-windows, not setting userdata"
       end
@@ -610,7 +610,9 @@ EOD
     end
 
     def transport_for(machine_spec, machine_options, instance)
-      if machine_spec.reference['is_windows']
+      transport = machine_options.reference['transport']
+      transport ||= machine_spec.reference['is_windows'] ? 'ssh' : 'winrm'
+      if transport == 'winrm'
         create_winrm_transport(machine_spec, machine_options, instance)
       else
         create_ssh_transport(machine_spec, machine_options, instance)
@@ -941,7 +943,7 @@ EOD
             instance.tags['Name'] = machine_spec.name
             instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
             machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-            %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+            %w(transport is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
               machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
             end
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"

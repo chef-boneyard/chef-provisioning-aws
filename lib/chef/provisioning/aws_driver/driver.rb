@@ -610,7 +610,7 @@ EOD
     end
 
     def transport_for(machine_spec, machine_options, instance)
-      transport = machine_options.reference['transport']
+      transport = machine_spec.reference['transport']
       transport ||= machine_spec.reference['is_windows'] ? 'ssh' : 'winrm'
       if transport == 'winrm'
         create_winrm_transport(machine_spec, machine_options, instance)

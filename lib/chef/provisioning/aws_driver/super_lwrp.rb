@@ -45,7 +45,6 @@ end
 
 module NoResourceCloning
   def prior_resource
-    # For some unknown reason, `kind_of?` is just not working
     if resource_class <= Chef::Provisioning::AWSDriver::SuperLWRP
       Chef::Log.debug "Canceling resource cloning for #{resource_class}"
       nil

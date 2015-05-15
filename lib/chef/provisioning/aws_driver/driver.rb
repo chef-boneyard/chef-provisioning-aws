@@ -437,7 +437,11 @@ EOD
           actual_instance = ec2.instances.create(bootstrap_options.to_hash)
 
           # Make sure the instance is ready to be tagged
-          sleep 5 while actual_instance.status == :pending
+          require ‘retryable’
+          Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
+            raise TimeoutError unless instance.status == :pending || instance.status == :running
+          end
+          
           # TODO add other tags identifying user / node url (same as fog)
           actual_instance.tags['Name'] = machine_spec.name
           actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)

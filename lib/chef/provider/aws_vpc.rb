@@ -68,7 +68,13 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       # If any of the below resources start needing complicated delete logic (dependent resources needing to
       # be deleted) move that logic into `delete_aws_resource` and add the purging logic to the resource
       vpc.network_acls.each       { |o| o.delete unless o.default? }
-      vpc.network_interfaces.each { |o| o.delete }
+      vpc.network_interfaces.each do |ni|
+        Cheffish.inline_resource(self, action) do
+          aws_network_interface ni do
+            action :purge
+          end
+        end
+      end
       vpc.route_tables.each do |rt|
         unless rt.main?
           Cheffish.inline_resource(self, action) do

@@ -35,6 +35,39 @@ describe Chef::Resource::AwsRouteTable do
           ]
         ).and be_idempotent
       end
+
+      it "ignores routes whose target matches ignore_route_targets" do
+        eni = nil
+        expect_recipe {
+            aws_subnet 'test_subnet' do
+              vpc 'test_vpc'
+            end
+
+            eni = aws_network_interface 'test_network_interface' do
+              subnet 'test_subnet'
+            end
+
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              routes(
+                '0.0.0.0/0' => :internet_gateway,
+                '172.31.0.0/16' => eni
+              )
+            end
+  
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              routes '0.0.0.0/0' => :internet_gateway
+              ignore_route_targets ['^eni-']
+            end
+          }.to create_an_aws_route_table('test_route_table',
+            routes: [
+              { destination_cidr_block: '10.0.0.0/24', 'target.id' => 'local', state: :active },
+              { destination_cidr_block: '172.31.0.0/16', 'target.id' => eni.aws_object.id, state: :blackhole },
+              { destination_cidr_block: '0.0.0.0/0', 'target.id' => test_vpc.aws_object.internet_gateway.id, state: :active },
+            ]
+          ).and be_idempotent
+      end
     end
   end
 end

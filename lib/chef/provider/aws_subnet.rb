@@ -61,6 +61,13 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
           end
         end
       end
+      p.parallel_do(subnet.network_interfaces.to_a) do |network|
+        Cheffish.inline_resource(self, action) do
+          aws_network_interface network do
+            action :purge
+          end
+        end
+      end
     end
     converge_by "delete #{new_resource.to_s} in VPC #{new_resource.vpc} in #{region}" do
       # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available

@@ -7,7 +7,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     route_table = super
 
     if !new_resource.routes.nil?
-      update_routes(vpc, route_table)
+      update_routes(vpc, route_table, new_resource.ignore_route_targets)
     end
 
     update_virtual_private_gateways(route_table, new_resource.virtual_private_gateways)
@@ -55,12 +55,13 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
   attr_accessor :vpc
 
-  def update_routes(vpc, route_table)
+  def update_routes(vpc, route_table, ignore_route_targets = [])
     # Collect current routes
     current_routes = {}
     route_table.routes.each do |route|
       # Ignore the automatic local route
       next if route.target.id == 'local'
+      next if ignore_route_targets.find { |target| route.target.id.match(/#{target}/) }
       current_routes[route.destination_cidr_block] = route
     end
 

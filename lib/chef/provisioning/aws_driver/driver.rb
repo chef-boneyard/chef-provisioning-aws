@@ -437,7 +437,7 @@ EOD
           actual_instance = ec2.instances.create(bootstrap_options.to_hash)
 
           # Make sure the instance is ready to be tagged
-          sleep 5 while actual_instance.status == :pending
+          sleep 5 while !actual_instance.exists?
           # TODO add other tags identifying user / node url (same as fog)
           actual_instance.tags['Name'] = machine_spec.name
           actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
@@ -1027,13 +1027,14 @@ EOD
       # AWS always returns tags as strings, and we don't want to overwrite a
       # tag-as-string with the same tag-as-symbol
       desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
+      tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
       tags_to_delete = current_tags.keys - desired_tags.keys
       # We don't want to delete `Name`, just all other tags
       tags_to_delete.delete('Name')
 
-      unless desired_tags.empty?
-        action_handler.perform_action "applying tags #{desired_tags}" do
-          set_tags_block.call(aws_object, desired_tags)
+      unless tags_to_update.empty?
+        action_handler.perform_action "applying tags #{tags_to_update}" do
+          set_tags_block.call(aws_object, tags_to_update)
         end
       end
       unless tags_to_delete.empty?

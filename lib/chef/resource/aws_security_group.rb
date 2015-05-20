@@ -3,7 +3,9 @@ require 'chef/resource/aws_vpc'
 require 'chef/provisioning/aws_driver/exceptions'
 
 class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::EC2::SecurityGroup, id: :name
+  aws_sdk_type AWS::EC2::SecurityGroup,
+               id: :id,
+               option_names: [:security_group, :security_group_id, :security_group_name]
 
   attribute :name,          kind_of: String, name_attribute: true
   attribute :vpc,           kind_of: [ String, AwsVpc, AWS::EC2::VPC ]

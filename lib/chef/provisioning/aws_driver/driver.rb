@@ -359,7 +359,7 @@ module AWSDriver
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
-      aws_tags = image_options.delete(:aws_tags)
+      aws_tags = image_options.delete(:aws_tags) || {}
       if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
           image_options[:name] ||= image_spec.name

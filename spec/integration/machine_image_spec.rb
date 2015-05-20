@@ -12,7 +12,7 @@ describe Chef::Resource::MachineImage do
       purge_all
       setup_public_vpc
 
-      it "machine_image can create an image in the VPC", :super_slow do
+      it "machine_image can create an image in the VPC", :super_slow, :focus do
         expect_recipe {
           machine_image 'test_machine_image' do
             machine_options bootstrap_options: {
@@ -31,7 +31,7 @@ describe Chef::Resource::MachineImage do
         chef_config[:log_level] = :warn
       end
 
-      it "machine_image with no options can create an image in the VPC", :super_slow do
+      it "machine_image with no options can create an image in the VPC", :super_slow, :focus do
         expect_recipe {
           aws_key_pair 'test_key_pair' do
             allow_overwrite true

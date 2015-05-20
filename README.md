@@ -119,6 +119,8 @@ idempotently, meaning no write will occur if no tags are changing.
 We will not touch the `'Name'` tag UNLESS you specifically pass it.  If you do not pass it, we
 leave it alone.
 
+## Base Resources
+
 Because base resources from chef-provisioning do not have the `aws_tag` attribute, they must be
 tagged in their options:
 

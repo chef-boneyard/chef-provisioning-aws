@@ -22,12 +22,16 @@ describe Chef::Resource::AwsEbsVolume do
           end
         }
         it "deletes the ebs volume" do
-          expect_recipe {
+          # TODO all the `with_*` and `expect_*` methods from Cheffish
+          # automatically converge the block - we don't want to do that,
+          # we want to let the `destroy_an*` matcher do that
+          r = recipe {
             aws_ebs_volume "test_volume" do
               action :destroy
             end
-          }.to destroy_an_aws_ebs_volume('test_volume')
-           .and be_idempotent
+          }
+          expect(r).to destroy_an_aws_ebs_volume('test_volume'
+          ).and be_idempotent
         end
       end
 

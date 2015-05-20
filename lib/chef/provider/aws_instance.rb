@@ -6,7 +6,10 @@ class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
   def update_aws_object(instance); end
 
   def destroy_aws_object(instance)
-    converge_by "delete instance #{new_resource} in VPC #{instance.vpc.id} in #{region}" do
+    message = "delete instance #{new_resource}"
+    message += " in VPC #{instance.vpc.id}" unless instance.vpc.nil?
+    message += " in #{region}"
+    converge_by message do
       instance.delete
     end
     converge_by "waited until instance #{new_resource} is :terminated" do

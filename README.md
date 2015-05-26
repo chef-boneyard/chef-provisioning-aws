@@ -77,6 +77,115 @@ with_machine_options({
 This options hash can be supplied to either `with_machine_options` or directly into the `machine_options`
 attribute.
 
+## Looking up AWS objects
+
+### \#aws\_object
+
+All chef-provisioning-aws resources have a `aws_object` method that will return the AWS object.  The AWS
+object won't exist until the resource converges, however.  An example of how to do this looks like:
+
+```ruby
+my_vpc = aws_vpc 'my_vpc' do
+  cidr_block '10.0.0.0/24'
+  main_routes '0.0.0.0/0' => :internet_gateway
+  internet_gateway true
+end
+
+my_sg = aws_security_group 'my_sg' do
+  vpc lazy { my_vpc.aws_object.id }
+  inbound_rules '0.0.0.0/0' => [ 22, 80 ]
+end
+
+my_subnet = aws_subnet 'my_subnet' do
+  vpc lazy { my_vpc.aws_object.id }
+  cidr_block '10.0.0.0/24'
+  availability_zone 'eu-west-1a'
+  map_public_ip_on_launch true
+end
+
+machine 'my_machine' do
+  machine_options(
+    lazy do
+      {
+        bootstrap_options: {
+          subnet_id: my_subnet.aws_object.id,
+          security_group_ids: [my_sg.aws_object.id]
+        }
+      }
+    end
+  )
+end
+```
+
+Note the use of the `lazy` attribute modifier.  This is necessary because when the resources are compiled
+the aws_objects do not exist yet, so we must wait to reference them until the converge phase.
+
+### \#lookup\_options
+
+You have access to the aws object when necessary, but often it isn't needed.  The above example is better
+written as:
+
+```ruby
+aws_vpc 'my_vpc' do
+  cidr_block '10.0.0.0/24'
+  main_routes '0.0.0.0/0' => :internet_gateway
+  internet_gateway true
+end
+
+aws_security_group 'my_sg' do
+  vpc 'my_vpc'
+  inbound_rules '0.0.0.0/0' => [ 22, 80 ]
+end
+
+aws_subnet 'my_subnet' do
+  vpc 'my_vpc'
+  cidr_block '10.0.0.0/24'
+  availability_zone 'eu-west-1a'
+  map_public_ip_on_launch true
+end
+
+machine 'my_machine' do
+  machine_options bootstrap_options: {
+    subnet_id: 'my_subnet',
+    security_group_ids: ['my_sg']
+  }
+end
+```
+
+When specifying `bootstrap_options` and any attributes which reference another aws resource, we
+perform [lookup_options](https://github.com/chef/chef-provisioning-aws/blob/master/lib/chef/provisioning/aws_driver/aws_resource.rb#L63-L91).
+This tries to turn elements with names like `vpc`, `security_group_ids`, `machines`, `launch_configurations`,
+`load_balancers`, etc. to the correct AWS object.
+
+### Looking up chef-provisioning resources
+
+The base chef-provisioning resources (machine, machine_batch, load_balancer, machine_image) don't
+have the `aws_object` method defined on them because they are not `AWSResource` classes.  To
+look them up use the class method `get_aws_object` defined on the chef-provisioning-aws specific
+resource:
+
+```ruby
+machine_image 'my_image' do
+  ...
+end
+
+ruby_block "look up machine_image object" do
+  aws_object = Chef::Resource::AwsImage.get_aws_object(
+    'my_image',
+    run_context: run_context,
+    driver: run_context.chef_provisioning.current_driver,
+    managed_entry_store: Chef::Provisioning.chef_managed_entry_store(self.chef_server)
+  )
+end
+```
+
+To look up a machine, use the `AwsInstance` class, to look up a load balancer use the `AwsLoadBalancer`
+class, etc.  The first parameter you pass should be the same resource name as used in the base
+chef-provisioning resource.
+
+Again, the AWS object will not exist until the converge phase, so the aws_object will only be
+available using a `lazy` attribute modifier or in a `ruby_block`.
+
 # Running Integration Tests
 
 To run the integration tests execute `bundle exec rake integration`.  If you have not set it up,

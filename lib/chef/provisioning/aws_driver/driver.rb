@@ -20,6 +20,8 @@ require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
+require 'retryable'
+
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -359,7 +361,7 @@ module AWSDriver
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
-      aws_tags = image_options.delete(:aws_tags)
+      aws_tags = image_options.delete(:aws_tags) || {}
       if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
           image_options[:name] ||= image_spec.name
@@ -437,7 +439,9 @@ EOD
           actual_instance = ec2.instances.create(bootstrap_options.to_hash)
 
           # Make sure the instance is ready to be tagged
-          sleep 5 while actual_instance.status == :pending
+          Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
+            raise TimeoutError unless actual_instance.status == :pending || actual_instance.status == :running
+          end
           # TODO add other tags identifying user / node url (same as fog)
           actual_instance.tags['Name'] = machine_spec.name
           actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
@@ -1027,13 +1031,14 @@ EOD
       # AWS always returns tags as strings, and we don't want to overwrite a
       # tag-as-string with the same tag-as-symbol
       desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
+      tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
       tags_to_delete = current_tags.keys - desired_tags.keys
       # We don't want to delete `Name`, just all other tags
       tags_to_delete.delete('Name')
 
-      unless desired_tags.empty?
-        action_handler.perform_action "applying tags #{desired_tags}" do
-          set_tags_block.call(aws_object, desired_tags)
+      unless tags_to_update.empty?
+        action_handler.perform_action "applying tags #{tags_to_update}" do
+          set_tags_block.call(aws_object, tags_to_update)
         end
       end
       unless tags_to_delete.empty?

@@ -16,6 +16,7 @@ aws_dhcp_options 'ref-dhcp-options' do
   ntp_servers          %w(8.8.8.8 8.8.4.4)
   netbios_name_servers %w(8.8.8.8 8.8.4.4)
   netbios_node_type    2
+  aws_tags :chef_type => "aws_dhcp_options"
 end
 
 aws_vpc 'ref-vpc' do
@@ -26,11 +27,13 @@ aws_vpc 'ref-vpc' do
   dhcp_options 'ref-dhcp-options'
   enable_dns_support true
   enable_dns_hostnames true
+  aws_tags :chef_type => "aws_vpc"
 end
 
 aws_route_table 'ref-main-route-table' do
   vpc 'ref-vpc'
   routes '0.0.0.0/0' => :internet_gateway
+  aws_tags :chef_type => "aws_route_table"
 end
 
 aws_vpc 'ref-vpc' do
@@ -52,11 +55,13 @@ aws_security_group 'ref-sg1' do
   outbound_rules [
     {:port => 22..22, :protocol => :tcp, :destinations => ['0.0.0.0/0'] }
   ]
+  aws_tags :chef_type => "aws_security_group"
 end
 
 aws_route_table 'ref-public' do
   vpc 'ref-vpc'
   routes '0.0.0.0/0' => :internet_gateway
+  aws_tags :chef_type => "aws_route_table"
 end
 
 aws_subnet 'ref-subnet' do
@@ -65,8 +70,10 @@ aws_subnet 'ref-subnet' do
   availability_zone 'us-west-1a'
   map_public_ip_on_launch true
   route_table 'ref-public'
+  aws_tags :chef_type => "aws_subnet"
 end
 
+# We cover tagging the base chef-provisioning resources in aws_tags.rb
 machine_image 'ref-machine_image1' do
   image_options description: 'some image description'
 end
@@ -130,11 +137,13 @@ aws_ebs_volume 'ref-volume' do
   volume_type 'io1'
   encrypted true
   device '/dev/sda2'
+  aws_tags :chef_type => "aws_ebs_volume"
 end
 
 aws_eip_address 'ref-elastic-ip' do
   machine 'ref-machine1'
   associate_to_vpc true
+  # guh - every other AWSResourceWithEntry accepts tags EXCEPT this one
 end
 
 aws_s3_bucket 'ref-s3-bucket' do

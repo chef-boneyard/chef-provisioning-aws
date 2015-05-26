@@ -99,10 +99,10 @@ describe Chef::Resource::AwsVpc do
       end
 
       it "aws_vpc 'vpc' with no attributes fails to create a VPC (must specify cidr_block)" do
-        expect_recipe {
+        expect_converge {
           aws_vpc 'test_vpc' do
           end
-        }.to be_up_to_date
+        }.to raise_error(AWS::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
       end
     end
   end

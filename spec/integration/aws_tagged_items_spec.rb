@@ -10,7 +10,8 @@ describe "AWS Tagged Items" do
           aws_ebs_volume "test_volume"
         }.to create_an_aws_ebs_volume('test_volume'
         ).and have_aws_ebs_volume_tags('test_volume',
-                       { 'Name' => 'test_volume' } )
+                       { 'Name' => 'test_volume' }
+        ).and be_idempotent
       end
 
       it "aws_ebs_volume 'test_volume' tags are updated" do
@@ -22,7 +23,8 @@ describe "AWS Tagged Items" do
         ).and have_aws_ebs_volume_tags('test_volume_a',
                                       { 'Name' => 'test_volume_a',
                                         'byebye' => 'true'
-                                      })
+                                      }
+        ).and be_idempotent
 
         expect_recipe {
           aws_ebs_volume "test_volume_a" do
@@ -32,7 +34,8 @@ describe "AWS Tagged Items" do
         ).and have_aws_ebs_volume_tags('test_volume_a',
                                       { 'Name' => 'test_volume_b',
                                         'project' => 'X'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
       it "aws_ebs_volume 'test_volume' tags are not changed when not updated" do
@@ -44,14 +47,16 @@ describe "AWS Tagged Items" do
         ).and have_aws_ebs_volume_tags('test_volume_c',
                                       { 'Name' => 'test_volume_c',
                                         'byebye' => 'true'
-                                      })
+                                      }
+        ).and be_idempotent
 
         expect_recipe {
           aws_ebs_volume "test_volume_c"
         }.to have_aws_ebs_volume_tags('test_volume_c',
                                       { 'Name' => 'test_volume_c',
                                         'byebye' => 'true'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
 
@@ -62,7 +67,8 @@ describe "AWS Tagged Items" do
           end
         }.to create_an_aws_ebs_volume('test_volume_2'
         ).and have_aws_ebs_volume_tags('test_volume_2',
-                                      { 'Name' => 'test_volume_new' } )
+                                      { 'Name' => 'test_volume_new' }
+        ).and be_idempotent
       end
 
       it "aws_ebs_volume 'test_volume' created with custom tag" do
@@ -74,7 +80,8 @@ describe "AWS Tagged Items" do
         ).and have_aws_ebs_volume_tags('test_volume_3',
                                       { 'Name' => 'test_volume_3',
                                         'project' => 'aws-provisioning'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
       it "aws_instance 'test_instance' created with custom tag", :super_slow do
@@ -92,7 +99,8 @@ describe "AWS Tagged Items" do
         ).and have_aws_instance_tags('test_instance',
                                       { 'Name' => 'test_instance',
                                         'project' => 'FUN'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
       it "machine 'test_machine' created using machine_options aws_tag", :super_slow do
@@ -106,7 +114,8 @@ describe "AWS Tagged Items" do
                                       { 'Name' => 'test_machine',
                                         'mach_opt_sym' => 'value',
                                         'mach_opt_str' => 'value'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
       it "machine 'test_machine_2' created using default with_machine_options aws_tag", :super_slow do
@@ -120,7 +129,8 @@ describe "AWS Tagged Items" do
         ).and have_aws_instance_tags('test_machine_2',
                                       { 'Name' => 'test_machine_2',
                                         'default' => 'value1'
-                                      })
+                                      }
+        ).and be_idempotent
       end
 
       it "load balancer 'lbtest' tagged with load_balancer_options" do
@@ -133,14 +143,16 @@ describe "AWS Tagged Items" do
         ).and have_aws_load_balancer_tags('lbtest',
                                             { 'marco' => 'polo',
                                               'happyhappy' => 'joyjoy'
-                                            })
+                                            }
+        ).and be_idempotent
         expect_recipe {
           load_balancer 'lbtest' do
             load_balancer_options :aws_tags => { :default => 'value1' }
           end
         }.to update_an_aws_load_balancer('lbtest'
         ).and have_aws_load_balancer_tags('lbtest',
-                                            { 'default' => 'value1' })
+                                            { 'default' => 'value1' }
+        ).and be_idempotent
       end
 
     end

@@ -245,13 +245,14 @@ class AWSProvider < Chef::Provider::LWRPBase
     # AWS always returns tags as strings, and we don't want to overwrite a
     # tag-as-string with the same tag-as-symbol
     desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
+    tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
     tags_to_delete = current_tags.keys - desired_tags.keys
     # We don't want to delete `Name`, just all other tags
     tags_to_delete.delete('Name')
 
-    unless desired_tags.empty?
-      converge_by "applying tags #{desired_tags}" do
-        aws_object.tags.set(desired_tags)
+    unless tags_to_update.empty?
+      converge_by "applying tags #{tags_to_update}" do
+        aws_object.tags.set(tags_to_update)
       end
     end
     unless tags_to_delete.empty?

@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (5/27/2015)
 
+- Security groups can be referenced by group-name, don't need a data bag entry ([#194][])
+- Added support for tags across almost all resources.  See the README for examples ([#190][])
 - Updated `aws_route_table` with the ability to ignore routes with regex matching.  This supports AWS performing automatic route switching for HA purposes without chef-provisioning interfering with that logic. ([@dblessing][], [#172][])
 - Updated `aws_route_table` to propogate routes from provided virtual gateways.  See the comments in the resource for specifics.  ([@dblessing][], [#151][])
+- Updated the `docs/examples/ref_*` examples to execute correctly and fixed broken integration tests ([@tyler-ball][])
 
 ## 1.1.1 (4/28/2015)
 
@@ -123,7 +126,9 @@ end
 [#185]: https://github.com/chef/chef-provisioning-aws/issues/185
 [#186]: https://github.com/chef/chef-provisioning-aws/issues/186
 [#187]: https://github.com/chef/chef-provisioning-aws/issues/187
+[#190]: https://github.com/chef/chef-provisioning-aws/issues/190
 [#191]: https://github.com/chef/chef-provisioning-aws/issues/191
+[#194]: https://github.com/chef/chef-provisioning-aws/issues/194
 [@afiune]: https://github.com/afiune
 [@bbbco]: https://github.com/bbbco
 [@christinedraper]: https://github.com/christinedraper

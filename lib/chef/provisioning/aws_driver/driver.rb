@@ -437,11 +437,9 @@ EOD
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
           actual_instance = ec2.instances.create(bootstrap_options.to_hash)
-
           # Make sure the instance is ready to be tagged
-          Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
-            raise TimeoutError unless actual_instance.status == :pending || actual_instance.status == :running
-          end
+          wait_until_taggable(actual_instance)
+
           # TODO add other tags identifying user / node url (same as fog)
           actual_instance.tags['Name'] = machine_spec.name
           actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
@@ -1005,6 +1003,7 @@ EOD
       parallelizer.parallelize(1.upto(num_servers)) do |i|
         clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
         instance = ec2.instances.create(clean_bootstrap_options.to_hash)
+        wait_until_taggable(instance)
 
         yield instance if block_given?
         instance
@@ -1045,6 +1044,12 @@ EOD
         action_handler.perform_action "deleting tags #{tags_to_delete.inspect}" do
           delete_tags_block.call(aws_object, tags_to_delete)
         end
+      end
+    end
+
+    def wait_until_taggable(instance)
+      Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
+        raise TimeoutError unless instance.status == :pending || instance.status == :running
       end
     end
 

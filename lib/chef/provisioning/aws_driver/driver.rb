@@ -522,6 +522,10 @@ EOD
       @elb ||= AWS::ELB.new(config: aws_config)
     end
 
+    def elasticache
+      @elasticache ||= AWS::ElastiCache::Client.new(config: aws_config)
+    end
+
     def iam
       @iam ||= AWS::IAM.new(config: aws_config)
     end

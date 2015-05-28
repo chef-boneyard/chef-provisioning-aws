@@ -235,6 +235,7 @@ class AWSProvider < Chef::Provider::LWRPBase
   # @param aws_object Aws SDK Object to update tags
   #
   def converge_tags(aws_object)
+    return unless new_resource.respond_to?(:aws_tags)
     desired_tags = new_resource.aws_tags
     # If aws_tags were not provided we exit
     if desired_tags.nil?

@@ -155,6 +155,12 @@ describe "AWS Tagged Items" do
         ).and be_idempotent
       end
 
+      it "does not error when a class does not define #aws_tags" do
+        expect_recipe {
+          aws_eip_address 'test_address'
+        }.to create_an_aws_eip_address('test_address')
+      end
+
     end
   end
 end

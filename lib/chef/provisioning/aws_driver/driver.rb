@@ -21,7 +21,7 @@ require 'chef/provisioning/aws_driver/credentials'
 require 'yaml'
 require 'aws-sdk-v1'
 require 'retryable'
-
+require 'ubuntu_ami'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -675,31 +675,42 @@ EOD
                            end
     end
 
-    def default_ami_for_region(region)
+    def default_ami_arch
+      'amd64'
+    end
+
+    def default_ami_release
+      'vivid'
+    end
+
+    def default_ami_root_store
+      'ebs'
+    end
+
+    def default_ami_virtualization_type
+      'hvm'
+    end
+
+    def default_ami_for_criteria(region, arch, release, root_store, virtualization_type)
+      ami = Ubuntu.release(release).amis.find do |ami|
+        ami.arch == arch &&
+        ami.root_store == root_store &&
+        ami.region == region &&
+        ami.virtualization_type == virtualization_type
+      end
+
+      ami.name || fail("Default AMI not found")
+    end
+
+    def default_ami_for_region(region, criteria = {})
       Chef::Log.debug("Choosing default AMI for region '#{region}'")
 
-      case region
-        when 'ap-northeast-1'
-          'ami-6cbca76d'
-        when 'ap-southeast-1'
-          'ami-04c6ec56'
-        when 'ap-southeast-2'
-          'ami-c9eb9ff3'
-        when 'eu-west-1'
-          'ami-5f9e1028'
-        when 'eu-central-1'
-          'ami-56c2f14b'
-        when 'sa-east-1'
-          'ami-81f14e9c'
-        when 'us-east-1'
-          'ami-12793a7a'
-        when 'us-west-1'
-          'ami-6ebca42b'
-        when 'us-west-2'
-          'ami-b9471c89'
-        else
-          raise 'Unsupported region!'
-      end
+      arch = criteria['arch'] || default_ami_arch
+      release = criteria['release'] || default_ami_release
+      root_store = criteria['root_store'] || default_ami_root_store
+      virtualization_type = criteria['virtualization_type'] || default_ami_virtualization_type
+
+      default_ami_for_criteria(region, arch, release, root_store, virtualization_type)
     end
 
     def create_winrm_transport(machine_spec, machine_options, instance)

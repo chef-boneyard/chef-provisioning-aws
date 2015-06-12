@@ -24,6 +24,13 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   end
 
   #
+  # Override the default implementation to be true
+  #
+  def taggable?
+    true
+  end
+
+  #
   # Save the ID of this object to Chef.
   #
   # @param aws_object [AWS::EC2::Core] The AWS object containing the ID.

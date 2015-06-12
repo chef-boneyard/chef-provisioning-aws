@@ -43,6 +43,13 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
     result && result.exists? ? result : nil
   end
 
+  #
+  # this object isn't taggable even though the base class says it is
+  #
+  def taggable?
+    false
+  end
+
   def action(*args)
     # Backcompat for associate and disassociate
     if args == [ :associate ]

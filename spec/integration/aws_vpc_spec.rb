@@ -23,6 +23,23 @@ describe Chef::Resource::AwsVpc do
           ).and be_idempotent
         end
 
+        it "aws_vpc 'vpc' with cidr_block '10.0.0.0/24' creates a VPC with tags" do
+          expect_recipe {
+            aws_vpc 'test_vpc_2' do
+              cidr_block '10.0.0.0/24'
+              aws_tags :foo => :bar
+            end
+          }.to create_an_aws_vpc('test_vpc_2',
+            cidr_block: '10.0.0.0/24',
+            instance_tenancy: :default,
+            state: :available,
+            internet_gateway: nil
+          ).and have_aws_vpc_tags('test_vpc_2',
+                                  {"foo" => "bar"}
+          ).and be_idempotent
+        end
+
+
         it "aws_vpc 'vpc' with all attributes creates a VPC" do
           expect_recipe {
             aws_vpc 'test_vpc' do

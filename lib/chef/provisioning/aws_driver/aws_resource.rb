@@ -60,6 +60,23 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     raise NotImplementedError, :aws_object
   end
 
+
+  #
+  # Is this object ready to be tagged?
+  #
+  def taggable?
+    false
+  end
+
+  #
+  # Wait until this object.taggable? returns true
+  #
+  def wait_until_taggable()
+    Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
+      raise TimeoutError unless taggable?
+    end
+  end
+
   #
   # Look up an AWS options list, translating standard names using the appropriate
   # classes.

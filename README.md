@@ -170,12 +170,14 @@ machine_image 'my_image' do
 end
 
 ruby_block "look up machine_image object" do
-  aws_object = Chef::Resource::AwsImage.get_aws_object(
-    'my_image',
-    run_context: run_context,
-    driver: run_context.chef_provisioning.current_driver,
-    managed_entry_store: Chef::Provisioning.chef_managed_entry_store(self.chef_server)
-  )
+  block do
+    aws_object = Chef::Resource::AwsImage.get_aws_object(
+      'my_image',
+      run_context: run_context,
+      driver: run_context.chef_provisioning.current_driver,
+      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(self.chef_server)
+    )
+  end
 end
 ```
 

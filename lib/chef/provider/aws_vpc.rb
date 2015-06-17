@@ -36,6 +36,14 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   protected
 
+  #
+  # If this object is either in pending or running state, then it's taggable
+  #
+  def taggable?
+    status == :pending || status == :running
+  end
+
+
   def create_aws_object
     options = { }
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
@@ -43,6 +51,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "create new VPC #{new_resource.name} in #{region}" do
       vpc = new_resource.driver.ec2.vpcs.create(new_resource.cidr_block, options)
       vpc.tags['Name'] = new_resource.name
+      new_resource.wait_until_taggable
       vpc
     end
   end

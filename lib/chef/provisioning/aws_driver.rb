@@ -2,6 +2,9 @@ require 'chef/provisioning'
 require 'chef/provisioning/aws_driver/driver'
 
 require "chef/resource/aws_auto_scaling_group"
+require "chef/resource/aws_cache_cluster"
+require "chef/resource/aws_cache_replication_group"
+require "chef/resource/aws_cache_subnet_group"
 require "chef/resource/aws_dhcp_options"
 require "chef/resource/aws_ebs_volume"
 require "chef/resource/aws_eip_address"

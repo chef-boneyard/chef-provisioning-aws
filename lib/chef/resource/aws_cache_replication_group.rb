@@ -49,7 +49,7 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
 
   # Subnet group name
   #
-  # @param :subnet_group_name [String] Cache cluster subnet group.
+  # @param :subnet_group_name [String] Cache cluster aws_cache_subnet_group.
   attribute :subnet_group_name, kind_of: String
 
   # Security Groups

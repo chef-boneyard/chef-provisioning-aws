@@ -54,15 +54,15 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
 
   # Security Groups
   #
-  # @param
+  # @param :security_groups [String, Array, AwsSecurityGroup, AWS::EC2::SecurityGroup] one or more VPC security groups associated with the cache cluster.
   attribute :security_groups,
             kind_of: [ String, Array, AwsSecurityGroup, AWS::EC2::SecurityGroup ],
             required: true,
             coerce: proc { |v| [v].flatten }
 
-  # Group Name
+  # Preferred Availability Zones
   #
-  # @param
+  # @param :preferred_availability_zones [String, Array] The EC2 Availability Zone in which the cache cluster will be created.
   attribute :preferred_availability_zones,
             kind_of: [ String, Array ],
             coerce: proc { |v| [v].flatten }

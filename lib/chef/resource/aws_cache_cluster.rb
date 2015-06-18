@@ -54,7 +54,7 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
 
   # Engine Version
   #
-  # @param :engine_version [String] The version number of the cache engine to be used for this cache cluster. 
+  # @param :engine_version [String] The version number of the cache engine to be used for this cache cluster.
   attribute :engine_version, kind_of: String, required: true
 
   # Subnet Group Name

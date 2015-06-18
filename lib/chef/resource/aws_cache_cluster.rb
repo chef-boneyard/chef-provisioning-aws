@@ -21,7 +21,7 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
 
   # Availability Zone
   #
-  # @param :az_mode [String] availability zone of the cache cluster
+  # @param :az_mode [String] Specifies whether the nodes in this Memcached node group are created in a single Availability Zone or created across multiple Availability Zones in the cluster's region. This parameter is only supported for Memcached cache clusters. If the AZMode and PreferredAvailabilityZones are not specified, ElastiCache assumes single-az mode.
   attribute :az_mode, kind_of: String
 
   # Preferred Availability Zone

@@ -190,10 +190,10 @@ available using a `lazy` attribute modifier or in a `ruby_block`.
 
 # Running Integration Tests
 
-To run the integration tests execute `bundle exec rake integration`.  If you have not set it up,
+To run the integration tests execute `bundle exec rspec`.  If you have not set it up,
 you should see an error message about a missing environment variable `AWS_TEST_DRIVER`.  You can add
 this as a normal environment variable or set it for a single run with `AWS_TEST_DRIVER=aws::eu-west-1
-bundle exec rake integration`.  The format should match what `with_driver` expects.
+bundle exec rspec`.  The format should match what `with_driver` expects.
 
 You will also need to have configured your `~/.aws/config` or environment variables with your
 AWS credentials.

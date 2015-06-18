@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Chef::Resource::AwsCacheCluster do
+describe Chef::Resource::AwsCacheReplicationGroup do
   extend AWSSupport
 
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
@@ -25,18 +25,16 @@ describe Chef::Resource::AwsCacheCluster do
         vpc 'test_vpc'
       end
 
-      it "aws_cache_cluster 'test_ec_cluster' creates an elasticache cluster" do
+      it "aws_cache_replication_group 'test_repl_group' creates an elasticache replication group" do
         expect_recipe {
-          aws_cache_cluster 'test_ec_cluster' do
-            az_mode 'single-az'
-            number_nodes 2
-            node_type 'cache.t2.micro'
-            engine 'memcached'
-            engine_version '1.4.14'
-            security_groups ['test-sg']
-            subnet_group_name 'test-ec'
+          aws_cache_replication_group "test_repl_group" do
+              description "my fancy group"
+              node_type 'cache.t2.micro'
+              engine 'memcached'
+              engine_version '1.4.14'
+              security_groups ['test-sg']
           end
-        }.to create_an_aws_cache_cluster("test_ec_cluster", {}).and be_idempotent
+        }.to create_an_aws_cache_replication_group("test_repl_group", {}).and be_idempotent
       end
     end
   end

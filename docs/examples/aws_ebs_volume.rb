@@ -9,6 +9,19 @@ with_machine_options :bootstrap_options => { :key_name => 'ref-key-pair-ebs' }
 machine 'ref-machine-1'
 machine 'ref-machine-2'
 
+
+# create and attach ebs volume with machine
+machine 'ref-machine-3' do
+  machine_options bootstrap_options: {
+    block_device_mapping: [{
+      device_name: '/dev/xvdf',
+      ebs: {
+        volume_size: 1 # 1 GB
+      }
+    }]
+  }
+end
+
 # machine_batch do
 #   machines 'ref-machine-1', 'ref-machine-2'
 # end

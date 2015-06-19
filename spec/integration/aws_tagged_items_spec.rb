@@ -137,7 +137,7 @@ describe "AWS Tagged Items" do
         expect_recipe {
           load_balancer 'lbtest' do
             load_balancer_options :aws_tags => { :marco => 'polo', 'happyhappy' => 'joyjoy' },
-                                  :availability_zones => ["#{driver.aws_config.region}a", "#{driver.aws_config.region}b"] # TODO should enchance to accept letter AZs
+                                  :availability_zones => ["#{driver.aws_config.region}a", "#{driver.aws_config.region}c"]
           end
         }.to create_an_aws_load_balancer('lbtest'
         ).and have_aws_load_balancer_tags('lbtest',

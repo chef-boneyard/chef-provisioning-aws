@@ -148,7 +148,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     actual_rules = {}
     actual_rules_list.each do |rule|
       port_range = {
-        port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : nil,
+        port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
       add_rule(actual_rules, [ port_range ], rule[:groups]) if rule[:groups]

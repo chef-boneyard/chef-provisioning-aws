@@ -2,6 +2,14 @@
 
 This README is a work in progress.  Please add to it!
 
+# Prerequesites
+
+## Credentials
+
+AWS credentials should be specified in your `~/.aws/credentials` file as documented [here](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files).  We support the use of profiles as well.  If you do not specify a profile then we use the `default` profile.
+
+You can specify a profile as the middle section of the semi-colon seperated driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.
+
 # Resources
 
 TODO: List out weird/unique things about resources here.  We don't need to document every resource

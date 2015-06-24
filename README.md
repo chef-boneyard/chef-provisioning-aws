@@ -183,7 +183,7 @@ ruby_block "look up machine_image object" do
       'my_image',
       run_context: run_context,
       driver: run_context.chef_provisioning.current_driver,
-      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(self.chef_server)
+      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(run_context.cheffish.current_chef_server)
     )
   end
 end

@@ -8,7 +8,6 @@ require 'chef/provisioning/aws_driver/aws_taggable'
 class Chef
 module Provisioning
 module AWSDriver
-
   class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     actions :create, :destroy, :purge, :nothing
     default_action :create

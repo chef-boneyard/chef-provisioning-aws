@@ -1,4 +1,5 @@
 require 'chef/mixin/shell_out'
+require 'chef/mixin/deep_merge'
 require 'chef/provisioning/driver'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/convergence_strategy/install_sh'
@@ -33,6 +34,7 @@ module AWSDriver
   class Driver < Chef::Provisioning::Driver
 
     include Chef::Mixin::ShellOut
+    include Chef::Mixin::DeepMerge
 
     attr_reader :aws_config
 
@@ -69,6 +71,9 @@ module AWSDriver
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options = AWSResource.lookup_options(lb_options || {}, managed_entry_store: lb_spec.managed_entry_store, driver: self)
+      # We delete the attributes here because they are not valid in the create call
+      # and must be applied afterward
+      lb_attributes = lb_options.delete(:attributes)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -303,6 +308,21 @@ module AWSDriver
         elb.client.remove_tags load_balancer_names: [aws_object.name], tags: aws_form_tags
       }
       converge_tags(actual_elb, lb_options[:aws_tags], action_handler, read_tags_block, set_tags_block, delete_tags_block)
+
+      # Update load balancer attributes
+      if lb_attributes
+        current = elb.client.describe_load_balancer_attributes(load_balancer_name: actual_elb.name)[:load_balancer_attributes]
+        # Need to do a deep copy w/ Marshal load/dump to avoid overwriting current
+        desired = deep_merge!(lb_attributes, Marshal.load(Marshal.dump(current)))
+        if current != desired
+          perform_action.call("  updating attributes to #{desired.inspect}") do
+            elb.client.modify_load_balancer_attributes(
+              load_balancer_name: actual_elb.name,
+              load_balancer_attributes: desired.to_hash
+            )
+          end
+        end
+      end
 
       # Update instance list, but only if there are machines specified
       if machine_specs

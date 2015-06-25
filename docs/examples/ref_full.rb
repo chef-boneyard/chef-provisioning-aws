@@ -110,6 +110,13 @@ end
 
 load_balancer 'ref-load-balancer' do
   machines [ 'ref-machine2' ]
+  load_balancer_options(
+    attributes: {
+      cross_zone_load_balancing: {
+        enabled: true
+      }
+    }
+  )
 end
 
 aws_launch_configuration 'ref-launch-configuration' do

@@ -7,14 +7,12 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
     network_acl = super
 
     apply_rules(network_acl)
-
-    link_subnets(network_acl)
   end
 
   protected
 
   def create_aws_object
-    converge_by "Creating new Network ACL #{new_resource.name} in #{region}" do
+    converge_by "create new Network ACL #{new_resource.name} in #{region}" do
       options = {}
       options[:vpc] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
@@ -36,8 +34,6 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
         raise "Network ACL VPC cannot be changed after being created!  Desired VPC for #{new_resource.to_s} was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{network_acl.vpc_id}"
       end
     end
-    apply_rules(network_acl)
-    link_subnets(network_acl)
   end
 
   def destroy_aws_object(network_acl)
@@ -50,11 +46,86 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   def apply_rules(network_acl)
+    current_rules = network_acl.entries.map { |entry| entry_to_hash(entry) }
+    inbound_rules = new_resource.inbound_rules
+    outbound_rules = new_resource.outbound_rules
+    # AWS requires a deny all rule at the end. Delete here so we don't
+    # try to compare.
+    current_rules.delete_if { |rule| rule[:rule_number] == 32767 }
 
+    current_inbound_rules = current_rules.select { |rule| rule[:egress] == false }
+    # If inbound_rules is nil, leave rules alone. If empty array, delete all.
+    if inbound_rules
+      desired_inbound_rules = inbound_rules.map { |rule| rule[:egress] = false; rule }
+      compare_and_apply_rules(network_acl, :ingress, current_inbound_rules, desired_inbound_rules)
+    end
+
+    current_outbound_rules = current_rules.select { |rule| rule[:egress] == true }
+    if outbound_rules
+      desired_outbound_rules = outbound_rules.map { |rule| rule[:egress] = true; rule }
+      compare_and_apply_rules(network_acl, :egress, current_outbound_rules, desired_outbound_rules)
+    end
   end
 
-  def link_subnets(network_acl)
+  def compare_and_apply_rules(network_acl, direction, current_rules, desired_rules)
+    replace_rules = []
 
+    # Get the desired rules in a comparable state
+    desired_rules.clone.each do |desired_rule|
+      matching_rule = current_rules.select { |r| r[:rule_number] == desired_rule[:rule_number]}.first
+      if matching_rule
+        # Anything unhandled will be removed
+        current_rules.delete(matching_rule)
+        # Anything unhandled will be added
+        desired_rules.delete(desired_rule)
+
+        if matching_rule.merge(desired_rule) != matching_rule
+          # Replace anything with a matching rule number but different attributes
+          replace_rules << desired_rule
+        end
+      end
+    end
+
+    unless replace_rules.empty? && desired_rules.empty? && current_rules.empty?
+      action_handler.report_progress "update Network ACL #{new_resource.name} #{direction.to_s} rules"
+      replace_rules(network_acl, replace_rules)
+      add_rules(network_acl, desired_rules)
+      remove_rules(network_acl, current_rules)
+    end
   end
 
+  def replace_rules(network_acl, rules)
+    rules.each do |rule|
+      action_handler.report_progress "  update #{rule_direction(rule)} rule #{rule[:rule_number]}"
+      network_acl.replace_entry(rule)
+    end
+  end
+
+  def add_rules(network_acl, rules)
+    rules.each do |rule|
+      action_handler.report_progress "  add #{rule_direction(rule)} rule #{rule[:rule_number]}"
+      network_acl.create_entry(rule)
+    end
+  end
+
+  def remove_rules(network_acl, rules)
+    rules.each do |rule|
+      action_handler.report_progress "  remove #{rule_direction(rule)} rule #{rule[:rule_number]}"
+      network_acl.delete_entry(rule_direction(rule).to_sym, rule[:rule_number])
+    end
+  end
+
+  def rule_direction(rule)
+    rule[:egress] == true ? 'egress' : 'ingress'
+  end
+
+  def entry_to_hash(entry)
+    options = [
+      :rule_number, :action, :protocol, :cidr_block, :egress,
+      :port_range, :icmp_code, :icmp_type
+    ]
+    entry_hash = {}
+    options.each { |option| entry_hash.merge!(option => entry.send(option.to_sym)) }
+    entry_hash
+  end
 end

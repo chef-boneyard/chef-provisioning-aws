@@ -8,7 +8,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   #
   # The name of this network acl.
   #
-  attribute :name,           kind_of: String, name_attribute: true
+  attribute :name, kind_of: String, name_attribute: true
 
   #
   # The VPC of this network acl.
@@ -18,30 +18,33 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc,            kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
+  attribute :vpc, kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
 
   #
   # Accepts rules in the format:
   # [
-  #   { port: 22, protocol: :tcp, sources: [<source>, <source>, ...], rule_number: 100,  rule: <:allow/:deny>}
+  #   { rule_number: 100, action: <:deny|:allow>, protocol: -1, cidr_block: '0.0.0.0/0', port_range: 80..80 }
   # ]
   #
+  # `cidr_block` will be a source if it is an inbound rule, or a destination if it is an outbound rule
   #
-  # <source> will be a source if it is an inbound rule, or a destination if it is an outbound rule
-  # <source> must be a :
-  # - <CIDR>: An IP or CIDR of IPs to talk to
-  #   - `inbound_rules '1.2.3.4' => 80`
-  #   - `inbound_rules '1.2.3.4/24' => 80`
-  #   - `outbound_rules '5.6.7.8' => 22`
+  # If `inbound_rules` or `outbound_rules` is `nil`, respective current rules will not be changed.
+  # However, if either is set to `[]` all respective current rules will be removed.
   #
-  attribute :inbound_rules,  kind_of: [ Array, Hash ]
-  attribute :outbound_rules, kind_of: [ Array, Hash ]
+  attribute :inbound_rules,
+            kind_of: [ Array, Hash ],
+            coerce: proc { |v| [v].flatten }
 
-  attribute :subnet,         kind_of: [ String, AWS::EC2::Subnet, AwsSubnet ]
+  attribute :outbound_rules,
+            kind_of: [ Array, Hash ],
+            coerce: proc { |v| [v].flatten }
 
-  attribute :network_acl_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
-    name =~ /^acl-[a-f0-9]{8}$/ ? name : nil
-  }
+  attribute :network_acl_id,
+            kind_of: String,
+            aws_id_attribute: true,
+            lazy_default: proc {
+              name =~ /^acl-[a-f0-9]{8}$/ ? name : nil
+            }
 
   def aws_object
     driver, id = get_driver_and_id

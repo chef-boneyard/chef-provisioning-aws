@@ -64,6 +64,21 @@ aws_route_table 'ref-public' do
   aws_tags :chef_type => "aws_route_table"
 end
 
+aws_network_acl 'ref-acl' do
+  vpc 'ref-vpc'
+  inbound_rules(
+    [
+      { rule_number: 100, action: :allow, protocol: -1, cidr_block: '0.0.0.0/0' },
+      { rule_number: 200, action: :allow, protocol: 6, port_range: 443..443, cidr_block: '172.31.0.0/24' }
+    ]
+  )
+  outbound_rules(
+    [
+      { rule_number: 100, action: :allow, protocol: -1, cidr_block: '0.0.0.0/0' }
+    ]
+  )
+end
+
 aws_subnet 'ref-subnet' do
   vpc 'ref-vpc'
   cidr_block '10.0.0.0/24'
@@ -71,6 +86,7 @@ aws_subnet 'ref-subnet' do
   map_public_ip_on_launch true
   route_table 'ref-public'
   aws_tags :chef_type => "aws_subnet"
+  network_acl 'ref-acl'
 end
 
 # We cover tagging the base chef-provisioning resources in aws_tags.rb

@@ -17,6 +17,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   aws_sdk_type AWS::EC2::Subnet
 
   require 'chef/resource/aws_vpc'
+  require 'chef/resource/aws_network_acl'
   require 'chef/resource/aws_route_table'
 
   #
@@ -74,6 +75,14 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   # By default, an implicit association with the main route table is made (`:default_to_main`)
   #
   attribute :route_table#, kind_of: [ String, AwsRouteTable, AWS::EC2::RouteTable ], equal_to: [ :default_to_main ]
+
+  #
+  # The Network ACL to associate with this subnet. Subnets may only
+  # be associated with a single Network ACL.
+  #
+  # TODO: See if it's possible to disassociate a Network ACL.
+  #
+  attribute :network_acl, kind_of: [ String, AwsNetworkAcl, AWS::EC2::NetworkACL ]
 
   attribute :subnet_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
     name =~ /^subnet-[a-f0-9]{8}$/ ? name : nil

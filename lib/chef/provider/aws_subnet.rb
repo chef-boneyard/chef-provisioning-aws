@@ -15,6 +15,8 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.route_table != nil
       update_route_table(subnet)
     end
+
+    update_network_acl(subnet)
   end
 
   protected
@@ -120,6 +122,18 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         # The route table is different now.  Change it.
         converge_by "change route table of subnet #{new_resource.name} to #{new_resource.route_table} (was #{current_route_table_association.route_table.id})" do
           subnet.route_table = route_table
+        end
+      end
+    end
+  end
+
+  def update_network_acl(subnet)
+    if new_resource.network_acl
+      network_acl_id =
+        AWSResource.lookup_options({ network_acl: new_resource.network_acl }, resource: new_resource)[:network_acl]
+      if subnet.network_acl.id != network_acl_id
+        converge_by "update network acl of subnet #{new_resource.name} to #{new_resource.network_acl}" do
+          subnet.network_acl = network_acl_id
         end
       end
     end

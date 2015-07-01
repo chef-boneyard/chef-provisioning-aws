@@ -42,6 +42,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create new VPC #{new_resource.name} in #{region}" do
       vpc = new_resource.driver.ec2.vpcs.create(new_resource.cidr_block, options)
+      wait_for_state(vpc, [:available])
       vpc.tags['Name'] = new_resource.name
       vpc
     end

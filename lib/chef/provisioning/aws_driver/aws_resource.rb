@@ -168,6 +168,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_option_name
   end
 
+  attribute :terraform_action, kind_of: Symbol
 
   def tf_attrs
     @tf_attrs ||= { generated_by: "chef-provisioning" }

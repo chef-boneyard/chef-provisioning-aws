@@ -171,7 +171,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   attribute :terraform_action, kind_of: Symbol
 
   def tf_attrs
-    @tf_attrs ||= { generated_by: "chef-provisioning" }
+    @tf_attrs ||= {}
   end
 
   def method_missing(attribute, *value)

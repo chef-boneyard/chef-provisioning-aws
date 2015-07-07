@@ -51,13 +51,20 @@ class AWSProvider < Chef::Provider::LWRPBase
     result
   end
 
+  def tf_doc_url(resource_name)
+    provider, thing = resource_name.to_s.split('-', 2)
+    "https://www.terraform.io/docs/providers/#{provider}/r/#{thing}.html"
+  end
+
   action :terraform do
     resource = {
       resource: {
         # this does not call AWSResource#tf_attrs(!)
         # new_resource.name => new_resource.tf_attrs
         # wrong beyond description, but the only thing that works.
-        new_resource.name => new_resource.instance_variable_get("@tf_attrs")
+        new_resource.resource_name => {
+          new_resource.name => new_resource.instance_variable_get("@tf_attrs")
+        }
       }
     }
 
@@ -65,8 +72,9 @@ class AWSProvider < Chef::Provider::LWRPBase
       provider: {
         aws: {
           access_key: aws_credentials[:access_key_id],
+          # access_key: "hlaghl",
           secret_key: aws_credentials[:secret_access_key],
-          region: "us-east-1"
+          region: region,
         }
       }
     }
@@ -75,12 +83,25 @@ class AWSProvider < Chef::Provider::LWRPBase
     puts "\n#{full_tf}"
 
     tfdir = "/tmp/tf"
-    ::File.open("#{tfdir}/foo.tf.json", 'w') { |file|
+    # NB: suffix has to be ".tf.json" for Terraform to see it.
+    tffile = "#{tfdir}/#{new_resource.name}-terraform.tf.json"
+    ::File.open(tffile, 'w') { |file|
       file.write(full_tf)
     }
-    puts `cd #{tfdir} && terraform plan .`
-    puts `cd #{tfdir} && terraform apply`
-    puts "------------------------------------------"
+
+    # without -force, destroy asks for confirmation.
+    tf_plan_cmd, tf_apply_cmd = if new_resource.terraform_action == :destroy
+        ["-destroy ", "destroy -force"]
+      else
+        ["", "apply"]
+      end
+
+    Chef::Log.info("See #{tf_doc_url(new_resource.resource_name)} for docs")
+    converge_by "terraform_action [#{new_resource.terraform_action}] with #{tffile}" do
+      puts "------------------------------------------"
+      puts `cd #{tfdir} && terraform plan #{tf_plan_cmd} . && terraform #{tf_apply_cmd}`
+      puts "------------------------------------------"
+    end
   end
 
   action :create do

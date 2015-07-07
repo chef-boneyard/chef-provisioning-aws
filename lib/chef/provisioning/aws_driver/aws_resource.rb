@@ -170,14 +170,16 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
 
 
   def tf_attrs
-    @tf_attrs ||= {}
+    @tf_attrs ||= { generated_by: "chef-provisioning" }
   end
 
   def method_missing(attribute, *value)
-    if value.empty?
-      tf_attrs[variabilify(attribute)]
-    else
-      tf_attrs[variabilify(attribute)] = value.first
+    if self.action.include?(:terraform)
+      if value.empty?
+        tf_attrs[variabilify(attribute)]
+      else
+        tf_attrs[variabilify(attribute)] = value.first
+      end
     end
   end
 

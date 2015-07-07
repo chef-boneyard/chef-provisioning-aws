@@ -32,6 +32,13 @@ class AWSProvider < Chef::Provider::LWRPBase
     new_resource.driver.aws_config.region
   end
 
+  def aws_credentials
+    {
+      access_key_id: new_resource.driver.aws_config.access_key_id,
+      secret_access_key: new_resource.driver.aws_config.secret_access_key
+    }
+  end
+
   #
   # Return the damned value from the block, not whatever weirdness converge_by
   # normally returns.
@@ -57,15 +64,15 @@ class AWSProvider < Chef::Provider::LWRPBase
     header = {
       provider: {
         aws: {
-          access_key: "some access key",
-          secret_key: "some secret key",
+          access_key: aws_credentials[:access_key_id],
+          secret_key: aws_credentials[:secret_access_key],
           region: "us-east-1"
         }
       }
     }
 
     full_tf = JSON.pretty_generate(resource.merge(header))
-    puts full_tf
+    puts "\n#{full_tf}"
 
     tfdir = "/tmp/tf"
     ::File.open("#{tfdir}/foo.tf.json", 'w') { |file|

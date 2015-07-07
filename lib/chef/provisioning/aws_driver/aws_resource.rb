@@ -5,7 +5,7 @@ require 'chef/provisioning/chef_managed_entry_store'
 # Common AWS resource - contains metadata that all AWS resources will need
 module Chef::Provisioning::AWSDriver
 class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
-  actions :create, :destroy, :purge, :nothing
+  actions :create, :destroy, :purge, :nothing, :generate
   default_action :create
 
   def initialize(name, run_context=nil)
@@ -168,6 +168,15 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
     @aws_sdk_option_name
   end
 
+
+  def method_missing(attribute, *value)
+    if value.empty?
+      self.instance_variable_get(variabilify(attribute))
+    else
+      self.instance_variable_set(variabilify(attribute), value.first)
+    end
+  end
+
   @@aws_option_handlers = {}
   def self.aws_option_handlers
     @@aws_option_handlers
@@ -181,6 +190,12 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
 
   def self.aws_id_attribute
     @aws_id_attribute
+  end
+
+  private
+  # stringify instance variable names.
+  def variabilify(s)
+    "@#{s}"
   end
 end
 end

@@ -4,6 +4,8 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
 require 'retryable'
+require 'json'
+require 'mustache'
 
 module Chef::Provisioning::AWSDriver
 class AWSProvider < Chef::Provider::LWRPBase
@@ -40,6 +42,35 @@ class AWSProvider < Chef::Provider::LWRPBase
       result = block.call
     end
     result
+  end
+
+  action :generate do
+    puts "------------------------------------------"
+    input = new_resource.to_json
+    puts input
+    puts "=========================================="
+    tfile = "/tmp/terraform_s3.mustache"
+    template = ::File.read(tfile)
+    output = Mustache.render(template, JSON.parse(input)["instance_vars"])
+    # puts output
+
+    header = <<-eos
+provider "aws" {
+  access_key = "FOO"
+  secret_key = "BAR"
+  region = "us-east-1"
+}
+eos
+
+    full_tf = "#{header}\n#{output}\n"
+    puts full_tf
+
+    ::File.open("/tmp/foo.tf", 'w') { |file|
+      file.write(full_tf)
+    }
+    # puts `cd /tmp/foobar123 && terraform plan .`
+    # puts `cd /tmp/foobar123 && terraform apply`
+    puts "------------------------------------------"
   end
 
   action :create do

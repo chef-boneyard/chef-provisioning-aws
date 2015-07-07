@@ -5,7 +5,7 @@ require 'chef/provisioning/chef_managed_entry_store'
 # Common AWS resource - contains metadata that all AWS resources will need
 module Chef::Provisioning::AWSDriver
 class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
-  actions :create, :destroy, :purge, :nothing, :generate
+  actions :create, :destroy, :purge, :nothing, :terraform
   default_action :create
 
   def initialize(name, run_context=nil)
@@ -169,11 +169,15 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   end
 
 
+  def tf_attrs
+    @tf_attrs ||= {}
+  end
+
   def method_missing(attribute, *value)
     if value.empty?
-      self.instance_variable_get(variabilify(attribute))
+      tf_attrs[variabilify(attribute)]
     else
-      self.instance_variable_set(variabilify(attribute), value.first)
+      tf_attrs[variabilify(attribute)] = value.first
     end
   end
 
@@ -195,7 +199,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   private
   # stringify instance variable names.
   def variabilify(s)
-    "@#{s}"
+    "#{s}"
   end
 end
 end

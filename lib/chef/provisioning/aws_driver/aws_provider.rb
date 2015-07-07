@@ -44,32 +44,35 @@ class AWSProvider < Chef::Provider::LWRPBase
     result
   end
 
-  action :generate do
-    puts "------------------------------------------"
-    input = new_resource.to_json
-    puts input
-    puts "=========================================="
-    tfile = "/tmp/terraform_s3.mustache"
-    template = ::File.read(tfile)
-    output = Mustache.render(template, JSON.parse(input)["instance_vars"])
-    # puts output
+  action :terraform do
+    resource = {
+      resource: {
+        # this does not call AWSResource#tf_attrs(!)
+        # new_resource.name => new_resource.tf_attrs
+        # wrong beyond description, but the only thing that works.
+        new_resource.name => new_resource.instance_variable_get("@tf_attrs")
+      }
+    }
 
-    header = <<-eos
-provider "aws" {
-  access_key = "FOO"
-  secret_key = "BAR"
-  region = "us-east-1"
-}
-eos
+    header = {
+      provider: {
+        aws: {
+          access_key: "some access key",
+          secret_key: "some secret key",
+          region: "us-east-1"
+        }
+      }
+    }
 
-    full_tf = "#{header}\n#{output}\n"
+    full_tf = JSON.pretty_generate(resource.merge(header))
     puts full_tf
 
-    ::File.open("/tmp/foo.tf", 'w') { |file|
+    tfdir = "/tmp/tf"
+    ::File.open("#{tfdir}/foo.tf.json", 'w') { |file|
       file.write(full_tf)
     }
-    # puts `cd /tmp/foobar123 && terraform plan .`
-    # puts `cd /tmp/foobar123 && terraform apply`
+    puts `cd #{tfdir} && terraform plan .`
+    puts `cd #{tfdir} && terraform apply`
     puts "------------------------------------------"
   end
 

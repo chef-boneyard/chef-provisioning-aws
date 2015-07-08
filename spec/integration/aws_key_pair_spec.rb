@@ -10,11 +10,11 @@ describe Chef::Resource::AwsKeyPair do
       end
 
       it "aws_key_pair 'test_key_pair' creates a key pair" do
-        expect_recipe {
+        expect(recipe {
           aws_key_pair 'test_key_pair' do
             private_key_options format: :der, type: :rsa
           end
-        }.to create_an_aws_key_pair('test_key_pair').and be_idempotent
+        }).to create_an_aws_key_pair('test_key_pair').and be_idempotent
       end
     end
   end

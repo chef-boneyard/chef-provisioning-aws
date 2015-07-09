@@ -288,5 +288,30 @@ class AWSProvider < Chef::Provider::LWRPBase
     end
   end
 
+  # Wait until aws_object obtains one of expected_state
+  #
+  # @param aws_object Aws SDK Object to check state on
+  # @param expected_state [Symbol,Array<Symbol>] Final state(s) to look for
+  # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
+  # @param tries [Integer] Number of times to check state
+  # @param sleep [Integer] Time to wait between checking states
+  #
+  def wait_for_state(aws_object, expected_states, acceptable_errors = [], tries=60, sleep=5)
+    acceptable_errors = [acceptable_errors].flatten
+    expected_states = [expected_states].flatten
+    current_state = aws_object.state
+
+    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_states.inspect}..."
+      begin
+        current_state = aws_object.state
+        unless expected_states.include?(current_state)
+          raise StatusTimeoutError.new(aws_object, current_state, expected_states)
+        end
+      rescue *acceptable_errors
+      end
+    end
+  end
+
 end
 end

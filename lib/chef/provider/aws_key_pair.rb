@@ -168,7 +168,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
     current_key_pair = new_resource.aws_object
     if current_key_pair
-      @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
+      @current_fingerprint = current_key_pair.fingerprint
     else
       current_resource.action :destroy
     end

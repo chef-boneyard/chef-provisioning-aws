@@ -25,8 +25,13 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       super
     end
   end
-  def action=(value)
-    action(value)
+
+  # In Chef < 12.4 we need to define this method.  In > 12.4 this method is
+  # already defined for us so we don't need to overwrite it.
+  unless defined?(:action=)
+    def action=(value)
+      action(value)
+    end
   end
 
   #

@@ -12,7 +12,6 @@ describe Chef::Resource::AwsCacheSubnetGroup do
 
       aws_subnet "test_subnet" do
         vpc 'test_vpc'
-        availability_zone 'us-east-1a'
         cidr_block "10.0.0.0/24"
       end
 

@@ -15,6 +15,9 @@ You can specify a profile as the middle section of the semi-colon seperated driv
 TODO: List out weird/unique things about resources here.  We don't need to document every resource
 because users can look at the resource model.
 
+TODO: document `aws_object` and `get_aws_object` and how you can get the aws object for a base
+chef-provisioning resource like machine or load_balancer
+
 ## aws_vpc
 
 If you specify `internet_gateway true` the VPC will create and manage its own internet gateway.

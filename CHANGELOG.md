@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.0 (7/17/2015)
+
+- Adding support for Elasticache ([#212][])
+- Adding support for Network ACLs ([#241][])
+- Adding support for ELB attributes which enables cross-zone load balancing ([#199][])
+- Fixing machine destroy when using EC2 classic ([#209][])
+- Use the `ubuntu_ami` gem to query Ubuntu AMIs instead of hardcoding them ([#197][])
+- Fixing security group rule comparison when a protocol is specified ([#237][])
+- Wait for VPC to be created before attempting to tag it ([#245][])
+- Adding support for Chef 12.4.x ([#250][])
+- Adding a new RSPEC matcher which does not perform any CRUD operations, only validation ([#248][])
+- Documentation updates ([#234][], [#236][], [#239][])
+
 ## 1.2.1 (5/27/2015)
 
 - I didn't actually fix [#158][] and [#204][] - fixing and adding test coverage
@@ -134,7 +147,19 @@ end
 [#190]: https://github.com/chef/chef-provisioning-aws/issues/190
 [#191]: https://github.com/chef/chef-provisioning-aws/issues/191
 [#194]: https://github.com/chef/chef-provisioning-aws/issues/194
+[#197]: https://github.com/chef/chef-provisioning-aws/issues/197
+[#199]: https://github.com/chef/chef-provisioning-aws/issues/199
 [#204]: https://github.com/chef/chef-provisioning-aws/issues/204
+[#209]: https://github.com/chef/chef-provisioning-aws/issues/209
+[#212]: https://github.com/chef/chef-provisioning-aws/issues/212
+[#234]: https://github.com/chef/chef-provisioning-aws/issues/234
+[#236]: https://github.com/chef/chef-provisioning-aws/issues/236
+[#237]: https://github.com/chef/chef-provisioning-aws/issues/237
+[#239]: https://github.com/chef/chef-provisioning-aws/issues/239
+[#241]: https://github.com/chef/chef-provisioning-aws/issues/241
+[#245]: https://github.com/chef/chef-provisioning-aws/issues/245
+[#248]: https://github.com/chef/chef-provisioning-aws/issues/248
+[#250]: https://github.com/chef/chef-provisioning-aws/issues/250
 [@afiune]: https://github.com/afiune
 [@bbbco]: https://github.com/bbbco
 [@christinedraper]: https://github.com/christinedraper

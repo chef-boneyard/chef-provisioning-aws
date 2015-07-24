@@ -20,7 +20,36 @@ chef-provisioning resource like machine or load_balancer
 
 ## aws_key_pair
 
-TODO - document how to specify an existing local key 
+You can specify an existing key pair to upload by specifying the following:
+
+```ruby
+aws_key_pair 'my-aws-key' do
+  private_key_path "~boiardi/.ssh/my-aws-key.pem"
+  public_key_path "~boiardi/.ssh/my-aws-key.pub"
+  overwrite false # Set to true if you want to regenerate this each chef run
+end
+```
+
+## aws_launch_configuration
+
+In the AWS SDK V1, you must specify `key_pair` instead of `key_name` when specifying the key name to use for machines in the auto scaling group.  This is fixed in V2 and uses `key_name` like machines do.
+
+```ruby
+aws_launch_configuration 'example-windows-launch-configuration' do
+  image 'example-windows-image'
+  instance_type 't2.medium'
+  options security_groups: 'example-windows-sg',
+    key_pair: 'my-key-name',
+    ebs_optimized: false,
+    detailed_instance_monitoring: false,
+    iam_instance_profile: 'example-windows-role',
+    user_data: <<-EOF
+<powershell>
+# custom powershell code goes here, executed at instance creation time
+</powershell>
+  EOF
+end
+```
 
 ## aws_vpc
 

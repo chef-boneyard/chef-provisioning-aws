@@ -1,29 +1,24 @@
 require 'chef/provider/lwrp_base'
-require 'chef/provisioning/aws_driver'
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'aws-sdk-v1'
 
 
-class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
-
-  use_inline_resources
-
-  def whyrun_supported?
-    true
-  end
+class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
   action :create do
     create_key(:create)
   end
 
-  action :delete do
+  action :destroy do
     if current_resource_exists?
-      ec2.key_pairs[new_resource.name].delete
+      converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
+        driver.ec2.key_pairs[new_resource.name].delete
+      end
     end
   end
 
   def key_description
-    "#{new_resource.name} on #{new_driver.driver_url}"
+    "#{new_resource.name} on #{driver.driver_url}"
   end
 
   @@use_pkcs8 = nil # For Ruby 1.9 and below, PKCS can be run
@@ -79,8 +74,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            ec2.key_pairs[new_resource.name].delete
-            ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            driver.ec2.key_pairs[new_resource.name].delete
+            driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -92,12 +87,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
 
-  def new_driver
+  def driver
     run_context.chef_provisioning.driver_for(new_resource.driver)
   end
 
@@ -135,15 +130,11 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
   end
 
   def existing_keypair
-    @existing_keypair ||= begin
-      ec2.key_pairs[fqn]
-    rescue
-      nil
-    end
+    @existing_keypair ||= new_resource.aws_object
   end
 
   def current_resource_exists?
-    @current_resource.action != [ :delete ]
+    @current_resource.action != [ :destroy ]
   end
 
   def compare_public_key(new)
@@ -160,9 +151,9 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
     private_key_path = new_resource.private_key_path || new_resource.name
     if private_key_path.is_a?(Symbol)
       private_key_path
-    elsif Pathname.new(private_key_path).relative? && new_driver.config[:private_key_write_path]
+    elsif Pathname.new(private_key_path).relative? && driver.config[:private_key_write_path]
       @should_create_directory = true
-      ::File.join(new_driver.config[:private_key_write_path], private_key_path)
+      ::File.join(driver.config[:private_key_write_path], private_key_path)
     else
       private_key_path
     end
@@ -175,11 +166,11 @@ class Chef::Provider::AwsKeyPair < Chef::Provider::AwsProvider
   def load_current_resource
     @current_resource = Chef::Resource::AwsKeyPair.new(new_resource.name, run_context)
 
-    current_key_pair = ec2.key_pairs[new_resource.name]
-    if current_key_pair && current_key_pair.exists?
-      @current_fingerprint = current_key_pair ? current_key_pair.fingerprint : nil
+    current_key_pair = new_resource.aws_object
+    if current_key_pair
+      @current_fingerprint = current_key_pair.fingerprint
     else
-      current_resource.action :delete
+      current_resource.action :destroy
     end
 
     if new_private_key_path && ::File.exist?(new_private_key_path)

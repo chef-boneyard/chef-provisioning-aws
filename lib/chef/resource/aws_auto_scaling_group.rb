@@ -1,16 +1,19 @@
-require 'chef/resource/aws_resource'
-require 'chef/provisioning/aws_driver'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsAutoScalingGroup < Chef::Resource::AwsResource
-  self.resource_name = 'aws_auto_scaling_group'
-  self.databag_name = 'auto_scaling_groups'
+class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::AutoScaling::Group
 
-  actions :create, :delete, :nothing
-  default_action :create
+  attribute :name,                 kind_of: String,  name_attribute: true
+  attribute :options,              kind_of: Hash,    default: {}
+  attribute :availability_zones,   kind_of: Array
+  attribute :desired_capacity,     kind_of: Integer
+  attribute :launch_configuration, kind_of: String
+  attribute :min_size,             kind_of: Integer
+  attribute :max_size,             kind_of: Integer
+  attribute :load_balancers,       kind_of: Array,   coerce: proc { |value| [value].flatten }
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :desired_capacity, :kind_of => Integer
-  attribute :launch_config, :kind_of => String
-  attribute :min_size, :kind_of => Integer, :default => 1
-  attribute :max_size, :kind_of => Integer, :default => 4
+  def aws_object
+    result = driver.auto_scaling.groups[name]
+    result && result.exists? ? result : nil
+  end
 end

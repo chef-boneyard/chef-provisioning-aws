@@ -1,6 +1,17 @@
 require 'bundler'
 require 'bundler/gem_tasks'
+require 'rspec/core/rake_task'
 
-task :spec do
-  require File.expand_path('spec/run')
+task :default => :spec
+
+desc "Run specs"
+RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = 'spec/**/*_spec.rb'
+  # TODO add back integration tests whenever we have strategy for keys
+  spec.exclude_pattern = 'spec/integration/**/*_spec.rb'
+end
+
+desc "Run Integration Specs"
+RSpec::Core::RakeTask.new(:integration) do |spec|
+  spec.pattern = 'spec/integration/**/*_spec.rb'
 end

@@ -1,20 +1,28 @@
 require 'chef/mixin/shell_out'
+require 'chef/mixin/deep_merge'
 require 'chef/provisioning/driver'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/convergence_strategy/install_sh'
+require 'chef/provisioning/convergence_strategy/install_msi'
 require 'chef/provisioning/convergence_strategy/no_converge'
 require 'chef/provisioning/transport/ssh'
+require 'chef/provisioning/transport/winrm'
 require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
-require 'chef/provider/aws_key_pair'
 require 'chef/resource/aws_key_pair'
+require 'chef/resource/aws_instance'
+require 'chef/resource/aws_image'
+require 'chef/resource/aws_load_balancer'
+require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
 
 require 'yaml'
 require 'aws-sdk-v1'
+require 'retryable'
+require 'ubuntu_ami'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -26,8 +34,9 @@ module AWSDriver
   class Driver < Chef::Provisioning::Driver
 
     include Chef::Mixin::ShellOut
+    include Chef::Mixin::DeepMerge
 
-    attr_reader :region
+    attr_reader :aws_config
 
     # URL scheme:
     # aws:profilename:region
@@ -45,150 +54,313 @@ module AWSDriver
       region = nil if region && region.empty?
 
       credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
-      @region = region || credentials[:region]
-      # TODO: fix credentials here
-      AWS.config(:access_key_id => credentials[:aws_access_key_id],
-                 :secret_access_key => credentials[:aws_secret_access_key],
-                 :region => @region)
+      @aws_config = AWS.config(
+        access_key_id:     credentials[:aws_access_key_id],
+        secret_access_key: credentials[:aws_secret_access_key],
+        region: region || credentials[:region],
+        proxy_uri: credentials[:proxy_uri] || nil,
+        session_token: credentials[:aws_session_token] || nil,
+        logger: Chef::Log.logger
+      )
     end
 
     def self.canonicalize_url(driver_url, config)
       [ driver_url, config ]
     end
 
-
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      security_group_name = lb_options[:security_group_name]
-      security_group_id = lb_options[:security_group_id]
+      lb_options = AWSResource.lookup_options(lb_options || {}, managed_entry_store: lb_spec.managed_entry_store, driver: self)
+      # We delete the attributes here because they are not valid in the create call
+      # and must be applied afterward
+      lb_attributes = lb_options.delete(:attributes)
 
-      security_group = if security_group_id.nil? && !security_group_name.nil?
-                         ec2.security_groups.filter('group-name', security_group_name).first
-                       elsif !security_group_id.nil?
-                         ec2.security_groups[security_group_id]
-                       end
-      availability_zones = lb_options[:availability_zones]
-      listeners = lb_options[:listeners]
-
-      lb_optionals = {}
-      lb_optionals[:security_groups] = [security_group] if security_group
-      lb_optionals[:availability_zones] = availability_zones if availability_zones
-      lb_optionals[:listeners] = listeners if listeners
-
+      old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb.exists?
+      if !actual_elb || !actual_elb.exists?
+        lb_options[:listeners] ||= get_listeners(:http)
+        if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
+          lb_options[:subnets] = machine_specs.map { |s| ec2.instances[s.reference['instance_id']].subnet }.uniq
+        end
+
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
+        Chef::Log.debug "AWS Load Balancer options: #{lb_options.inspect}"
 
-        updates = [ "Create load balancer #{lb_spec.name} in #{@region}" ]
-        updates << "  enable availability zones #{availability_zones.join(', ')}" if availability_zones && availability_zones.size > 0
-        updates << "  with listeners #{listeners.join(', ')}" if listeners && listeners.size > 0
-        updates << "  with security group #{security_group.name}" if security_group
+        updates = [ "create load balancer #{lb_spec.name} in #{aws_config.region}" ]
+        updates << "  enable availability zones #{lb_options[:availability_zones]}" if lb_options[:availability_zones]
+        updates << "  attach subnets #{lb_options[:subnets].join(', ')}" if lb_options[:subnets]
+        updates << "  with listeners #{lb_options[:listeners]}" if lb_options[:listeners]
+        updates << "  with security groups #{lb_options[:security_groups]}" if lb_options[:security_groups]
+        updates << "  with tags #{lb_options[:aws_tags]}" if lb_options[:aws_tags]
 
+
+        lb_aws_tags = lb_options[:aws_tags]
+        lb_options.delete(:aws_tags)
         action_handler.perform_action updates do
-          actual_elb = elb.load_balancers.create(lb_spec.name, lb_optionals)
+          actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          lb_options[:aws_tags] = lb_aws_tags
 
-          lb_spec.location = {
-            'driver_url' => driver_url,
+          lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
           }
+          lb_spec.driver_url = driver_url
         end
       else
         # Header gets printed the first time we make an update
         perform_action = proc do |desc, &block|
           perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
-          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{@region}", desc ].flatten, &block
+          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
         end
 
-        # Update availability zones
-        enable_zones = (availability_zones || []).dup
-        disable_zones = []
-        actual_elb.availability_zones.each do |availability_zone|
-          if !enable_zones.delete(availability_zone.name)
-            disable_zones << availability_zone.name
-          end
-        end
-        if enable_zones.size > 0
-          perform_action.call("  enable availability zones #{enable_zones.join(', ')}") do
-            actual_elb.availability_zones.enable(*enable_zones)
-          end
-        end
-        if disable_zones.size > 0
-          perform_action.call("  disable availability zones #{disable_zones.join(', ')}") do
-            actual_elb.availability_zones.disable(*disable_zones)
+        # TODO: refactor this whole giant method into many smaller method calls
+        # TODO if we update scheme, we don't need to run any of the other updates.
+        # Also, if things aren't specified (such as machines / listeners), we
+        # need to grab them from the actual load balancer so we don't lose them.
+        # i.e. load_balancer 'blah' do
+        #   lb_options: { scheme: 'other_scheme' }
+        # end
+        # TODO we will leak the actual_elb if we fail to finish creating it
+        # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
+        # ELB and create a new one
+        if lb_options[:scheme] && lb_options[:scheme].downcase != actual_elb.scheme
+          desc = ["  updating scheme to #{lb_options[:scheme]}"]
+          desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
+          perform_action.call(desc) do
+            old_elb = actual_elb
+            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
           end
         end
 
-        # Update listeners
-        perform_listener_action = proc do |desc, &block|
-          perform_listener_action = proc { |desc, &block| perform_action(desc, &block) }
-          perform_action([ "  update listener #{listener.port}", desc ], &block)
-        end
-        add_listeners = {}
-        listeners.each { |l| add_listeners[l[:port]] = l } if listeners
-        actual_elb.listeners.each do |listener|
-          desired_listener = add_listeners.delete(listener.port)
-          if desired_listener
-            if listener.protocol != desired_listener[:protocol]
-              perform_listener_action.call("    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}'") do
-                listener.protocol = desired_listener[:protocol]
-              end
-            end
-            if listener.instance_port != desired_listener[:instance_port]
-              perform_listener_action.call("    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}'") do
-                listener.instance_port = desired_listener[:instance_port]
-              end
-            end
-            if listener.instance_protocol != desired_listener[:instance_protocol]
-              perform_listener_action.call("    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}'") do
-                listener.instance_protocol = desired_listener[:instance_protocol]
-              end
-            end
-            if listener.server_certificate != desired_listener[:server_certificate]
-              perform_listener_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}'") do
-                listener.server_certificate = desired_listener[:server_certificate]
-              end
-            end
-          else
-            perform_action.call("  remove listener #{listener.port}") do
-              listener.delete
+        # Update security groups
+        if lb_options[:security_groups]
+          current = actual_elb.security_group_ids
+          desired = lb_options[:security_groups]
+          if current != desired
+            perform_action.call("  updating security groups to #{desired.to_a}") do
+              elb.client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.name,
+                security_groups: desired.to_a
+              )
             end
           end
         end
-        add_listeners.each do |listener|
-          updates = [ "  add listener #{listener[:port]}" ]
-          updates << "    set protocol to #{listener[:protocol].inspect}"
-          updates << "    set instance port to #{listener[:instance_port].inspect}"
-          updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
-          updates << "    set server certificate to #{listener[:server_certificate]}" if listener[:server_certificate]
-          perform_action.call(updates) do
-            actual_elb.listeners.create(listener)
+
+        if lb_options[:availability_zones] || lb_options[:subnets]
+          # A subnet always belongs to an availability zone.  When specifying a ELB spec, you can either
+          # specify subnets OR AZs but not both.  You cannot specify multiple subnets in the same AZ.
+          # You must specify at least 1 subnet or AZ.  On an update you cannot remove all subnets
+          # or AZs - it must belong to one.
+          if lb_options[:availability_zones] && lb_options[:subnets]
+            # We do this check here because there is no atomic call we can make to specify both
+            # subnets and AZs at the same time
+            raise "You cannot specify both `availability_zones` and `subnets`"
+          end
+
+          # Users can switch from availability zones to subnets or vice versa.  To ensure we do not
+          # unassign all (which causes an AWS error) we first add all available ones, then remove
+          # an unecessary ones
+          actual_zones_subnets = {}
+          actual_elb.subnets.each do |subnet|
+            actual_zones_subnets[subnet.id] = subnet.availability_zone.name
+          end
+
+          # Only 1 of subnet or AZ will be populated b/c of our check earlier
+          desired_subnets_zones = {}
+          if lb_options[:availability_zones]
+            lb_options[:availability_zones].each do |zone|
+              # If the user specifies availability zone, we find the default subnet for that
+              # AZ because this duplicates the create logic
+              zone = zone.downcase
+              filters = [
+                {:name => 'availabilityZone', :values => [zone]},
+                {:name => 'defaultForAz', :values => ['true']}
+              ]
+              default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
+              if default_subnet.size != 1
+                raise "Could not find default subnet in availability zone #{zone}"
+              end
+              default_subnet = default_subnet[0]
+              desired_subnets_zones[default_subnet[:subnet_id]] = zone
+            end
+          end
+          unless lb_options[:subnets].nil? || lb_options[:subnets].empty?
+            subnet_query = ec2.client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnet_set]
+            # AWS raises an error on an unknown subnet, but not an unknown AZ
+            subnet_query.each do |subnet|
+              zone = subnet[:availability_zone].downcase
+              desired_subnets_zones[subnet[:subnet_id]] = zone
+            end
+          end
+
+          # We only bother attaching subnets, because doing this automatically attaches the AZ
+          attach_subnets = desired_subnets_zones.keys - actual_zones_subnets.keys
+          unless attach_subnets.empty?
+            action = "  attach subnets #{attach_subnets.join(', ')}"
+            enable_zones = (desired_subnets_zones.map {|s,z| z if attach_subnets.include?(s)}).compact
+            action += " (availability zones #{enable_zones.join(', ')})"
+            perform_action.call(action) do
+              begin
+                elb.client.attach_load_balancer_to_subnets(
+                  load_balancer_name: actual_elb.name,
+                  subnets: attach_subnets
+                )
+              rescue AWS::ELB::Errors::InvalidConfigurationRequest
+                raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
+                    "Amazon does not have an atomic operation which allows this.  You must create a new " +
+                    "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
+                    "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
+                    "existing ELB named #{actual_elb.name}"
+              end
+            end
+          end
+
+          detach_subnets = actual_zones_subnets.keys - desired_subnets_zones.keys
+          unless detach_subnets.empty?
+            action = "  detach subnets #{detach_subnets.join(', ')}"
+            disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact
+            action += " (availability zones #{disable_zones.join(', ')})"
+            perform_action.call(action) do
+              elb.client.detach_load_balancer_from_subnets(
+                load_balancer_name: actual_elb.name,
+                subnets: detach_subnets
+              )
+            end
+          end
+        end
+
+        # Update listeners - THIS IS NOT ATOMIC
+        if lb_options[:listeners]
+          add_listeners = {}
+          lb_options[:listeners].each { |l| add_listeners[l[:port]] = l }
+          actual_elb.listeners.each do |listener|
+            desired_listener = add_listeners.delete(listener.port)
+            if desired_listener
+
+              # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
+              # of the listener - must create a new one and delete old one
+              immutable_updates = []
+              if listener.protocol != desired_listener[:protocol].to_sym.downcase
+                immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
+              end
+              if listener.instance_port != desired_listener[:instance_port]
+                immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
+              end
+              if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
+                immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
+              end
+              if !immutable_updates.empty?
+                perform_action.call(immutable_updates) do
+                  listener.delete
+                  actual_elb.listeners.create(desired_listener)
+                end
+              elsif listener.server_certificate != desired_listener[:server_certificate]
+                # Server certificate is mutable - if no immutable changes required a full recreate, update cert
+                perform_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}") do
+                  listener.server_certificate = desired_listener[:server_certificate]
+                end
+              end
+
+            else
+              perform_action.call("  remove listener #{listener.port}") do
+                listener.delete
+              end
+            end
+          end
+          add_listeners.values.each do |listener|
+            updates = [ "  add listener #{listener[:port]}" ]
+            updates << "    set protocol to #{listener[:protocol].inspect}"
+            updates << "    set instance port to #{listener[:instance_port].inspect}"
+            updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
+            updates << "    set server certificate to #{listener[:server_certificate]}" if listener[:server_certificate]
+            perform_action.call(updates) do
+              actual_elb.listeners.create(listener)
+            end
           end
         end
       end
 
-      # Update instance list
-      actual_instance_ids = Set.new(actual_elb.instances.map { |i| i.instance_id })
+      # GRRRR curse you AWS and your crappy tagging support for ELBs
+      read_tags_block = lambda {|aws_object|
+        resp = elb.client.describe_tags load_balancer_names: [aws_object.name]
+        tags = {}
+        resp.data[:tag_descriptions] && resp.data[:tag_descriptions].each do |td|
+          td[:tags].each do |t|
+            tags[t[:key]] = t[:value]
+          end
+        end
+        tags
+      }
 
-      instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.location['instance_id']) }
-      instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.location['instance_id'] }
+      set_tags_block = lambda {|aws_object, desired_tags|
+        aws_form_tags = []
+        desired_tags.each do |k, v|
+          aws_form_tags << {key: k, value: v}
+        end
+        elb.client.add_tags load_balancer_names: [aws_object.name], tags: aws_form_tags
+      }
 
-      if instances_to_add.size > 0
-        perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
-          instance_ids_to_add = instances_to_add.map { |s| s.location['instance_id'] }
-          Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{@region}")
-          actual_elb.instances.add(instance_ids_to_add)
+      delete_tags_block=lambda {|aws_object, tags_to_delete|
+        aws_form_tags = []
+        tags_to_delete.each do |k, v|
+          aws_form_tags << {key: k}
+        end
+        elb.client.remove_tags load_balancer_names: [aws_object.name], tags: aws_form_tags
+      }
+      converge_tags(actual_elb, lb_options[:aws_tags], action_handler, read_tags_block, set_tags_block, delete_tags_block)
+
+      # Update load balancer attributes
+      if lb_attributes
+        current = elb.client.describe_load_balancer_attributes(load_balancer_name: actual_elb.name)[:load_balancer_attributes]
+        # Need to do a deep copy w/ Marshal load/dump to avoid overwriting current
+        desired = deep_merge!(lb_attributes, Marshal.load(Marshal.dump(current)))
+        if current != desired
+          perform_action.call("  updating attributes to #{desired.inspect}") do
+            elb.client.modify_load_balancer_attributes(
+              load_balancer_name: actual_elb.name,
+              load_balancer_attributes: desired.to_hash
+            )
+          end
         end
       end
 
-      if instance_ids_to_remove.size > 0
-        perform_action.call("  remove instances #{instance_ids_to_remove}") do
-          actual_elb.instances.remove(instance_ids_to_remove)
+      # Update instance list, but only if there are machines specified
+      if machine_specs
+        actual_instance_ids = actual_elb.instances.map { |i| i.instance_id }
+
+        instances_to_add = machine_specs.select { |s| !actual_instance_ids.include?(s.reference['instance_id']) }
+        instance_ids_to_remove = actual_instance_ids - machine_specs.map { |s| s.reference['instance_id'] }
+
+        if instances_to_add.size > 0
+          perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
+            instance_ids_to_add = instances_to_add.map { |s| s.reference['instance_id'] }
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
+            actual_elb.instances.add(instance_ids_to_add)
+          end
         end
+
+        if instance_ids_to_remove.size > 0
+          perform_action.call("  remove instances #{instance_ids_to_remove}") do
+            actual_elb.instances.remove(instance_ids_to_remove)
+          end
+        end
+      end
+
+      # We have successfully switched all our instances to the (possibly) new LB
+      # so it is safe to delete the old one.
+      unless old_elb.nil?
+        old_elb.delete
+      end
+    ensure
+      # Something went wrong before we could moved instances from the old ELB to the new one
+      # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
+      unless old_elb.nil?
+        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.name} and #{actual_elb.name}. " +
+        "Determine which is correct and manually clean up the other.")
       end
     end
 
-    def ready_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
+    def ready_load_balancer(action_handler, lb_spec, lb_options, machine_spec)
     end
 
     def destroy_load_balancer(action_handler, lb_spec, lb_options)
@@ -207,29 +379,26 @@ module AWSDriver
     end
 
     # Image methods
-    def allocate_image(action_handler, image_spec, image_options, machine_spec)
+    def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
+      aws_tags = image_options.delete(:aws_tags) || {}
       if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
           image_options[:name] ||= image_spec.name
-          image_options[:instance_id] ||= machine_spec.location['instance_id']
+          image_options[:instance_id] ||= machine_spec.reference['instance_id']
           image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
           Chef::Log.debug "AWS Image options: #{image_options.inspect}"
-          image = ec2.images.create(image_options)
-          image_spec.location = {
-            'driver_url' => driver_url,
+          actual_image = ec2.images.create(image_options.to_hash)
+          image_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
-            'image_id' => image.id,
+            'image_id' => actual_image.id,
             'allocated_at' => Time.now.to_i
           }
-          image_spec.machine_options ||= {}
-          image_spec.machine_options.merge!({
-            :bootstrap_options => {
-                :image_id => image.id
-            }
-          })
+          image_spec.driver_url = driver_url
         end
       end
+      aws_tags['From-Instance'] = image_options[:instance_id] if image_options[:instance_id]
+      converge_tags(actual_image, aws_tags, action_handler)
     end
 
     def ready_image(action_handler, image_spec, image_options)
@@ -247,64 +416,74 @@ module AWSDriver
     end
 
     def destroy_image(action_handler, image_spec, image_options)
-      actual_image = image_for(image_spec)
-      snapshots = snapshots_for(image_spec)
-      if actual_image.nil? || !actual_image.exists?
-        Chef::Log.warn "Image #{image_spec.name} doesn't exist"
-      else
-        action_handler.perform_action "De-registering image #{image_spec.name}" do
-          actual_image.deregister
-        end
-        unless snapshots.any?
-          action_handler.perform_action "Deleting image #{image_spec.name} snapshots" do
-            snapshots.each do |snap|
-              snap.delete
-            end
-          end
+      # TODO the driver should automatically be set by `inline_resource`
+      d = self
+      Provisioning.inline_resource(action_handler) do
+        aws_image image_spec.name do
+          action :destroy
+          driver d
         end
       end
+    end
+
+    def user_data
+      # TODO: Make this use HTTPS at some point.
+      <<EOD
+<powershell>
+winrm quickconfig -q
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
+winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+winrm set winrm/config/service/auth '@{Basic="true"}'
+
+netsh advfirewall firewall add rule name="WinRM 5985" protocol=TCP dir=in localport=5985 action=allow
+netsh advfirewall firewall add rule name="WinRM 5986" protocol=TCP dir=in localport=5986 action=allow
+
+net stop winrm
+sc config winrm start=auto
+net start winrm
+</powershell>
+EOD
     end
 
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
       actual_instance = instance_for(machine_spec)
-      if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
-        image_id = machine_options[:image_id] || default_ami_for_region(@region)
-        bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
-        bootstrap_options[:image_id] = image_id
-        if !bootstrap_options[:key_name]
-          Chef::Log.debug('No key specified, generating a default one...')
-          bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
-        end
-        Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
+      bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{image_id} in #{@region}" do
+      if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
+
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
-          instance = ec2.instances.create(bootstrap_options)
+
+          actual_instance = ec2.instances.create(bootstrap_options.to_hash)
           # Make sure the instance is ready to be tagged
-          sleep 5 while instance.status == :pending
+          wait_until_taggable(actual_instance)
+
           # TODO add other tags identifying user / node url (same as fog)
-          instance.tags['Name'] = machine_spec.name
-          machine_spec.location = {
-              'driver_url' => driver_url,
+          actual_instance.tags['Name'] = machine_spec.name
+          actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
+          machine_spec.reference = {
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
-              'image_id' => machine_options[:image_id],
-              'instance_id' => instance.id
+              'image_id' => bootstrap_options[:image_id],
+              'instance_id' => actual_instance.id
           }
-          machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+          machine_spec.driver_url = driver_url
+          machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
           %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
-            machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+            machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
           end
         end
       end
+      # TODO because we don't want to add `provider_tags` as a base attribute,
+      # we have to update the tags here in driver.rb instead of the providers
+      converge_tags(actual_instance, machine_options[:aws_tags], action_handler)
     end
 
     def allocate_machines(action_handler, specs_and_options, parallelizer)
-      #Chef::Log.warn("#{specs_and_options}")
       create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, server|
-    #Chef::Log.warn("#{machine_spec}")
         yield machine_spec
       end
       specs_and_options.keys
@@ -320,14 +499,14 @@ module AWSDriver
       if instance.status != :running
         wait_until_machine(action_handler, machine_spec, instance) { instance.status != :stopping }
         if instance.status == :stopped
-          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
+          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
             instance.start
           end
         end
         wait_until_ready_machine(action_handler, machine_spec, instance)
-        wait_for_transport(action_handler, machine_spec, machine_options)
       end
 
+      wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
     end
 
@@ -338,26 +517,85 @@ module AWSDriver
         machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
       end
 
-      machine_for(machine_spec, machine_spec.location)
+      machine_for(machine_spec, machine_spec.reference)
     end
 
     def destroy_machine(action_handler, machine_spec, machine_options)
-      instance = instance_for(machine_spec)
-      if instance && instance.exists?
-        # TODO do we need to wait_until(action_handler, machine_spec, instance) { instance.status != :shutting_down } ?
-        action_handler.perform_action "Terminate #{machine_spec.name} (#{machine_spec.location['instance_id']}) in #{@region} ..." do
-          instance.terminate
-          machine_spec.location = nil
+      d = self
+      Provisioning.inline_resource(action_handler) do
+        aws_instance machine_spec.name do
+          action :destroy
+          driver d
         end
-      else
-        Chef::Log.warn "Instance #{machine_spec.location['instance_id']} doesn't exist for #{machine_spec.name}"
       end
 
+      # TODO move this into the aws_instance provider somehow
       strategy = convergence_strategy_for(machine_spec, machine_options)
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
 
-    private
+    def ec2
+      @ec2 ||= AWS::EC2.new(config: aws_config)
+    end
+
+    def elb
+      @elb ||= AWS::ELB.new(config: aws_config)
+    end
+
+    def elasticache
+      @elasticache ||= AWS::ElastiCache::Client.new(config: aws_config)
+    end
+
+    def iam
+      @iam ||= AWS::IAM.new(config: aws_config)
+    end
+
+    def s3
+      @s3 ||= AWS::S3.new(config: aws_config)
+    end
+
+    def sns
+      @sns ||= AWS::SNS.new(config: aws_config)
+    end
+
+    def sqs
+      @sqs ||= AWS::SQS.new(config: aws_config)
+    end
+
+    def auto_scaling
+      @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
+    end
+
+    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
+      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
+    end
+
+    def parse_arn(arn)
+      parts = arn.split(':', 6)
+      {
+        partition: parts[1],
+        service: parts[2],
+        region: parts[3],
+        account_id: parts[4],
+        resource: parts[5]
+      }
+    end
+
+    def account_id
+      begin
+        # We've got an AWS account root credential or an IAM admin with access rights
+        current_user = iam.client.get_user
+        arn = current_user[:user][:arn]
+      rescue AWS::IAM::Errors::AccessDenied => e
+        # If we don't have access, the error message still tells us our account ID and user ...
+        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
+        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
+          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
+        end
+        arn = $1
+      end
+      parse_arn(arn)[:account_id]
+    end
 
     # For creating things like AWS keypairs exclusively
     @@chef_default_lock = Mutex.new
@@ -369,22 +607,33 @@ module AWSDriver
         raise "Instance for node #{machine_spec.name} has not been created!"
       end
 
-      if machine_spec.location['is_windows']
+      if machine_spec.reference['is_windows']
         Chef::Provisioning::Machine::WindowsMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       else
         Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       end
     end
 
-    def start_machine(action_handler, machine_spec, machine_options, base_image_name)
-    end
+    def bootstrap_options_for(action_handler, machine_spec, machine_options)
+      bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+      bootstrap_options[:instance_type] ||= default_instance_type
+      image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
+      bootstrap_options[:image_id] = image_id
+      if !bootstrap_options[:key_name]
+        Chef::Log.debug('No key specified, generating a default one...')
+        bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
+      end
 
-    def ec2
-      @ec2 ||= AWS.ec2
-    end
+      if machine_options[:is_windows]
+        Chef::Log.debug "Setting WinRM userdata..."
+        bootstrap_options[:user_data] = user_data
+      else
+        Chef::Log.debug "Non-windows, not setting userdata"
+      end
 
-    def elb
-      @elb ||= AWS::ELB.new
+      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
+      Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
+      bootstrap_options
     end
 
     def default_ssh_username
@@ -403,57 +652,34 @@ module AWSDriver
     end
 
     def load_balancer_for(lb_spec)
-      if lb_spec.name
-        elb.load_balancers[lb_spec.name]
-      else
-        nil
-      end
+      Chef::Resource::AwsLoadBalancer.get_aws_object(lb_spec.name, driver: self, managed_entry_store: lb_spec.managed_entry_store, required: false)
     end
 
     def instance_for(machine_spec)
-      if machine_spec.location && machine_spec.location['instance_id']
-        ec2.instances[machine_spec.location['instance_id']]
+      if machine_spec.reference
+        if machine_spec.driver_url != driver_url
+          raise "Switching a machine's driver from #{machine_spec.driver_url} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
+        end
+        Chef::Resource::AwsInstance.get_aws_object(machine_spec.reference['instance_id'], driver: self, managed_entry_store: machine_spec.managed_entry_store, required: false)
       end
     end
 
     def instances_for(machine_specs)
       result = {}
-      machine_specs.each do |machine_spec|
-        if machine_spec.location && machine_spec.location['instance_id']
-          if machine_spec.location['driver_url'] != driver_url
-            raise "Switching a machine's driver from #{machine_spec.location['driver_url']} to #{driver_url} is not currently supported!  Use machine :destroy and then re-create the machine on the new driver."
-          end
-          #returns nil if not found
-          result[machine_spec] = ec2.instances[machine_spec.location['instance_id']]
-        end
-      end
+      machine_specs.each { |machine_spec| result[machine_spec] = instance_for(machine_spec) }
       result
     end
 
     def image_for(image_spec)
-      if image_spec.location && image_spec.location['image_id']
-        ec2.images[image_spec.location['image_id']]
-      end
-    end
-
-    def snapshots_for(image_spec)
-      if image_spec.location && image_spec.location['image_id']
-        actual_image = image_for(image_spec)
-        snapshots = []
-        actual_image.block_device_mappings.each do |dev, opts|
-            snapshots << ec2.snapshots[opts[:snapshot_id]]
-        end
-        snapshots
-      end
+      Chef::Resource::AwsImage.get_aws_object(image_spec.name, driver: self, managed_entry_store: image_spec.managed_entry_store, required: false)
     end
 
     def transport_for(machine_spec, machine_options, instance)
-      # TODO winrm
-      create_ssh_transport(machine_spec, machine_options, instance)
-    end
-
-    def compute_options
-
+      if machine_spec.reference['is_windows']
+        create_winrm_transport(machine_spec, machine_options, instance)
+      else
+        create_ssh_transport(machine_spec, machine_options, instance)
+      end
     end
 
     def aws_credentials
@@ -463,9 +689,9 @@ module AWSDriver
                            else
                              credentials = Credentials.new
                              if driver_options[:aws_config_file]
-                               credentials.load_ini(driver_options.delete(:aws_config_file))
+                               credentials.load_ini(driver_options[:aws_config_file])
                              elsif driver_options[:aws_csv_file]
-                               credentials.load_csv(driver_options.delete(:aws_csv_file))
+                               credentials.load_csv(driver_options[:aws_csv_file])
                              else
                                credentials.load_default
                              end
@@ -473,72 +699,132 @@ module AWSDriver
                            end
     end
 
-    def default_ami_for_region(region)
+    def default_ami_arch
+      'amd64'
+    end
+
+    def default_ami_release
+      'vivid'
+    end
+
+    def default_ami_root_store
+      'ebs'
+    end
+
+    def default_ami_virtualization_type
+      'hvm'
+    end
+
+    def default_ami_for_criteria(region, arch, release, root_store, virtualization_type)
+      ami = Ubuntu.release(release).amis.find do |ami|
+        ami.arch == arch &&
+        ami.root_store == root_store &&
+        ami.region == region &&
+        ami.virtualization_type == virtualization_type
+      end
+
+      ami.name || fail("Default AMI not found")
+    end
+
+    def default_ami_for_region(region, criteria = {})
       Chef::Log.debug("Choosing default AMI for region '#{region}'")
 
-      case region
-        when 'ap-northeast-1'
-          'ami-c786dcc6'
-        when 'ap-southeast-1'
-          'ami-eefca7bc'
-        when 'ap-southeast-2'
-          'ami-996706a3'
-        when 'eu-west-1'
-          'ami-4ab46b3d'
-        when 'eu-central-1'
-          'ami-7c3c0a61'
-        when 'sa-east-1'
-          'ami-6770d87a'
-        when 'us-east-1'
-          'ami-d2ff23ba'
-        when 'us-west-1'
-          'ami-73717d36'
-        when 'us-west-2'
-          'ami-f1ce8bc1'
-        else
-          raise 'Unsupported region!'
+      arch = criteria['arch'] || default_ami_arch
+      release = criteria['release'] || default_ami_release
+      root_store = criteria['root_store'] || default_ami_root_store
+      virtualization_type = criteria['virtualization_type'] || default_ami_virtualization_type
+
+      default_ami_for_criteria(region, arch, release, root_store, virtualization_type)
+    end
+
+    def create_winrm_transport(machine_spec, machine_options, instance)
+      remote_host = determine_remote_host(machine_spec, instance)
+
+      port = machine_spec.reference['winrm_port'] || 5985
+      endpoint = "http://#{remote_host}:#{port}/wsman"
+      type = :plaintext
+      pem_bytes = get_private_key(instance.key_name)
+      encrypted_admin_password = wait_for_admin_password(machine_spec)
+
+      decoded = Base64.decode64(encrypted_admin_password)
+      private_key = OpenSSL::PKey::RSA.new(pem_bytes)
+      decrypted_password = private_key.private_decrypt decoded
+
+      winrm_options = {
+        :user => machine_spec.reference['winrm_username'] || 'Administrator',
+        :pass => decrypted_password,
+        :disable_sspi => true,
+        :basic_auth_only => true
+      }
+
+      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+    end
+
+    def wait_for_admin_password(machine_spec)
+      time_elapsed = 0
+      sleep_time = 10
+      max_wait_time = 900 # 15 minutes
+      encrypted_admin_password = nil
+      instance_id = machine_spec.reference['instance_id']
+
+      Chef::Log.info "waiting for #{machine_spec.name}'s admin password to be available..."
+      while time_elapsed < max_wait_time && encrypted_admin_password.nil?
+        response = ec2.client.get_password_data({ :instance_id => instance_id })
+        encrypted_admin_password = response['password_data'.to_sym]
+
+        if encrypted_admin_password.nil?
+          Chef::Log.info "#{time_elapsed}/#{max_wait_time}s elapsed -- sleeping #{sleep_time} for #{machine_spec.name}'s admin password."
+          sleep(sleep_time)
+          time_elapsed += sleep_time
+        end
       end
+
+      Chef::Log.info "#{machine_spec.name}'s admin password is available!"
+
+      encrypted_admin_password
     end
 
     def create_ssh_transport(machine_spec, machine_options, instance)
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
-      username = machine_spec.location['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
-      if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.location['ssh_username']
-        Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.location['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.location['ssh_username']}.  Please edit the node and change the chef_provisioning.location.ssh_username attribute if you want to change it.")
+      username = machine_spec.reference['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
+      if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.reference['ssh_username']
+        Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.reference['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.reference['ssh_username']}.  Please edit the node and change the chef_provisioning.reference.ssh_username attribute if you want to change it.")
       end
       options = {}
-      if machine_spec.location[:sudo] || (!machine_spec.location.has_key?(:sudo) && username != 'root')
+      if machine_spec.reference[:sudo] || (!machine_spec.reference.has_key?(:sudo) && username != 'root')
         options[:prefix] = 'sudo '
       end
 
-      remote_host = nil
-
-      if machine_spec.location['use_private_ip_for_ssh']
-        remote_host = instance.private_ip_address
-      elsif !instance.public_ip_address
-        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set driver option 'use_private_ip_for_ssh' => true if this will always be the case ...")
-        remote_host = instance.private_ip_address
-      elsif instance.public_ip_address
-        remote_host = instance.public_ip_address
-      else
-        raise "Server #{instance.id} has no private or public IP address!"
-      end
+      remote_host = determine_remote_host(machine_spec, instance)
 
       #Enable pty by default
       options[:ssh_pty_enable] = true
-      options[:ssh_gateway] = machine_spec.location['ssh_gateway'] if machine_spec.location.has_key?('ssh_gateway')
+      options[:ssh_gateway] = machine_spec.reference['ssh_gateway'] if machine_spec.reference.has_key?('ssh_gateway')
 
       Chef::Provisioning::Transport::SSH.new(remote_host, username, ssh_options, options, config)
     end
 
+    def determine_remote_host(machine_spec, instance)
+      if machine_spec.reference['use_private_ip_for_ssh']
+        instance.private_ip_address
+      elsif !instance.public_ip_address
+        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set driver option 'use_private_ip_for_ssh' => true if this will always be the case ...")
+        instance.private_ip_address
+      elsif instance.public_ip_address
+        instance.public_ip_address
+      else
+        raise "Server #{instance.id} has no private or public IP address!"
+      end
+    end
+
     def ssh_options_for(machine_spec, machine_options, instance)
       result = {
-# TODO create a user known hosts file
-#          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
-#          :paranoid => true,
-:auth_methods => [ 'publickey' ],
-:keys_only => true,
-:host_key_alias => "#{instance.id}.AWS"
+        # TODO create a user known hosts file
+        #          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
+        #          :paranoid => true,
+        :auth_methods => [ 'publickey' ],
+        :keys_only => true,
+        :host_key_alias => "#{instance.id}.AWS"
       }.merge(machine_options[:ssh_options] || {})
       if instance.respond_to?(:private_key) && instance.private_key
         result[:key_data] = [ instance.private_key ]
@@ -548,10 +834,10 @@ module AWSDriver
           raise "Server has key name '#{instance.key_name}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
         end
         result[:key_data] = [ key ]
-      elsif machine_spec.location['key_name']
-        key = get_private_key(machine_spec.location['key_name'])
+      elsif machine_spec.reference['key_name']
+        key = get_private_key(machine_spec.reference['key_name'])
         unless key
-          raise "Server was created with key name '#{machine_spec.location['key_name']}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
+          raise "Server was created with key name '#{machine_spec.reference['key_name']}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
         end
         result[:key_data] = [ key ]
       elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_path]
@@ -560,7 +846,7 @@ module AWSDriver
         result[:key_data] = [ get_private_key(machine_options[:bootstrap_options][:key_name]) ]
       else
         # TODO make a way to suggest other keys to try ...
-        raise "No key found to connect to #{machine_spec.name} (#{machine_spec.location.inspect})!"
+        raise "No key found to connect to #{machine_spec.name} (#{machine_spec.reference.inspect})!"
       end
       result
     end
@@ -572,11 +858,11 @@ module AWSDriver
         ohai_hints: { 'ec2' => '' })
 
       # Defaults
-      if !machine_spec.location
+      if !machine_spec.reference
         return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(convergence_options, config)
       end
 
-      if machine_spec.location['is_windows']
+      if machine_spec.reference['is_windows']
         Chef::Provisioning::ConvergenceStrategy::InstallMsi.new(convergence_options, config)
       elsif machine_options[:cached_installer] == true
         Chef::Provisioning::ConvergenceStrategy::InstallCached.new(convergence_options, config)
@@ -593,13 +879,16 @@ module AWSDriver
       image ||= image_for(image_spec)
       time_elapsed = 0
       sleep_time = 10
-      max_wait_time = 120
+      max_wait_time = 300
       if !yield(image)
         action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
-        while time_elapsed < 120 && !yield(image)
+        while time_elapsed < max_wait_time && !yield(image)
           action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
           sleep(sleep_time)
           time_elapsed += sleep_time
+        end
+        unless yield(image)
+          raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
         end
         action_handler.report_progress "Image #{image_spec.name} is now ready"
       end
@@ -617,10 +906,13 @@ module AWSDriver
       if !yield(instance)
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
-          while time_elapsed < 120 && !yield(instance)
+          while time_elapsed < max_wait_time && !yield(instance)
             action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
             sleep(sleep_time)
             time_elapsed += sleep_time
+          end
+          unless yield(instance)
+            raise "Image #{instance.id} did not become ready within #{max_wait_time} seconds"
           end
           action_handler.report_progress "#{machine_spec.name} is now ready"
         end
@@ -636,7 +928,7 @@ module AWSDriver
       unless transport.available?
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
-          while time_elapsed < 120 && !transport.available?
+          while time_elapsed < max_wait_time && !transport.available?
             action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable ..."
             sleep(sleep_time)
             time_elapsed += sleep_time
@@ -648,8 +940,8 @@ module AWSDriver
     end
 
     def default_aws_keypair_name(machine_spec)
-      if machine_spec.location &&
-          Gem::Version.new(machine_spec.location['driver_version']) < Gem::Version.new('0.10')
+      if machine_spec.reference &&
+          Gem::Version.new(machine_spec.reference['driver_version']) < Gem::Version.new('0.10')
         'metal_default'
       else
         'chef_default'
@@ -659,18 +951,14 @@ module AWSDriver
     def default_aws_keypair(action_handler, machine_spec)
       driver = self
       default_key_name = default_aws_keypair_name(machine_spec)
-      _region = region
       updated = @@chef_default_lock.synchronize do
         Provisioning.inline_resource(action_handler) do
           aws_key_pair default_key_name do
             driver driver
             allow_overwrite true
-            region_name _region
           end
         end
       end
-
-
 
       # Only warn the first time
       default_warning = 'Using default key, which is not shared between machines!  It is recommended to create an AWS key pair with the aws_key_pair resource, and set :bootstrap_options => { :key_name => <key name> }'
@@ -689,14 +977,15 @@ module AWSDriver
           if actual_instance.status == :terminated
             Chef::Log.warn "Machine #{machine_spec.name} (#{actual_instance.id}) is terminated.  Recreating ..."
           else
+            converge_tags(actual_instance, machine_options[:aws_tags], action_handler)
             yield machine_spec, actual_instance if block_given?
             next
           end
-        elsif machine_spec.location
-          Chef::Log.warn "Machine #{machine_spec.name} (#{machine_spec.location['instance_id']} on #{driver_url}) no longer exists.  Recreating ..."
+        elsif machine_spec.reference
+          Chef::Log.warn "Machine #{machine_spec.name} (#{machine_spec.reference['instance_id']} on #{driver_url}) no longer exists.  Recreating ..."
         end
 
-        bootstrap_options = machine_options[:bootstrap_options] || {}
+        bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
         by_bootstrap_options[bootstrap_options] ||= []
         by_bootstrap_options[bootstrap_options] << machine_spec
       end
@@ -718,18 +1007,20 @@ module AWSDriver
             # Assign each one to a machine spec
             machine_spec = machine_specs.pop
             machine_options = specs_and_options[machine_spec]
-            machine_spec.location = {
-              'driver_url' => driver_url,
+            machine_spec.reference = {
               'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
               'allocated_at' => Time.now.utc.to_s,
               'host_node' => action_handler.host_node,
               'image_id' => bootstrap_options[:image_id],
               'instance_id' => instance.id
             }
+            machine_spec.driver_url = driver_url
             instance.tags['Name'] = machine_spec.name
-            machine_spec.location['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+            instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
+            converge_tags(instance, machine_options[:aws_tags], action_handler)
+            machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
             %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
-              machine_spec.location[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+              machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
             end
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
 
@@ -746,12 +1037,129 @@ module AWSDriver
     def create_many_instances(num_servers, bootstrap_options, parallelizer)
       parallelizer.parallelize(1.upto(num_servers)) do |i|
         clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
-        instance = ec2.instances.create(clean_bootstrap_options)
+        instance = ec2.instances.create(clean_bootstrap_options.to_hash)
+        wait_until_taggable(instance)
 
         yield instance if block_given?
         instance
       end.to_a
     end
+
+    # TODO This is currently duplicated from AWS Provider
+    # Set the tags on the aws object to desired_tags, while ignoring any `Name` tag
+    # If no tags need to be modified, will not perform a write call on AWS
+    def converge_tags(
+      aws_object,
+      desired_tags,
+      action_handler,
+      read_tags_block=lambda {|aws_object| aws_object.tags.to_h},
+      set_tags_block=lambda {|aws_object, desired_tags| aws_object.tags.set(desired_tags) },
+      delete_tags_block=lambda {|aws_object, tags_to_delete| aws_object.tags.delete(*tags_to_delete) }
+    )
+      # If aws_tags were not provided we exit
+      if desired_tags.nil?
+        Chef::Log.debug "aws_tags not provided, nothing to converge"
+        return
+      end
+      current_tags = read_tags_block.call(aws_object)
+      # AWS always returns tags as strings, and we don't want to overwrite a
+      # tag-as-string with the same tag-as-symbol
+      desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
+      tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
+      tags_to_delete = current_tags.keys - desired_tags.keys
+      # We don't want to delete `Name`, just all other tags
+      tags_to_delete.delete('Name')
+
+      unless tags_to_update.empty?
+        action_handler.perform_action "applying tags #{tags_to_update}" do
+          set_tags_block.call(aws_object, tags_to_update)
+        end
+      end
+      unless tags_to_delete.empty?
+        action_handler.perform_action "deleting tags #{tags_to_delete.inspect}" do
+          delete_tags_block.call(aws_object, tags_to_delete)
+        end
+      end
+    end
+
+    def wait_until_taggable(instance)
+      Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
+        raise TimeoutError unless instance.status == :pending || instance.status == :running
+      end
+    end
+
+    def get_listeners(listeners)
+      case listeners
+      when Hash
+        listeners.map do |from, to|
+          from = get_listener(from)
+          from.delete(:instance_port)
+          from.delete(:instance_protocol)
+          to = get_listener(to)
+          to.delete(:port)
+          to.delete(:protocol)
+          to.merge(from)
+        end
+      when Array
+        listeners.map { |listener| get_listener(listener) }
+      when nil
+        nil
+      else
+        [ get_listener(listeners) ]
+      end
+    end
+
+    def get_listener(listener)
+      result = {}
+
+      case listener
+      when Hash
+        result.merge!(listener)
+      when Array
+        result[:port] = listener[0] if listener.size >= 1
+        result[:protocol] = listener[1] if listener.size >= 2
+      when Symbol,String
+        result[:protocol] = listener
+      when Integer
+        result[:port] = listener
+      else
+        raise "Invalid listener #{listener}"
+      end
+
+      # If either port or protocol are set, set the other
+      if result[:port] && !result[:protocol]
+        result[:protocol] = PROTOCOL_DEFAULTS[result[:port]]
+      elsif result[:protocol] && !result[:port]
+        result[:port] = PORT_DEFAULTS[result[:protocol]]
+      end
+      if result[:instance_port] && !result[:instance_protocol]
+        result[:instance_protocol] = PROTOCOL_DEFAULTS[result[:instance_port]]
+      elsif result[:instance_protocol] && !result[:instance_port]
+        result[:instance_port] = PORT_DEFAULTS[result[:instance_protocol]]
+      end
+
+      # If instance_port is still unset, copy port/protocol over
+      result[:instance_port] ||= result[:port]
+      result[:instance_protocol] ||= result[:protocol]
+
+      result
+    end
+
+    def default_instance_type
+      't2.micro'
+    end
+
+    PORT_DEFAULTS = {
+      :http => 80,
+      :https => 443,
+    }
+    PROTOCOL_DEFAULTS = {
+      25 => :tcp,
+      80 => :http,
+      443 => :https,
+      465 => :ssl,
+      587 => :tcp,
+    }
 
   end
 end

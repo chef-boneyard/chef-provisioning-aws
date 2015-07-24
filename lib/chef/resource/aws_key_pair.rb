@@ -1,18 +1,8 @@
-require 'chef/provisioning'
-require 'chef/resource/aws_resource'
+require 'chef/provisioning/aws_driver/aws_resource'
 
-class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
-  self.resource_name = 'aws_key_pair'
+class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
+  aws_sdk_type AWS::EC2::KeyPair, id: :name
 
-  def initialize(*args)
-    super
-    @driver = run_context.chef_provisioning.current_driver
-  end
-
-  actions :create, :delete, :nothing
-  default_action :create
-
-  attribute :driver
   # Private key to use as input (will be generated if it does not exist)
   attribute :private_key_path, :kind_of => String
   # Public key to use as input (will be generated if it does not exist)
@@ -23,8 +13,8 @@ class Chef::Resource::AwsKeyPair < Chef::Resource::AwsResource
   # TODO what is the right default for this?
   attribute :allow_overwrite, :kind_of => [TrueClass, FalseClass], :default => false
 
-  # Proc that runs after the resource completes.  Called with (resource, private_key, public_key)
-  def after(&block)
-    block ? @after = block : @after
+  def aws_object
+    result = driver.ec2.key_pairs[name]
+    result && result.exists? ? result : nil
   end
 end

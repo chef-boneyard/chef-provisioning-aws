@@ -1,81 +1,74 @@
-require 'chef/provider/aws_provider'
+require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
-class Chef::Provider::AwsS3Bucket < Chef::Provider::AwsProvider
-  action :create do
-    if existing_bucket == nil
-      converge_by "Creating new S3 bucket #{fqn}" do
-        bucket = s3.buckets.create(fqn)
-        bucket.tags['Name'] = new_resource.name
-      end
-    end
-    
-    if modifies_website_configuration?
-      if new_resource.enable_website_hosting
-        converge_by "Setting website configuration for bucket #{fqn}" do
-          existing_bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
+class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
+  def action_create
+    bucket = super
+
+    if new_resource.enable_website_hosting
+      if !bucket.website?
+        converge_by "Enabling website configuration for bucket #{new_resource.name}" do
+          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
-      else
-        converge_by "Disabling website configuration for bucket #{fqn}" do
-          existing_bucket.website_configuration = nil
+      elsif modifies_website_configuration?(bucket)
+        converge_by "Reconfiguring website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
+          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
+            new_resource.website_options)
+        end
+      end
+    else
+      if bucket.website?
+        converge_by "Disabling website configuration for bucket #{new_resource.name}" do
+          bucket.website_configuration = nil
         end
       end
     end
-    new_resource.endpoint "#{fqn}.s3-website-#{s3_website_endpoint_region}.amazonaws.com"
-    new_resource.save
   end
 
-  action :delete do
-    if existing_bucket
-      converge_by "Deleting S3 bucket #{fqn}" do
-        existing_bucket.delete
-      end
+  protected
+
+  def create_aws_object
+    converge_by "create new S3 bucket #{new_resource.name}" do
+      bucket = new_resource.driver.s3.buckets.create(new_resource.name)
+      bucket.tags['Name'] = new_resource.name
+      bucket
     end
-
-    new_resource.delete
   end
 
-  def existing_bucket
-    Chef::Log.debug("Checking for S3 bucket #{fqn}")
-    @existing_bucket ||= s3.buckets[fqn] if s3.buckets[fqn].exists?
+  def update_aws_object(bucket)
   end
 
-  def modifies_website_configuration?
+  def destroy_aws_object(bucket)
+    converge_by "delete S3 bucket #{new_resource.name}" do
+      bucket.delete
+    end
+  end
+
+  private
+
+  def modifies_website_configuration?(aws_object)
     # This is incomplete, routing rules have many optional values, so its
     # possible aws will put in default values for those which won't be in
     # the requested config.
-    new_web_config = new_resource.website_options
-    current_web_config = current_website_configuration
+    new_web_config = new_resource.website_options || {}
 
-    !!existing_bucket.website_configuration != new_resource.enable_website_hosting || 
-      (current_web_config[:index_document] != new_web_config.fetch(:index_document, {}) ||
-      current_web_config[:error_document] != new_web_config.fetch(:error_document, {}) ||
-      current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, []))
-  end
+    current_web_config = (aws_object.website_configuration || {}).to_hash
 
-  def current_website_configuration
-    if existing_bucket.website_configuration
-      existing_bucket.website_configuration.to_hash
-    else
-      {}
-    end
+    (current_web_config[:index_document] != new_web_config.fetch(:index_document, {}) ||
+    current_web_config[:error_document] != new_web_config.fetch(:error_document, {}) ||
+    current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, []))
   end
 
   def s3_website_endpoint_region
     # ¯\_(ツ)_/¯
-    case existing_bucket.location_constraint
+    case aws_object.location_constraint
     when nil, 'US'
       'us-east-1'
     when 'EU'
       'eu-west-1'
     else
-      existing_bucket.location_constraint
+      aws_object.location_constraint
     end
-  end
-
-  # Fully qualified bucket name (i.e resource_region unless otherwise specified)
-  def id
-    new_resource.bucket_name || new_resource.name
   end
 end

@@ -276,7 +276,7 @@ class AWSProvider < Chef::Provider::LWRPBase
     expected_status = [expected_status].flatten
     current_status = aws_object.status
 
-    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
+    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
       action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} status to change to #{expected_status.inspect}..."
       begin
         current_status = aws_object.status
@@ -301,7 +301,7 @@ class AWSProvider < Chef::Provider::LWRPBase
     expected_states = [expected_states].flatten
     current_state = aws_object.state
 
-    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
+    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
       action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_states.inspect}..."
       begin
         current_state = aws_object.state

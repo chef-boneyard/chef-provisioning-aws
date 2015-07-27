@@ -165,7 +165,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       if !current_ig
         converge_by "attach new Internet Gateway to VPC #{vpc.id}" do
           current_ig = AWS.ec2(config: vpc.config).internet_gateways.create
-          Retryable.retryable(:tries => 15, :sleep => 1, :matching => /never obtained existence/) do
+          Retryable.retryable(:tries => 15, :sleep => lambda { |n| 2**n }, :matching => /never obtained existence/) do
             raise "internet gateway for VPC #{vpc.id} never obtained existence" unless current_ig.exists?
           end
           action_handler.report_progress "create Internet Gateway #{current_ig.id}"

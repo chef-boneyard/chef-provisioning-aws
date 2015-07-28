@@ -109,9 +109,29 @@ configure the machine.  These are all the available options:
 ```ruby
 with_machine_options({
   bootstrap_options: {
-    key_name: 'ref-key-pair',
+    # http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Resource.html#create_instances-instance_method
+    # lists the available options.  The below options are the default
+    image_id: "ami-5915e11d", # default for us-west-1
+    instance_type: "t2.micro",
+    key_name: "chef_default", # If not specified, this will be used and generated
+    key_path: "~/.chef/keys/chef_default", # only necessary if storing keys some other location
+    user_data: "...", # Only defaulted on Windows instances to start winrm
+  },
+  convergence_options: {
+    chef_version: "12.4.1",
     ...
   },
+  ssh_options: {
+    ...
+  },
+  cached_installer: false, # ???
+  aws_tags: { :key1 => "value", "key2" => "value"},
+  source_dest_check: false, # Specifies whether to enable an instance launched in a VPC to perform NAT
+  is_windows: false, # set to true if using a Windows AMI
+  ssh_username: "ubuntu",
+  ssh_gateway: "localhost"
+  sudo: true,
+  use_private_ip_for_ssh: false, # If set to true, we will access the instance with its private_ip (usually requires VPN access)
   ...
 })
 ```

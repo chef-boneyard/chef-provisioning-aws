@@ -313,5 +313,12 @@ class AWSProvider < Chef::Provider::LWRPBase
     end
   end
 
+  # Retry a block with an doubling backoff time (maximum wait of 10 seconds).
+  # @param retry_on [Exception] An exception to retry on, defaults to RuntimeError
+  #
+  def retry_with_backoff(retry_on = RuntimeError, &block)
+    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 10].min }, :on => retry_on, &block)
+  end
+
 end
 end

@@ -32,8 +32,10 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create new subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
       subnet = new_resource.driver.ec2.subnets.create(cidr_block, options)
-      subnet.tags['Name'] = new_resource.name
-      subnet.tags['VPC'] = new_resource.vpc
+      retry_with_backoff(AWS::EC2::Errors::InvalidSubnetID::NotFound) do
+        subnet.tags['Name'] = new_resource.name
+        subnet.tags['VPC'] = new_resource.vpc
+      end
       subnet
     end
   end

@@ -23,7 +23,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = new_resource.driver.ec2.route_tables.create(options)
-      Retryable.retryable(:tries => 15, :sleep => 1, :on => AWS::EC2::Errors::InvalidRouteTableID::NotFound) do
+      retry_with_backoff(AWS::EC2::Errors::InvalidRouteTableID::NotFound) do
         route_table.tags['Name'] = new_resource.name
       end
       route_table

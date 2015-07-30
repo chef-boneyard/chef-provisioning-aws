@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 (TBD)
+
+- Deprecated the machine_option `use_private_ip_for_ssh`.  Replaced it with `transport_address_location` which can have an option
+  of `:public_ip`, `:private_ip` or `:dns`.  Existing ManagedEntry references will be converted and the old value will be ignored
+  if the new value is present.
+
 ## 1.3.1 (8/5/2015)
 
 - Exponentially backoff when trying to tag resources ([#263][], [@tyler-ball][])

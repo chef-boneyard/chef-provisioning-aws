@@ -154,7 +154,8 @@ with_machine_options({
   ssh_username: "ubuntu",
   ssh_gateway: "localhost"
   sudo: true,
-  use_private_ip_for_ssh: false, # If set to true, we will access the instance with its private_ip (usually requires VPN access)
+  use_private_ip_for_ssh: false, # DEPRECATED, use `transport_address_location`
+  transport_address_location: :public_ip, # `:public_ip` (default), `:private_ip` or `:dns`.  Defines how SSH or WinRM should find an address to communicate with the instance.
   ...
 })
 ```

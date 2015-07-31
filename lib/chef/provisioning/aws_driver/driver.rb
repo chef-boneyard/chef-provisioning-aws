@@ -626,7 +626,7 @@ EOD
 
       if machine_options[:is_windows]
         Chef::Log.debug "Setting WinRM userdata..."
-        bootstrap_options[:user_data] = user_data
+        bootstrap_options[:user_data] = user_data if bootstrap_options[:user_data].nil?
       else
         Chef::Log.debug "Non-windows, not setting userdata"
       end

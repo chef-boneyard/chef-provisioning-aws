@@ -81,12 +81,27 @@ end
 
 aws_subnet 'ref-subnet' do
   vpc 'ref-vpc'
-  cidr_block '10.0.0.0/24'
+  cidr_block '10.0.0.0/26'
   availability_zone 'us-west-1a'
   map_public_ip_on_launch true
   route_table 'ref-public'
   aws_tags :chef_type => "aws_subnet"
   network_acl 'ref-acl'
+end
+
+aws_subnet 'ref-subnet-2' do
+  vpc 'ref-vpc'
+  cidr_block '10.0.0.64/26'
+  availability_zone 'us-west-1b'
+  map_public_ip_on_launch true
+  route_table 'ref-public'
+  aws_tags :chef_type => "aws_subnet"
+  network_acl 'ref-acl'
+end
+
+aws_rds_subnet_group "ref-db-subnet-group" do
+  db_subnet_group_description "some_description"
+  subnets ['ref-subnet', ref_subnet_2.aws_object.id]
 end
 
 # We cover tagging the base chef-provisioning resources in aws_tags.rb

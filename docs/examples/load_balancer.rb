@@ -57,7 +57,7 @@ load_balancer "test-elb" do
           }],
           scheme: "internal",
           subnets: "subnet-1234567",
-          security_groups:"test-sg"
+          security_groups: "test-sg"
        }
       end
     )

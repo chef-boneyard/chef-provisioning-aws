@@ -254,7 +254,8 @@ module AWSDriver
                   listener.delete
                   actual_elb.listeners.create(desired_listener)
                 end
-              elsif listener.server_certificate != desired_listener[:server_certificate]
+              elsif ! server_certificate_eql?(listener.server_certificate,
+                                              server_cert_from_spec(desired_listener))
                 # Server certificate is mutable - if no immutable changes required a full recreate, update cert
                 perform_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}") do
                   listener.server_certificate = desired_listener[:server_certificate]
@@ -357,6 +358,34 @@ module AWSDriver
       unless old_elb.nil?
         Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.name} and #{actual_elb.name}. " +
         "Determine which is correct and manually clean up the other.")
+      end
+    end
+
+    # Compare two server certificates by casting them both to strings.
+    #
+    # The parameters should either be a String containing the
+    # certificate ARN, or a IAM::ServerCertificate object.
+    def server_certificate_eql?(cert1, cert2)
+      server_cert_to_string(cert1) == server_cert_to_string(cert2)
+    end
+
+    def server_cert_to_string(cert)
+      if cert.respond_to?(:arn)
+        cert.arn
+      else
+        cert
+      end
+    end
+
+    # Retreive the server certificate from a listener spec, prefering
+    # the server_certificate key.
+    def server_cert_from_spec(spec)
+      if spec[:server_certificate]
+        spec[:server_certificate]
+      elsif spec[:ssl_certificate_id]
+        spec[:ssl_certificate_id]
+      else
+        nil
       end
     end
 

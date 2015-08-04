@@ -119,7 +119,30 @@ with_machine_options({
   },
   convergence_options: {
     chef_version: "12.4.1",
-    ...
+    prerelease: "false",
+    chef_client_timeout: 120*60, # Default: 2 hours
+    chef_config: "log_level :debug\\n", # String containing additional text to inject into client.rb
+    chef_server: "http://my.chef.server/", # TODO could conflict with https://github.com/chef/chef-provisioning#pointing-boxes-at-chef-servers
+    bootstrap_proxy: "http://localhost:1234",
+    ssl_verify_mode: :verify_peer,
+    client_rb_path: "/etc/chef/client.rb", # <- DEFAULT, overwrite if necessary
+    client_pem_path: "/etc/chef/client.pem", # <- DEFAULT, overwrite if necessary
+    allow_overwrite_keys: false, # If there is an existing client.pem this needs to be true to overwrite it
+    private_key_options: {}, # TODO ????? Something to do with creating node object
+    source_key: "", # ?????
+    source_key_pass_phrase: "", # ?????
+    source_key_path: "", # ?????
+    public_key_path: "", # ?????
+    public_key_format: "", # ?????
+    admin: "", # ?????
+    validator: "", # ?????
+    ohai_hints: { :ec2 => { :key => :value } }, # Map from hint file name to file contents, this would create /etc/chef/ohai/hints/ec2.json
+    # The following are only available for Linux machines
+    install_sh_url: "https://www.chef.io/chef/install.sh", # <- DEFAULT, overwrite if necessary
+    install_sh_path: "/tmp/chef-install.sh", # <- DEFAULT, overwrite if necessary
+    install_sh_arguments: "-P chef-dk", # Additional commands to pass to install.sh
+    # The following are only available for Windows machines
+    install_msi_url: "foo://bar.com"
   },
   ssh_options: {
     ...

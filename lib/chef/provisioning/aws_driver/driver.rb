@@ -362,6 +362,9 @@ module AWSDriver
     end
 
     # Compare two server certificates by casting them both to strings.
+    #
+    # The parameters should either be a String containing the
+    # certificate ARN, or a IAM::ServerCertificate object.
     def server_certificate_eql?(cert1, cert2)
       server_cert_to_string(cert1) == server_cert_to_string(cert2)
     end

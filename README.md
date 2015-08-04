@@ -139,6 +139,43 @@ with_machine_options({
 This options hash can be supplied to either `with_machine_options` or directly into the `machine_options`
 attribute.
 
+# Load Balancer Options
+
+You can configure the ELB options by setting `with_load_balancer_options` or specifying them on each `load_balancer` resource.
+
+```ruby
+machine 'test1'
+m2 = machine 'test2'
+load_balancer "my_elb" do
+  machines ['test1', m2]
+  load_balancer_options({
+    subnets: subnets,
+    security_groups: [load_balancer_sg],
+    listeners: [
+      {
+          instance_port: 8080,
+          protocol: 'HTTP',
+          instance_protocol: 'HTTP',
+          port: 80
+      },
+      {
+          instance_port: 8080,
+          protocol: 'HTTPS',
+          instance_protocol: 'HTTP',
+          port: 443,
+          ssl_certificate_id: "arn:aws:iam::360965486607:server-certificate/cloudfront/foreflight-2015-07-09"
+      }
+    ]
+  })
+```
+
+The available parameters for `load_balancer_options` can be viewed at http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method .
+
+NOTES:
+
+1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
+2. Instead of specifying `tags` in the `load_balancer_options`, you should specify `aws_tags`.  See the note on [tagging base resources](https://github.com/chef/chef-provisioning-aws#base-resources).
+
 # Specifying a Chef Server
 
 See [Pointing Boxes at Chef Servers](https://github.com/chef/chef-provisioning/blob/master/README.md#pointing-boxes-at-chef-servers)

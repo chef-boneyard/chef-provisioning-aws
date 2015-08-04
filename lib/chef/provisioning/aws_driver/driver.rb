@@ -554,6 +554,10 @@ EOD
       @s3 ||= AWS::S3.new(config: aws_config)
     end
 
+    def rds
+      @rds ||= AWS::RDS.new(config: aws_config)
+    end
+
     def sns
       @sns ||= AWS::SNS.new(config: aws_config)
     end

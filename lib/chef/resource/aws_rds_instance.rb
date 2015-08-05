@@ -2,7 +2,7 @@ require 'chef/provisioning/aws_driver/aws_resource'
 
 
 class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::RDS::DBInstance
+  aws_sdk_type AWS::RDS::DBInstance, id: :db_instance_identifier
 
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
 
@@ -17,6 +17,8 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResourc
   attribute :master_user_password, kind_of: String
   attribute :db_name, kind_of: String
   attribute :db_port, kind_of: Integer
+
+  attribute :aws_tags, kind_of: Hash
 
   # RDS has a ton of options, allow users to set any of them via a
   # custom Hash

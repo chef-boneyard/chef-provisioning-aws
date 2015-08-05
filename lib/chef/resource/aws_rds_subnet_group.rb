@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/resource/aws_subnet'
 
-class Chef::Resource::AwsDbSubnetGroup < Chef::Provisioning::AWSDriver::AWSResource
+class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::RDS
 
   attribute :db_subnet_group_name, kind_of: String, name_attribute: true

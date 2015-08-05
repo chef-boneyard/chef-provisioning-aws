@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'aws'
 
-describe Chef::Resource::AwsDbSubnetGroup do
+describe Chef::Resource::AwsRdsSubnetGroup do
   extend AWSSupport
 
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
@@ -15,13 +15,13 @@ describe Chef::Resource::AwsDbSubnetGroup do
       end
       az_1 = azs[0].name
       az_2 = azs[1].name
-      
+
       aws_vpc "test_vpc" do
         cidr_block '10.0.0.0/24'
         internet_gateway true
       end
 
-      subnet1 = aws_subnet "test_subnet" do
+      aws_subnet "test_subnet" do
         vpc 'test_vpc'
         cidr_block "10.0.0.0/26"
         availability_zone az_1
@@ -35,7 +35,7 @@ describe Chef::Resource::AwsDbSubnetGroup do
 
       it "creates a database subnet group containing multiple subnets" do
         expect_recipe {
-          aws_db_subnet_group "test-db-subnet-group" do
+          aws_rds_subnet_group "test-db-subnet-group" do
             db_subnet_group_description "some_description"
             subnet_ids [test_subnet.aws_object.id, test_subnet_2.aws_object.id]
           end
@@ -51,7 +51,7 @@ describe Chef::Resource::AwsDbSubnetGroup do
                                               ]
                                              ).and be_idempotent
       end
-      
+
     end
   end
 end

@@ -1,15 +1,15 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
-class Chef::Provider::AwsDbSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
+class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
-    converge_by "create new DB Subnet Group #{new_resource.name} in #{region}"do
+    converge_by "create new RDS Subnet Group #{new_resource.name} in #{region}"do
       driver.create_db_subnet_group(desired_options)
     end
   end
 
   def destroy_aws_object(object)
-    converge_by "delete DB Subnet Group #{new_resource.name} in #{region}" do
+    converge_by "delete RDS Subnet Group #{new_resource.name} in #{region}" do
       driver.delete_db_subnet_group(db_subnet_group_name: new_resource.db_subnet_group_name)
     end
   end
@@ -44,18 +44,16 @@ class Chef::Provider::AwsDbSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvi
     end
 
     if ! xor_array(desired_options[:subnet_ids], subnet_ids(object[:subnets])).empty?
-      pp desired_options[:subnet_ids]
-      pp object[:subnets]
       ret << "  set subnets to #{desired_options[:subnet_ids]}"
     end
 
-    if ! (desired_options[:tags].nil? || desired_options[:tags].empty?)
+    if ! (desired_options[:aws_tags].nil? || desired_options[:aws_tags].empty?)
       # modify_db_subnet_group doesn't support the tags key according to
       # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#modify_db_subnet_group-instance_method
-      Chef::Log.warn "Updating tags for DB subnet groups is not supported."
+      Chef::Log.warn "Updating tags for RDS subnet groups is not supported."
     end
 
-    ret.unshift("update DB Subnet Group #{new_resource.name} in #{region}") unless ret.empty?
+    ret.unshift("update RDS Subnet Group #{new_resource.name} in #{region}") unless ret.empty?
     ret
   end
 

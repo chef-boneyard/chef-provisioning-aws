@@ -23,6 +23,7 @@ module AWSSupport
   require 'aws'
   require 'aws_support/deep_matcher/matchable_object'
   require 'aws_support/deep_matcher/matchable_array'
+
   DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^AWS::(EC2|ELB|IAM|S3|RDS|CloudSearch)($|::)/ }
   DeepMatcher::MatchableArray.matchable_classes  << AWS::Core::Data::List
 

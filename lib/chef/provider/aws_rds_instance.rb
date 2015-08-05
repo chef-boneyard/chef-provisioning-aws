@@ -24,12 +24,26 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
 
   def create_options
     opts = {}
+    opts.merge(new_resource.additional_options)
     REQUIRED_OPTIONS.each do |opt|
       opts[opt] = new_resource.send(opt.to_sym)
     end
     OTHER_OPTIONS.each do |opt|
       opts[opt] = new_resource.send(opt.to_sym) if ! new_resource.send(opt.to_sym).nil?
     end
-    opts.merge(new_resource.additional_options)
+    opts[:tags] = hash_to_tag_array(new_resource.aws_tags) if new_resource.aws_tags
+    opts
+  end
+
+  private
+
+  # To be in line with the other resources. The aws_tags property
+  # takes a hash.  But we actually need an array.
+  def tag_hash_to_array(tag_hash)
+    ret = []
+    tag_hash.each do |key, value|
+      ret << {:key => key, :value => value}
+    end
+    ret
   end
 end

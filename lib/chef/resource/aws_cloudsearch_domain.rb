@@ -41,6 +41,6 @@ class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSR
   # objects in the version of the AWS API we are using.  This will
   # return a hash with some relevant information about the domain.
   def aws_object
-    driver.cloudsearch.describe_domains[:domain_status_list].find {|d| d[:domain_name] == name && !d[:deleted]}
+    driver.cloudsearch.describe_domains(domain_names: [name])[:domain_status_list].find {|d| !d[:deleted] }
   end
 end

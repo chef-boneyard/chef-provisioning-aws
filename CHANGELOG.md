@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 (8/5/2015)
+
+- Exponentially backoff when trying to tag resources ([#263][], [@tyler-ball][])
+- Only apply default `user_data` in Windows if it has not been set by the user ([#270][], [@brumschlag][])
+- Fix load balancer SSL certificates ([#275][], [@stevendanna][])
+
 ## 1.3.0 (7/17/2015)
 
 - Adding support for Elasticache ([#212][])
@@ -160,8 +166,12 @@ end
 [#245]: https://github.com/chef/chef-provisioning-aws/issues/245
 [#248]: https://github.com/chef/chef-provisioning-aws/issues/248
 [#250]: https://github.com/chef/chef-provisioning-aws/issues/250
+[#263]: https://github.com/chef/chef-provisioning-aws/issues/263
+[#270]: https://github.com/chef/chef-provisioning-aws/issues/270
+[#275]: https://github.com/chef/chef-provisioning-aws/issues/275
 [@afiune]: https://github.com/afiune
 [@bbbco]: https://github.com/bbbco
+[@brumschlag]: https://github.com/brumschlag
 [@christinedraper]: https://github.com/christinedraper
 [@dblessing]: https://github.com/dblessing
 [@erikvanbrakel]: https://github.com/erikvanbrakel
@@ -173,4 +183,5 @@ end
 [@msonnabaum]: https://github.com/msonnabaum
 [@patrick-wright]: https://github.com/patrick-wright
 [@schisamo]: https://github.com/schisamo
+[@stevendanna]: https://github.com/stevendanna
 [@tyler-ball]: https://github.com/tyler-ball

@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'aws'
+require 'set'
 
 describe Chef::Resource::AwsRdsSubnetGroup do
   extend AWSSupport
@@ -39,17 +40,15 @@ describe Chef::Resource::AwsRdsSubnetGroup do
             db_subnet_group_description "some_description"
             subnet_ids [test_subnet.aws_object.id, test_subnet_2.aws_object.id]
           end
-        }.to create_an_aws_db_subnet_group("test-db-subnet-group",
+        }.to create_an_aws_rds_subnet_group("test-db-subnet-group",
                                               :db_subnet_group_description => "some_description",
-                                              :subnets => [
-                                                           {:subnet_status => "Active",
-                                                            :subnet_identifier => test_subnet_2.aws_object.id,
-                                                            :subnet_availability_zone => {:name => az_2}},
-                                                           {:subnet_status => "Active",
-                                                            :subnet_identifier => test_subnet.aws_object.id,
-                                                            :subnet_availability_zone => {:name => az_1}}
-                                              ]
-                                             ).and be_idempotent
+                                              :subnets => Set.new([ {:subnet_status => "Active",
+                                                                     :subnet_identifier => test_subnet_2.aws_object.id,
+                                                                     :subnet_availability_zone => {:name => az_2}},
+                                                                    {:subnet_status => "Active",
+                                                                     :subnet_identifier => test_subnet.aws_object.id,
+                                                                     :subnet_availability_zone => {:name => az_1}}])
+                                           ).and be_idempotent
       end
 
     end

@@ -17,6 +17,7 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResourc
   attribute :master_user_password, kind_of: String
   attribute :db_name, kind_of: String
   attribute :db_port, kind_of: Integer
+  attribute :db_subnet_group_name, kind_of: String
 
   attribute :aws_tags, kind_of: Hash
 

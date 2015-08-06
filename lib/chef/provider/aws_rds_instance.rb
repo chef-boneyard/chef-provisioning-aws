@@ -4,7 +4,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   REQUIRED_OPTIONS = %w(db_instance_identifier allocated_storage engine
                         db_instance_class master_username master_user_password)
 
-  OTHER_OPTIONS = %w(engine_version multi_az iops publicly_accessible db_name db_port)
+  OTHER_OPTIONS = %w(engine_version multi_az iops publicly_accessible db_name db_port db_subnet_group_name)
 
   def update_aws_object(instance)
     Chef::Log.warn("aws_rds_instance does not support modifying a started instance")

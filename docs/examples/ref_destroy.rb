@@ -95,3 +95,7 @@ end
 aws_dhcp_options 'ref-dhcp-options' do
   action :destroy
 end
+
+aws_server_certificate "ref-server-certificate" do
+  action :destroy
+end

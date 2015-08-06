@@ -192,12 +192,41 @@ load_balancer "my_elb" do
   })
 ```
 
-The available parameters for `load_balancer_options` can be viewed at http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method .
+The available parameters for `load_balancer_options` can be viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method).
 
 NOTES:
 
 1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
 2. Instead of specifying `tags` in the `load_balancer_options`, you should specify `aws_tags`.  See the note on [tagging base resources](https://github.com/chef/chef-provisioning-aws#base-resources).
+
+# RDS Instance Options
+
+### Additional Options
+
+RDS instances have many options. Some of them live as first class attributes. Any valid RDS option that is not a first class attribute can still be set via a hash in `additional_options`.
+*If you set an attribute and also specify it in `additional_options`, the resource will chose the attribute and not what is specified in `additional_options`.*
+
+To illustrate, note that the following example defines `multi_az` as both an attribute and in the `additional_options` hash:
+
+```
+aws_rds_instance "test-rds-instance2" do
+  engine "postgres"
+  publicly_accessible false
+  db_instance_class "db.t1.micro"
+  master_username "thechief"
+  master_user_password "securesecure"
+  multi_az false
+  additional_options(multi_az: true)
+end
+```
+
+The above would result in a new `aws_rds_instance` with `multi_az` being `false`.
+
+Additional values for `additional_options` can view viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#create_db_instance-instance_method).
+
+### Specifying a DB Subnet Group for your RDS Instance
+
+See [this example](docs/examples/aws_rds_subnet_group.rb) for how to set up a DB Subnet Group and pass it to your RDS Instance.
 
 # Specifying a Chef Server
 

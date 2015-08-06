@@ -55,6 +55,14 @@ aws_subnet 'ref-subnet' do
   action :destroy
 end
 
+aws_subnet 'ref-subnet-2' do
+  action :destroy
+end
+
+aws_rds_subnet_group "ref-db-subnet-group" do
+  action :destroy
+end
+
 aws_route_table 'ref-public' do
   action :destroy
 end

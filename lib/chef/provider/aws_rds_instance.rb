@@ -31,7 +31,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
       instance.delete(skip_final_snapshot: true)
     end
     # Wait up to 10 minutes for the db instance to shutdown
-    converge_by "waited until instance #{new_resource} is :terminated" do
+    converge_by "waited until RDS instance #{new_resource.name} was deleted" do
       wait_for(
         aws_object: instance,
         query_method: :exists?,

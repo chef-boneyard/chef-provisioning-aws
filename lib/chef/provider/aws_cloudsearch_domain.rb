@@ -15,6 +15,8 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     converge_by "Deleting CloudSearch domain #{new_resource.name}" do
       cs_client.delete_domain(domain_name: new_resource.name)
     end
+    # CloudSearch can take over 30 minutes to delete so im not adding a waiter
+    # for now
   end
 
   def update_aws_object(domain)

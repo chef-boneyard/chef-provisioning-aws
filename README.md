@@ -26,7 +26,7 @@ You can specify an existing key pair to upload by specifying the following:
 aws_key_pair 'my-aws-key' do
   private_key_path "~boiardi/.ssh/my-aws-key.pem"
   public_key_path "~boiardi/.ssh/my-aws-key.pub"
-  overwrite false # Set to true if you want to regenerate this each chef run
+  allow_overwrite false # Set to true if you want to regenerate this each chef run
 end
 ```
 

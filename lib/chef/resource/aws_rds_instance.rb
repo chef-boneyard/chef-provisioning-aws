@@ -10,16 +10,20 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResourc
   attribute :engine_version, kind_of: String
   attribute :db_instance_class, kind_of: String
   attribute :multi_az, default: false, kind_of: [TrueClass, FalseClass]
-  attribute :allocated_storage, kind_of: Integer, default: 5
+  attribute :allocated_storage, kind_of: Integer
   attribute :iops, kind_of: Integer
   attribute :publicly_accessible, kind_of: [TrueClass, FalseClass], default: false
   attribute :master_username, kind_of: String
   attribute :master_user_password, kind_of: String
   attribute :db_name, kind_of: String
-  attribute :db_port, kind_of: Integer
+  attribute :port, kind_of: Integer
+  # We cannot pass the resource or an AWS object because there is no AWS model
+  # and that causes lookup_options to fail
   attribute :db_subnet_group_name, kind_of: String
 
-  attribute :aws_tags, kind_of: Hash
+  # aws_tags are going to fail for now because there isn't an AWS objects
+  # we can call `.tags` on
+  # attribute :aws_tags, kind_of: Hash
 
   # RDS has a ton of options, allow users to set any of them via a
   # custom Hash

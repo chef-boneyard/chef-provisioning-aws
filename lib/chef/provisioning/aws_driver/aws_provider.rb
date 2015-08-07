@@ -263,50 +263,53 @@ class AWSProvider < Chef::Provider::LWRPBase
     end
   end
 
-  # Wait until aws_object obtains one of expected_status
-  #
-  # @param aws_object Aws SDK Object to check status on
-  # @param expected_status [Symbol,Array<Symbol>] Final status(s) to look for
-  # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
-  # @param tries [Integer] Number of times to check status
-  # @param sleep [Integer] Time to wait between checking status
-  #
   def wait_for_status(aws_object, expected_status, acceptable_errors = [], tries=60, sleep=5)
-    acceptable_errors = [acceptable_errors].flatten
-    expected_status = [expected_status].flatten
-    current_status = aws_object.status
-
-    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} status to change to #{expected_status.inspect}..."
-      begin
-        current_status = aws_object.status
-        unless expected_status.include?(current_status)
-          raise StatusTimeoutError.new(aws_object, current_status, expected_status)
-        end
-      rescue *acceptable_errors
-      end
-    end
+    wait_for(
+      aws_object: aws_object,
+      query_method: :status,
+      expected_responses: expected_status,
+      acceptable_errors: acceptable_errors,
+      tries: tries,
+      sleep: sleep
+    )
   end
 
-  # Wait until aws_object obtains one of expected_state
+  def wait_for_state(aws_object, expected_states, acceptable_errors = [], tries=60, sleep=5)
+    wait_for(
+      aws_object: aws_object,
+      query_method: :state,
+      expected_responses: expected_states,
+      acceptable_errors: acceptable_errors,
+      tries: tries,
+      sleep: sleep
+    )
+  end
+
+  # Wait until aws_object obtains one of expected_responses
   #
   # @param aws_object Aws SDK Object to check state on
-  # @param expected_state [Symbol,Array<Symbol>] Final state(s) to look for
+  # @param query_method Method to call on aws_object to get current state
+  # @param expected_responses [Symbol,Array<Symbol>] Final state(s) to look for
   # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
-  # @param tries [Integer] Number of times to check state
-  # @param sleep [Integer] Time to wait between checking states
+  # @param tries [Integer] Number of times to check state, defaults to 60
+  # @param sleep [Integer] Time to wait between checking states, defaults to 5
   #
-  def wait_for_state(aws_object, expected_states, acceptable_errors = [], tries=60, sleep=5)
-    acceptable_errors = [acceptable_errors].flatten
-    expected_states = [expected_states].flatten
-    current_state = aws_object.state
+  def wait_for(opts={})
+    aws_object = opts[:aws_object]
+    query_method = opts[:query_method]
+    expected_responses = [opts[:expected_responses]].flatten
+    acceptable_errors = [opts[:acceptable_errors] || []].flatten
+    tries = opts[:tries] || 60
+    sleep = opts[:sleep] || 5
 
     Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_states.inspect}..."
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_responses.inspect}..."
+      Chef::Log.debug("Current exception is #{exception.inspect}")
       begin
-        current_state = aws_object.state
-        unless expected_states.include?(current_state)
-          raise StatusTimeoutError.new(aws_object, current_state, expected_states)
+        current_response = aws_object.send(query_method)
+        Chef::Log.debug("Current response from [#{query_method}] is #{current_response}")
+        unless expected_responses.include?(current_response)
+          raise StatusTimeoutError.new(aws_object, current_response, expected_responses)
         end
       rescue *acceptable_errors
       end

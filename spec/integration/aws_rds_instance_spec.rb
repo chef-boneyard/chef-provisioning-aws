@@ -14,19 +14,19 @@ describe Chef::Resource::AwsRdsInstance do
       az_2 = azs[1].name
 
       aws_vpc "test_vpc" do
-        cidr_block '10.0.0.0/24'
+        cidr_block '10.0.5.0/24'
         internet_gateway true
       end
 
       aws_subnet "test_subnet" do
         vpc 'test_vpc'
-        cidr_block "10.0.0.0/26"
+        cidr_block "10.0.5.0/26"
         availability_zone az_1
       end
 
       aws_subnet "test_subnet_2" do
         vpc 'test_vpc'
-        cidr_block "10.0.0.64/26"
+        cidr_block "10.0.5.64/26"
         availability_zone az_2
       end
 
@@ -44,18 +44,18 @@ describe Chef::Resource::AwsRdsInstance do
             master_username "thechief"
             master_user_password "securesecure" # 2x security
             multi_az false
+            allocated_storage 5
             db_subnet_group_name "test-db-subnet-group"
           end
         }.to create_an_aws_rds_instance('test-rds-instance',
                                         engine: 'postgres',
-                                        # Can't assert these two as the v1 SDK has no method
-                                        # that exposes it :(
-                                        # publicly_accessible: false,
-                                        # db_subnet_group_name: "test-db-subnet-group"
                                         multi_az: false,
                                         db_instance_class: "db.t1.micro",
                                         master_username: "thechief",
                                        ).and be_idempotent
+        i = driver.rds.client.describe_db_instances(:db_instance_identifier => "test-rds-instance")[:db_instances].first
+        expect(i[:db_subnet_group][:db_subnet_group_name]).to eq("test-db-subnet-group")
+        expect(i[:publicly_accessible]).to eq(false)
       end
 
       it "aws_rds_instance prefers explicit options" do
@@ -67,13 +67,15 @@ describe Chef::Resource::AwsRdsInstance do
             master_username "thechief"
             master_user_password "securesecure"
             multi_az false
-            additional_options(multi_az: true)
+            allocated_storage 5
+            additional_options(multi_az: true, backup_retention_period: 2)
           end
         }.to create_an_aws_rds_instance('test-rds-instance2',
                                         engine: 'postgres',
                                         multi_az: false,
                                         db_instance_class: "db.t1.micro",
-                                        master_username: "thechief")
+                                        master_username: "thechief",
+                                        backup_retention_period: 2)
 
       end
 

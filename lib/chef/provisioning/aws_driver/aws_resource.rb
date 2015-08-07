@@ -110,6 +110,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
       resource.driver driver if driver
       resource.managed_entry_store managed_entry_store if managed_entry_store
     end
+
     result = resource.aws_object
     if required && result.nil?
       raise "#{self}[#{value}] does not exist!"

@@ -563,6 +563,12 @@ EOD
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
 
+    def cloudsearch(api_version="20130101")
+      @cloudsearch ||= {}
+      @cloudsearch[api_version] ||= AWS::CloudSearch::Client.const_get("V#{api_version}").new
+      @cloudsearch[api_version]
+    end
+
     def ec2
       @ec2 ||= AWS::EC2.new(config: aws_config)
     end

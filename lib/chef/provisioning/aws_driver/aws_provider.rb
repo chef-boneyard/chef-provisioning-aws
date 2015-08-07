@@ -121,7 +121,11 @@ class AWSProvider < Chef::Provider::LWRPBase
       aws_object = create_aws_object
     end
 
-    converge_tags(aws_object)
+    # If the resource hasn't obtained full existence yet this will failed
+    # It could have different errors from different resources
+    retry_with_backoff do
+      converge_tags(aws_object)
+    end
 
     #
     # Associate the managed entry with the AWS object

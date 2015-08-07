@@ -2,6 +2,10 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::us-west-1'
 
+aws_cloudsearch_domain "ref-cs-domain" do
+  action :destroy
+end
+
 aws_sqs_queue 'ref-sqs-queue' do
   action :destroy
 end

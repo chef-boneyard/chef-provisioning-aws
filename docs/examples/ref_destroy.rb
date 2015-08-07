@@ -63,6 +63,10 @@ aws_rds_subnet_group "ref-db-subnet-group" do
   action :destroy
 end
 
+aws_rds_instance "ref-rds-instance" do
+  action :destroy
+end
+
 aws_route_table 'ref-public' do
   action :destroy
 end

@@ -33,7 +33,7 @@ module AWSSupport
 
         # Converge
         begin
-          recipe.converge
+          recipe.converge unless recipe.converged?
         rescue
           differences += [ "error trying to converge #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
         end

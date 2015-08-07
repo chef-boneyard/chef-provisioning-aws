@@ -12,7 +12,7 @@ end
 
 class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type ::AWS::CloudSearch::Domain
-  attribute :domain_name, kind_of: String, name_attribute: true
+  attribute :name, kind_of: String, name_attribute: true
   attribute :cloudsearch_api_version, equal_to: ["20130101", "20110201"], default: "20130101"
 
   # Availability Options

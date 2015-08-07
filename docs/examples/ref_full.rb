@@ -89,7 +89,7 @@ aws_subnet 'ref-subnet' do
   network_acl 'ref-acl'
 end
 
-aws_subnet 'ref-subnet-2' do
+ref_subnet_2 = aws_subnet 'ref-subnet-2' do
   vpc 'ref-vpc'
   cidr_block '10.0.0.64/26'
   availability_zone 'us-west-1b'
@@ -102,6 +102,16 @@ end
 aws_rds_subnet_group "ref-db-subnet-group" do
   db_subnet_group_description "some_description"
   subnets ['ref-subnet', ref_subnet_2.aws_object.id]
+end
+
+aws_rds_instance "ref-rds-instance" do
+  engine "postgres"
+  publicly_accessible false
+  db_instance_class "db.t1.micro"
+  master_username "thechief"
+  master_user_password "securesecure" # 2x security
+  multi_az false
+  db_subnet_group_name "test-db-subnet-group"
 end
 
 # We cover tagging the base chef-provisioning resources in aws_tags.rb

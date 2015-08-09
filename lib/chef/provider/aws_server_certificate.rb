@@ -6,7 +6,7 @@ class Chef::Provider::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def create_aws_object
-    converge_by "Create new Server Certificate #{new_resource.name}" do
+    converge_by "create server certificate #{new_resource.name}" do
       new_resource.driver.iam.server_certificates.upload(:name => new_resource.name,
                                                          :certificate_body => new_resource.certificate_body,
                                                          :private_key => new_resource.private_key)
@@ -14,7 +14,7 @@ class Chef::Provider::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def destroy_aws_object(certificate)
-    converge_by "Deleting Server Certificate #{new_resource.name}" do
+    converge_by "delete server certificate #{new_resource.name}" do
       certificate.delete
     end
   end

@@ -3,13 +3,13 @@ require 'chef/provisioning/aws_driver/aws_provider'
 class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
-    converge_by "create new RDS Subnet Group #{new_resource.name} in #{region}" do
+    converge_by "create RDS subnet group #{new_resource.name} in #{region}" do
       driver.create_db_subnet_group(desired_options)
     end
   end
 
   def destroy_aws_object(object)
-    converge_by "delete RDS Subnet Group #{new_resource.name} in #{region}" do
+    converge_by "delete RDS subnet group #{new_resource.name} in #{region}" do
       driver.delete_db_subnet_group(db_subnet_group_name: new_resource.name)
     end
   end
@@ -54,7 +54,7 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
       Chef::Log.warn "Updating tags for RDS subnet groups is not supported."
     end
 
-    ret.unshift("update RDS Subnet Group #{new_resource.name} in #{region}") unless ret.empty?
+    ret.unshift("update RDS subnet group #{new_resource.name} in #{region}") unless ret.empty?
     ret
   end
 

@@ -3,7 +3,7 @@ require 'chef/provisioning/aws_driver/aws_provider'
 class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
-    converge_by "create new SQS queue #{new_resource.name} in #{region}" do
+    converge_by "create SQS queue #{new_resource.name} in #{region}" do
       retry_with_backoff(AWS::SQS::Errors::QueueDeletedRecently) do
         new_resource.driver.sqs.queues.create(new_resource.name, new_resource.options || {})
       end

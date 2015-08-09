@@ -21,7 +21,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     options = AWSResource.lookup_options(options, resource: new_resource)
     self.vpc = Chef::Resource::AwsVpc.get_aws_object(options[:vpc], resource: new_resource)
 
-    converge_by "create new route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
+    converge_by "create route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = new_resource.driver.ec2.route_tables.create(options)
       retry_with_backoff(AWS::EC2::Errors::InvalidRouteTableID::NotFound) do
         route_table.tags['Name'] = new_resource.name
@@ -36,7 +36,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.vpc
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
       if vpc != desired_vpc
-        raise "VPC of route table #{new_resource.to_s} is #{route_table.vpc.id}, but desired vpc is #{new_resource.vpc}!  The AWS SDK does not support updating the main route table except by creating a new route table."
+        raise "VPC of route table #{new_resource.to_s} is #{route_table.vpc.id}, but desired VPC is #{new_resource.vpc}!  The AWS SDK does not support updating the main route table except by creating a new route table."
       end
     end
   end

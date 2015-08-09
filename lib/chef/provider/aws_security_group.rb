@@ -14,7 +14,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   protected
 
   def create_aws_object
-    converge_by "Creating new SG #{new_resource.name} in #{region}" do
+    converge_by "create security group #{new_resource.name} in #{region}" do
       options = { description: new_resource.description }
       options[:vpc] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
@@ -26,19 +26,19 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
 
   def update_aws_object(sg)
     if !new_resource.description.nil? && new_resource.description != sg.description
-      raise "Security Group descriptions cannot be changed after being created!  Desired description for #{new_resource.name} (#{sg.id}) was \"#{new_resource.description}\" and actual description is \"#{sg.description}\""
+      raise "Security group descriptions cannot be changed after being created!  Desired description for #{new_resource.name} (#{sg.id}) was \"#{new_resource.description}\" and actual description is \"#{sg.description}\""
     end
     if !new_resource.vpc.nil?
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
       if desired_vpc != sg.vpc_id
-        raise "Security Group VPC cannot be changed after being created!  Desired VPC for #{new_resource.name} (#{sg.id}) was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{sg.vpc_id}"
+        raise "Security group VPC cannot be changed after being created!  Desired VPC for #{new_resource.name} (#{sg.id}) was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{sg.vpc_id}"
       end
     end
     apply_rules(sg)
   end
 
   def destroy_aws_object(sg)
-    converge_by "delete #{new_resource.to_s} in #{region}" do
+    converge_by "delete security group #{new_resource.to_s} in #{region}" do
       sg.delete
     end
   end

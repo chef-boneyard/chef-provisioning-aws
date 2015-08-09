@@ -156,7 +156,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def wait_for_eni_status(eni, expected_status)
     initial_status = eni.status
     log_callback = proc {
-      Chef::Log.info("waiting for #{new_resource} status to change to #{expected_status}...")
+      Chef::Log.info("Waiting for #{new_resource} status to change to #{expected_status}...")
     }
 
     Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do

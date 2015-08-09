@@ -42,7 +42,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     options = { }
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
 
-    converge_by "create new VPC #{new_resource.name} in #{region}" do
+    converge_by "create VPC #{new_resource.name} in #{region}" do
       vpc = new_resource.driver.ec2.vpcs.create(new_resource.cidr_block, options)
       wait_for_state(vpc, [:available])
       retry_with_backoff(AWS::EC2::Errors::InvalidVpcID::NotFound) do
@@ -103,11 +103,11 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     # Detach or destroy the internet gateway
     ig = vpc.internet_gateway
     if ig
-      converge_by "detach Internet Gateway #{ig.id} in #{region} from #{new_resource.to_s}" do
+      converge_by "detach Internet gateway #{ig.id} in #{region} from #{new_resource.to_s}" do
         ig.detach(vpc.id)
       end
       if ig.tags['OwnedByVPC'] == vpc.id
-        converge_by "destroy Internet Gateway #{ig.id} in #{region} (owned by #{new_resource.to_s})" do
+        converge_by "destroy Internet gateway #{ig.id} in #{region} (owned by #{new_resource.to_s})" do
           ig.delete
         end
       end
@@ -151,40 +151,40 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
       new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
       if !current_ig
-        converge_by "attach Internet Gateway #{new_resource.internet_gateway} to VPC #{vpc.id}" do
+        converge_by "attach Internet gateway #{new_resource.internet_gateway} to VPC #{vpc.id}" do
           new_ig.attach(vpc.id)
         end
       elsif current_ig != new_ig
-        converge_by "replace Internet Gateway #{current_ig.id} on VPC #{vpc.id} with new Internet Gateway #{new_ig.id}" do
+        converge_by "replace Internet gateway #{current_ig.id} on VPC #{vpc.id} with new Internet gateway #{new_ig.id}" do
           current_ig.detach(vpc.id)
           new_ig.attach(vpc.id)
         end
         if current_ig.tags['OwnedByVPC'] == vpc.id
-          converge_by "destroy Internet Gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
+          converge_by "destroy Internet gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
             current_ig.delete
           end
         end
       end
     when true
       if !current_ig
-        converge_by "attach new Internet Gateway to VPC #{vpc.id}" do
+        converge_by "attach Internet gateway to VPC #{vpc.id}" do
           current_ig = AWS.ec2(config: vpc.config).internet_gateways.create
           retry_with_backoff(NeverObtainedExistence) do
-            raise NeverObtainedExistence.new("internet gateway for VPC #{vpc.id} never obtained existence") unless current_ig.exists?
+            raise NeverObtainedExistence.new("Internet gateway for VPC #{vpc.id} never obtained existence") unless current_ig.exists?
           end
-          action_handler.report_progress "create Internet Gateway #{current_ig.id}"
+          action_handler.report_progress "create Internet gateway #{current_ig.id}"
           current_ig.tags['OwnedByVPC'] = vpc.id
-          action_handler.report_progress "tag Internet Gateway #{current_ig.id} as OwnedByVpc: #{vpc.id}"
+          action_handler.report_progress "tag Internet gateway #{current_ig.id} as OwnedByVpc: #{vpc.id}"
           vpc.internet_gateway = current_ig
         end
       end
     when false
       if current_ig
-        converge_by "detach Internet Gateway #{current_ig.id} from VPC #{vpc.id}" do
+        converge_by "detach Internet gateway #{current_ig.id} from VPC #{vpc.id}" do
           current_ig.detach(vpc.id)
         end
         if current_ig.tags['OwnedByVPC'] == vpc.id
-          converge_by "destroy Internet Gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
+          converge_by "destroy Internet gateway #{current_ig.id} in #{region} (owned by VPC #{vpc.id})" do
             current_ig.delete
           end
         end

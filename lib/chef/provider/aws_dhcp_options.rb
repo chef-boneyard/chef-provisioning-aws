@@ -10,7 +10,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
       options[:domain_name_servers] = "AmazonProvidedDNS"
     end
 
-    converge_by "create new dhcp_options #{new_resource.name} in #{region}" do
+    converge_by "create DHCP options #{new_resource.name} in #{region}" do
       dhcp_options = new_resource.driver.ec2.dhcp_options.create(options)
       retry_with_backoff(AWS::EC2::Errors::InvalidDhcpOptionsID::NotFound) do
         dhcp_options.tags['Name'] = new_resource.name
@@ -35,17 +35,17 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
       if action_handler.should_perform_actions
         dhcp_options = AWS.ec2(config: dhcp_options.config).dhcp_options.create(config.merge(desired_options))
       end
-      action_handler.report_progress "create new dhcp_options #{dhcp_options.id} with new attributes in #{region}"
+      action_handler.report_progress "create DHCP options #{dhcp_options.id} with new attributes in #{region}"
 
       # attach dhcp_options to existing vpcs
       old_dhcp_options.vpcs.each do |vpc|
-        action_handler.perform_action "attach new dhcp_options #{dhcp_options.id} to vpc #{vpc.id}" do
+        action_handler.perform_action "attach DHCP options #{dhcp_options.id} to vpc #{vpc.id}" do
           vpc.dhcp_options = dhcp_options
         end
       end
 
       # delete old dhcp_options
-      action_handler.perform_action "delete old dhcp_options #{old_dhcp_options.id}" do
+      action_handler.perform_action "delete DHCP options #{old_dhcp_options.id}" do
         old_dhcp_options.delete
       end
 
@@ -54,7 +54,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
   end
 
   def destroy_aws_object(dhcp_options)
-    converge_by "delete dhcp_options #{new_resource.name} in #{region}" do
+    converge_by "delete DHCP options #{new_resource.name} in #{region}" do
       dhcp_options.delete
     end
   end

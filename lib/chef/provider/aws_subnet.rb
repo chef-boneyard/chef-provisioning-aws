@@ -30,7 +30,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
     options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(options, resource: new_resource)
 
-    converge_by "create new subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
+    converge_by "create subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
       subnet = new_resource.driver.ec2.subnets.create(cidr_block, options)
       retry_with_backoff(AWS::EC2::Errors::InvalidSubnetID::NotFound) do
         subnet.tags['Name'] = new_resource.name
@@ -47,7 +47,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     end
     vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
     if vpc && subnet.vpc != vpc
-      raise "vpc for subnet #{new_resource.name} is #{new_resource.vpc} (#{vpc.id}), but existing subnet (#{subnet.id})'s vpc is #{subnet.vpc.id}.  Modification of subnet vpc is unsupported!"
+      raise "VPC for subnet #{new_resource.name} is #{new_resource.vpc} (#{vpc.id}), but existing subnet (#{subnet.id})'s vpc is #{subnet.vpc.id}.  Modification of subnet VPC is unsupported!"
     end
     if new_resource.availability_zone && subnet.availability_zone_name != new_resource.availability_zone
       raise "availability_zone for subnet #{new_resource.name} is #{new_resource.availability_zone}, but existing subnet (#{subnet.id})'s availability_zone is #{subnet.availability_zone}.  Modification of subnet availability_zone is unsupported!"
@@ -134,7 +134,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       network_acl_id =
         AWSResource.lookup_options({ network_acl: new_resource.network_acl }, resource: new_resource)[:network_acl]
       if subnet.network_acl.id != network_acl_id
-        converge_by "update network acl of subnet #{new_resource.name} to #{new_resource.network_acl}" do
+        converge_by "update network ACL of subnet #{new_resource.name} to #{new_resource.network_acl}" do
           subnet.network_acl = network_acl_id
         end
       end

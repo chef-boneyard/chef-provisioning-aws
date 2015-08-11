@@ -4,7 +4,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
 
   def create_aws_object
     domain = nil # define here to ensure it is available outside of the coverge_by scope
-    converge_by "Creating new CloudSearch domain #{new_resource.name}" do
+    converge_by "create CloudSearch domain #{new_resource.name}" do
       domain = create_domain
     end
 
@@ -12,7 +12,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def destroy_aws_object(domain)
-    converge_by "Deleting CloudSearch domain #{new_resource.name}" do
+    converge_by "delete CloudSearch domain #{new_resource.name}" do
       cs_client.delete_domain(domain_name: new_resource.name)
     end
     # CloudSearch can take over 30 minutes to delete so im not adding a waiter
@@ -21,19 +21,19 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
 
   def update_aws_object(domain)
     if update_availability_options?(domain)
-      converge_by "Updating availability options for CloudSearch domain #{new_resource}" do
+      converge_by "update availability options for CloudSearch domain #{new_resource}" do
         update_availability_options
       end
     end
 
     if update_scaling_params?(domain)
-      converge_by "Updating scaling parameters for CloudSearch domain #{new_resource.name}" do
+      converge_by "update scaling parameters for CloudSearch domain #{new_resource.name}" do
         update_scaling_parameters
       end
     end
 
     if update_policy?(domain)
-      converge_by "Updating access policy for CloudSearch domain #{new_resource.name}" do
+      converge_by "update access policy for CloudSearch domain #{new_resource.name}" do
         update_service_access_policy
       end
     end
@@ -53,7 +53,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   def update_scaling_params?(domain)
     if new_resource.partition_count || new_resource.replication_count || new_resource.instance_type
       # We don't want to change scaling parameters that the user
-      # didn't specify Thus, we compare on a key-by-key basis.  Only
+      # didn't specify. Thus, we compare on a key-by-key basis.  Only
       # user-specified keys show up in desired_scaling_parameters
       actual_scaling_parameters = scaling_parameters(domain)
       desired_scaling_parameters.each do |key, value|
@@ -124,7 +124,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   # API Query Functions
   #
   # The CloudSearch API doesn't provide all of the data about the
-  # domain's settings via the descrbe domaiAPI.  We have to call
+  # domain's settings via the descrbe domain API.  We have to call
   # additional endpoints to determine the current values of:
   # availability_options, scalability_parameters, index_fields, and
   # access_policies

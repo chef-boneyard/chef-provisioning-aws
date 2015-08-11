@@ -9,7 +9,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     instance_type = new_resource.instance_type || new_resource.driver.default_instance_type
     options = AWSResource.lookup_options(new_resource.options || options, resource: new_resource)
 
-    converge_by "Creating new Launch Configuration #{new_resource.name} in #{region}" do
+    converge_by "create launch configuration #{new_resource.name} in #{region}" do
       new_resource.driver.auto_scaling.launch_configurations.create(
         new_resource.name,
         image,
@@ -35,7 +35,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   end
 
   def destroy_aws_object(launch_configuration)
-    converge_by "delete Launch Configuration #{new_resource.name} in #{region}" do
+    converge_by "delete launch configuration #{new_resource.name} in #{region}" do
       # TODO add a timeout here.
       # TODO is InUse really a status guaranteed to go away??
       begin

@@ -7,19 +7,19 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
     if new_resource.enable_website_hosting
       if !bucket.website?
-        converge_by "Enabling website configuration for bucket #{new_resource.name}" do
+        converge_by "enable website configuration for bucket #{new_resource.name}" do
           bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
       elsif modifies_website_configuration?(bucket)
-        converge_by "Reconfiguring website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
+        converge_by "reconfigure website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
           bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
       end
     else
       if bucket.website?
-        converge_by "Disabling website configuration for bucket #{new_resource.name}" do
+        converge_by "disable website configuration for bucket #{new_resource.name}" do
           bucket.website_configuration = nil
         end
       end
@@ -29,7 +29,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    converge_by "create new S3 bucket #{new_resource.name}" do
+    converge_by "create S3 bucket #{new_resource.name}" do
       bucket = new_resource.driver.s3.buckets.create(new_resource.name)
       bucket.tags['Name'] = new_resource.name
       bucket

@@ -20,14 +20,14 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   end
 
   def create_aws_object
-    converge_by "Create new RDS instance #{new_resource.db_instance_identifier} in #{region}" do
+    converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
       new_resource.driver.rds.client.create_db_instance(options_hash)
     end
     # TODO need to wait for state?
   end
 
   def destroy_aws_object(instance)
-    converge_by "Deleting RDS instance #{new_resource.db_instance_identifier} in #{region}" do
+    converge_by "delete RDS instance #{new_resource.db_instance_identifier} in #{region}" do
       instance.delete(skip_final_snapshot: true)
     end
     # Wait up to 10 minutes for the db instance to shutdown

@@ -12,7 +12,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    converge_by "create new Network ACL #{new_resource.name} in #{region}" do
+    converge_by "create network ACL #{new_resource.name} in #{region}" do
       options = {}
       options[:vpc] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
@@ -87,7 +87,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
     end
 
     unless replace_rules.empty? && desired_rules.empty? && current_rules.empty?
-      action_handler.report_progress "update Network ACL #{new_resource.name} #{direction.to_s} rules"
+      action_handler.report_progress "update network ACL #{new_resource.name} #{direction.to_s} rules"
       replace_rules(network_acl, replace_rules)
       add_rules(network_acl, desired_rules)
       remove_rules(network_acl, current_rules)

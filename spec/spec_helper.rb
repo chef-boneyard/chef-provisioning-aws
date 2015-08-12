@@ -1,3 +1,6 @@
+require 'simplecov'
+SimpleCov.start
+
 # Bring in the RSpec monkeypatch before we do *anything*, so that builtin matchers
 # will get the module.  Not strictly necessary, but cleaner that way.
 require 'aws_support/deep_matcher/rspec_monkeypatches'

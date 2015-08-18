@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.homepage = 'https://github.com/opscode/chef-provisioning-aws'
 
   s.add_dependency 'chef', '>= 11.16.4'
-  s.add_dependency 'chef-provisioning', '~> 1.0'
+  s.add_dependency 'chef-provisioning', '~> 1.3'
   s.add_dependency 'aws-sdk-v1', '>= 1.59.0'
   s.add_dependency 'retryable', '~> 2.0.1'
   s.add_dependency 'ubuntu_ami', '~> 0.4.1'

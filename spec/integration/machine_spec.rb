@@ -52,6 +52,32 @@ describe Chef::Resource::Machine do
           source_dest_check: false
         ).and be_idempotent
       end
+
+      it "machine with from_image option is created from correct image", :super_slow do
+        expect_recipe {
+
+          machine_image 'test_machine_ami' do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            }
+          end
+
+          machine 'test_machine' do
+            from_image 'test_machine_ami'
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            }
+            action :allocate
+          end
+        }.to create_an_aws_instance('test_machine',
+          image_id: driver.ec2.images.filter('name', 'test_machine_ami').first.image_id
+        ).and create_an_aws_image('test_machine_ami',
+          name: 'test_machine_ami'
+        ).and be_idempotent
+      end
+
     end
 
     with_aws "Without a VPC" do

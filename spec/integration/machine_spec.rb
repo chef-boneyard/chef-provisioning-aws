@@ -72,7 +72,7 @@ describe Chef::Resource::Machine do
             action :allocate
           end
         }.to create_an_aws_instance('test_machine',
-          image_id: test_machine_ami.aws_object.id
+          image_id: driver.ec2.images.filter('name', 'test_machine_ami').first.image_id
         ).and be_idempotent
       end
     end

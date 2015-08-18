@@ -660,7 +660,7 @@ EOD
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
       bootstrap_options[:instance_type] ||= default_instance_type
-      image_id = bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
+      image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
       if !bootstrap_options[:key_name]
         Chef::Log.debug('No key specified, generating a default one...')

@@ -52,6 +52,20 @@ describe Chef::Resource::Machine do
           source_dest_check: false
         ).and be_idempotent
       end
+
+      it "machine with from_image option is created from correct image", :super_slow do
+        expect_recipe {
+
+          machine_image 'test_machine_ami'
+
+          machine 'test_machine' do
+            from_image 'test_machine_ami'
+            action :allocate
+          end
+        }.to create_an_aws_instance('test_machine',
+          image_id: test_machine_ami.aws_object.id
+        ).and be_idempotent
+      end
     end
 
     with_aws "Without a VPC" do

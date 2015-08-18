@@ -56,10 +56,19 @@ describe Chef::Resource::Machine do
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe {
 
-          machine_image 'test_machine_ami'
+          machine_image 'test_machine_ami' do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            }
+          end
 
           machine 'test_machine' do
             from_image 'test_machine_ami'
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            }
             action :allocate
           end
         }.to create_an_aws_instance('test_machine',

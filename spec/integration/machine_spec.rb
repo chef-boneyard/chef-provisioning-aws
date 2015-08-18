@@ -73,8 +73,11 @@ describe Chef::Resource::Machine do
           end
         }.to create_an_aws_instance('test_machine',
           image_id: driver.ec2.images.filter('name', 'test_machine_ami').first.image_id
+        ).and create_an_aws_image('test_machine_ami',
+          name: 'test_machine_ami'
         ).and be_idempotent
       end
+
     end
 
     with_aws "Without a VPC" do

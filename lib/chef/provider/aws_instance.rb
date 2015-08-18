@@ -10,12 +10,19 @@ class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
     message += " in VPC #{instance.vpc.id}" unless instance.vpc.nil?
     message += " in #{region}"
     converge_by message do
-      instance.delete
+      instance.terminate
     end
     converge_by "waited until instance #{new_resource} is :terminated" do
       # When purging, we must wait until the instance is fully terminated - thats the only way
       # to delete the network interface that I can see
-      wait_for_status(instance, :terminated, [AWS::EC2::Errors::InvalidInstanceID::NotFound])
+      instance.wait_until_terminated do |w|
+        # TODO look at `wait_for_status` - delay and max_attempts should be configurable
+        w.delay = 5
+        w.max_attempts = 60
+        w.before_wait do |attempts, response|
+          action_handler.report_progress "waited #{(attempts-1)*5}/#{60*5}s for #{instance.id} status to terminate..."
+        end
+      end
     end
   end
 end

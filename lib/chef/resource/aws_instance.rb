@@ -13,7 +13,7 @@ class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWi
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.instances[id] if id
+    result = driver.ec2_resource.instance(id) if id
     result && result.exists? ? result : nil
   end
 end

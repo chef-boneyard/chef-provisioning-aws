@@ -133,13 +133,14 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
                         load_provider: true,
                         id: :name,
                         aws_id_prefix: nil)
+    # TODO less than Chef 12.4, this is necessary.  Above that, this is deprecated.
     self.resource_name = self.dsl_name
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
     @aws_id_prefix = aws_id_prefix
 
     # Go ahead and require the provider since we're here anyway ...
-    require "chef/provider/#{resource_name}" if load_provider
+    require "chef/provider/#{resource_name.to_s}" if load_provider
 
     option_name = :"#{resource_name[4..-1]}" if option_name == NOT_PASSED
     @aws_sdk_option_name = option_name

@@ -20,7 +20,7 @@ module AWSDriver
     # @option options [String] :profile_name (ENV["AWS_DEFAULT_PROFILE"]) The profile name to use
     #    when loading the config from '~/.aws/credentials'.  This can be nil.
     def initialize(options = {})
-      @profile_name = options.fetch(:profile_name, nil) || ENV["AWS_DEFAULT_PROFILE"]
+      @profile_name = options[:profile_name] || ENV["AWS_DEFAULT_PROFILE"]
     end
 
     # Try to load the credentials from an ordered list of sources and return the first one that

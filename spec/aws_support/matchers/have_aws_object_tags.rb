@@ -55,7 +55,12 @@ module AWSSupport
           end
           tags
         else
-          @aws_object.tags.to_h
+          tags = @aws_object.tags
+          if tags.is_a? AWS::EC2::ResourceTagCollection
+            tags.to_h
+          else
+            Hash[tags.map {|o| [o.key, o.value]}]
+          end
         end
       end
     end

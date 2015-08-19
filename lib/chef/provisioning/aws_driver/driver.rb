@@ -11,10 +11,6 @@ require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
-require 'chef/resource/aws_key_pair'
-require 'chef/resource/aws_instance'
-require 'chef/resource/aws_image'
-require 'chef/resource/aws_load_balancer'
 require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
@@ -28,6 +24,15 @@ require 'ubuntu_ami'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
+AWS_V2_SERVICES = {"EC2" => "ec2"}
+Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
+
+# Need to load the resources after the SDK because `aws_sdk_types` can mess
+# up AWS loading if they are loaded too early
+require 'chef/resource/aws_key_pair'
+require 'chef/resource/aws_instance'
+require 'chef/resource/aws_image'
+require 'chef/resource/aws_load_balancer'
 
 class Chef
 module Provisioning
@@ -499,9 +504,6 @@ EOD
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
           instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
-          # TODO because we don't want to add `provider_tags` as a base attribute,
-          # we have to update the tags here in driver.rb instead of the providers
-          converge_tags(instance, machine_options[:aws_tags], action_handler)
         end
       end
 
@@ -570,14 +572,18 @@ EOD
       @ec2 ||= AWS::EC2.new(config: aws_config)
     end
 
-    # The client for the SDK V2
-    def ec2_client
-      @ec2_client ||= ::Aws::EC2::Client.new
-    end
+    AWS_V2_SERVICES.each do |load_name, short_name|
+      class_eval <<-META
 
-    # The client for the SDK V2
-    def ec2_resource
-      @ec2_resource ||= ::Aws::EC2::Resource.new(ec2_client)
+      def #{short_name}_client
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new
+      end
+
+      def #{short_name}_resource
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(#{short_name}_client)
+      end
+
+      META
     end
 
     def elb
@@ -1076,12 +1082,11 @@ EOD
 
             clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
             instance = create_instance_and_reference(clean_bootstrap_options, action_handler, machine_spec, machine_options)
-            converge_tags(instance, machine_options[:aws_tags], action_handler)
 
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
 
             yield machine_spec, instance if block_given?
-          end
+          end.to_a
 
           if machine_specs.size > 0
             raise "Not all machines were created by create_servers"
@@ -1133,10 +1138,16 @@ EOD
       instance.wait_until_exists
 
       # Sometimes tagging fails even though the instance 'exists'
-      Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound]) do
+      Retryable.retryable(:tries => 12, :sleep => 5, :on => [::Aws::EC2::Errors::InvalidInstanceIDNotFound]) do
         instance.create_tags({tags: [{key: "Name", value: machine_spec.name}]})
       end
-      instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
+      if machine_options.has_key?(:source_dest_check)
+        instance.modify_attribute({
+          source_dest_check: {
+            value: machine_options[:source_dest_check]
+          }
+        })
+      end
       machine_spec.reference = {
           'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
           'allocated_at' => Time.now.utc.to_s,
@@ -1157,6 +1168,7 @@ EOD
       %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
       end
+      converge_tags(instance, machine_options[:aws_tags], action_handler)
       instance
     end
 

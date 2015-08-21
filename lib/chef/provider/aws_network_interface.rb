@@ -4,13 +4,9 @@ require 'date'
 require 'retryable'
 
 class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSProvider
-  provides :aws_network_interface
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
 
-  class NetworkInterfaceStatusTimeoutError < TimeoutError
-    def initialize(new_resource, initial_status, expected_status)
-      super("timed out waiting for #{new_resource} status to change from #{initial_status} to #{expected_status}!")
-    end
-  end
+  provides :aws_network_interface
 
   class NetworkInterfaceStatusTimeoutError < TimeoutError
     def initialize(new_resource, initial_status, expected_status)
@@ -45,7 +41,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     end
 
     converge_by "wait for new #{new_resource} in #{region} to become available" do
-      wait_for_eni_status(eni, :available)
+      wait_for_status(eni, :available)
       eni
     end
   end
@@ -124,14 +120,14 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     #
     # If we were told to attach the network interface to a machine, do so
     #
-    if expected_instance.is_a?(AWS::EC2::Instance)
+    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(Aws::EC2::Instance)
       case status
       when :available
         attach(eni)
       when :in_use
         # We don't want to attempt to reattach to the same instance or device index
         attachment = current_attachment(eni)
-        if attachment.instance != expected_instance || (options[:device_index] && attachment.device_index != new_resource.device_index)
+        if attachment.instance.id != expected_instance.id || (options[:device_index] && attachment.device_index != new_resource.device_index)
           detach(eni)
           attach(eni)
         end
@@ -155,38 +151,27 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     eni
   end
 
-  def wait_for_eni_status(eni, expected_status)
-    initial_status = eni.status
-    log_callback = proc {
-      Chef::Log.info("Waiting for #{new_resource} status to change to #{expected_status}...")
-    }
-
-    Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
-      raise NetworkInterfaceStatusTimeoutError.new(new_resource, initial_status, expected_status) if eni.status != expected_status
-    end
-  end
-
   def detach(eni)
     attachment   = current_attachment(eni)
     instance     = attachment.instance
 
-    converge_by "detach #{new_resource} from #{instance.instance_id}" do
+    converge_by "detach #{new_resource} from #{instance.id}" do
       eni.detach
     end
 
     converge_by "wait for #{new_resource} to detach" do
-      wait_for_eni_status(eni, :available)
+      wait_for_status(eni, :available)
       eni
     end
   end
 
   def attach(eni)
-    converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id})" do
-      eni.attach(expected_instance, options)
+    converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.id})" do
+      eni.attach(expected_instance.id, options)
     end
 
     converge_by "wait for #{new_resource} to attach" do
-      wait_for_eni_status(eni, :in_use)
+      wait_for_status(eni, :in_use)
       eni
     end
   end

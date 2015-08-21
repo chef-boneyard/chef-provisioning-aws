@@ -2,8 +2,10 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'retryable'
 
 class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_route_table
-  
+
   def action_create
     route_table = super
 
@@ -132,7 +134,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { instance: route_target }
     when Chef::Resource::Machine
       route_target = { instance: route_target.name }
-    when AWS::EC2::Instance
+    when AWS::EC2::Instance, Aws::EC2::Instance
       route_target = { instance: route_target.id }
     when Hash
       if route_target.size != 1

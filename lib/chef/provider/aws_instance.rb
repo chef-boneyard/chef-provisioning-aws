@@ -1,6 +1,9 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/provisioning/aws_driver/tagging_strategy/ec2'
 
 class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_instance
 
   def create_aws_object(instance); end

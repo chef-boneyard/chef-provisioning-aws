@@ -4,12 +4,6 @@ require 'chef/provisioning/aws_driver/resources'
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
 
-  # This should be a hash of tags to apply to the AWS object
-  #
-  # @param aws_tags [Hash] Should be a hash of keys & values to add.  Keys and values
-  #        can be provided as symbols or strings, but will be stored in AWS as strings.
-  attribute :aws_tags, kind_of: Hash
-
   #
   # Dissociate the ID of this object from Chef.
   #

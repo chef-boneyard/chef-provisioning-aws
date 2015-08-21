@@ -1,6 +1,9 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/provisioning/aws_driver/tagging_strategy/rds'
 
 class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::RDSConvergeTags
+
   provides :aws_rds_instance
 
   REQUIRED_OPTIONS = %i(db_instance_identifier allocated_storage engine
@@ -25,7 +28,6 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
       new_resource.driver.rds.client.create_db_instance(options_hash)
     end
-    # TODO need to wait for state?
   end
 
   def destroy_aws_object(instance)

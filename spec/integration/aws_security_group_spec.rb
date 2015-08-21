@@ -56,6 +56,52 @@ describe Chef::Resource::AwsSecurityGroup do
         }.to raise_error(RuntimeError, /Chef::Resource::AwsSecurityGroup\[sg-12345678\] does not exist!/)
       end
 
+      it "creates aws_security_group tags" do
+        expect_recipe {
+          aws_security_group 'test_sg' do
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_security_group('test_sg')
+        .and have_aws_security_group_tags('test_sg',
+          {
+            'Name' => 'test_sg',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_security_group 'test_sg' do
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_security_group tags" do
+          expect_recipe {
+            aws_security_group 'test_sg' do
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_security_group_tags('test_sg',
+            {
+              'Name' => 'test_sg',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_security_group tags except Name" do
+          expect_recipe {
+            aws_security_group 'test_sg' do
+              aws_tags {}
+            end
+          }.to have_aws_security_group_tags('test_sg',
+            {
+              'Name' => 'test_sg'
+            }
+          ).and be_idempotent
+        end
+      end
+
     end
 
     with_aws "in a VPC" do
@@ -155,5 +201,6 @@ describe Chef::Resource::AwsSecurityGroup do
         expect(aws_obj.vpc.tags['Name']).to eq('test_vpc1')
       end
     end
+
   end
 end

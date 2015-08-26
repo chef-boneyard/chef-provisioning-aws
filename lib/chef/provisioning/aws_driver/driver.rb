@@ -501,7 +501,15 @@ EOD
           }
           machine_spec.driver_url = driver_url
           machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-          %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+          # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
+          if machine_options[:use_private_ip_for_ssh]
+            unless @transport_address_location_warned
+              Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
+              @transport_address_location_warned = true
+            end
+            machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
+          end
+          %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
             machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
           end
         end
@@ -848,10 +856,19 @@ EOD
     end
 
     def determine_remote_host(machine_spec, instance)
+      transport_address_location = (machine_spec.reference['transport_address_location'] || :none).to_sym
       if machine_spec.reference['use_private_ip_for_ssh']
+        # The machine_spec has the old config key, lets update it - a successful chef converge will save the machine_spec
+        # TODO in 2.0 get rid of this update
+        machine_spec.reference.delete('use_private_ip_for_ssh')
+        machine_spec.reference['transport_address_location'] = :private_ip
         instance.private_ip_address
-      elsif !instance.public_ip_address
-        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set driver option 'use_private_ip_for_ssh' => true if this will always be the case ...")
+      elsif transport_address_location == :private_ip
+        instance.private_ip_address
+      elsif transport_address_location == :dns
+        instance.dns_name
+      elsif !instance.public_ip_address && instance.private_ip_address
+        Chef::Log.warn("Server #{machine_spec.name} has no public ip address.  Using private ip '#{instance.private_ip_address}'.  Set machine_options ':transport_address_location => :private_ip' if this will always be the case ...")
         instance.private_ip_address
       elsif instance.public_ip_address
         instance.public_ip_address
@@ -1062,7 +1079,15 @@ EOD
             instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
             converge_tags(instance, machine_options[:aws_tags], action_handler)
             machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-            %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+            # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
+            if machine_options[:use_private_ip_for_ssh]
+              unless @transport_address_location_warned
+                Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
+                @transport_address_location_warned = true
+              end
+              machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
+            end
+            %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
               machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
             end
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"

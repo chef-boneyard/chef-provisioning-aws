@@ -10,6 +10,16 @@ AWS credentials should be specified in your `~/.aws/credentials` file as documen
 
 You can specify a profile as the middle section of the semi-colon seperated driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.
 
+## Configurable Options
+
+When using `machine_batch` with a large number of machines it is possible to overwhelm the AWS SDK until it starts returning `AWS::EC2::Errors::RequestLimitExceeded`.  You can configure the AWS SDK to retry these errors automatically by specifying
+
+```ruby
+chef_provisioning({:aws_retry_limit => 10})
+```
+
+in your client.rb for the provisioning workstation.  The default `:aws_retry_limit` is 5.
+
 # Resources
 
 TODO: List out weird/unique things about resources here.  We don't need to document every resource

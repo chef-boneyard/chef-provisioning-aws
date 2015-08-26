@@ -1,6 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_rds_instance
+
   REQUIRED_OPTIONS = %i(db_instance_identifier allocated_storage engine
                         db_instance_class master_username master_user_password)
 

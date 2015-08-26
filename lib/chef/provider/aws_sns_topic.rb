@@ -2,7 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
 class Chef::Provider::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_sns_topic
+  
   protected
 
   def create_aws_object

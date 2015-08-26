@@ -3,6 +3,8 @@ require 'chef/resource/aws_vpc'
 require 'retryable'
 
 class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_network_acl
+
   def action_create
     network_acl = super
 

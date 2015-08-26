@@ -2,6 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'date'
 
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_s3_bucket
+
   def action_create
     bucket = super
 

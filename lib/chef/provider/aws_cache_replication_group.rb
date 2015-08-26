@@ -1,7 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_cache_replication_group
+  
   protected
 
   def create_aws_object

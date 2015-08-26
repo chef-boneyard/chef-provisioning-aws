@@ -4,7 +4,8 @@ require 'date'
 require 'chef/resource/aws_vpc'
 
 class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_subnet
+  
   def action_create
     subnet = super
 

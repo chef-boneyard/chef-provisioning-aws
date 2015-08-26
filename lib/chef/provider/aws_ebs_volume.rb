@@ -4,6 +4,8 @@ require 'date'
 require 'retryable'
 
 class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_ebs_volume
+  
   class VolumeNotFoundError < RuntimeError
     def initialize(new_resource)
       super("#{new_resource} does not exist!")

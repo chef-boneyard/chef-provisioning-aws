@@ -16,7 +16,7 @@ class AWSProvider < Chef::Provider::LWRPBase
       super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
     end
   end
-
+  
   def action_handler
     @action_handler ||= Chef::Provisioning::ChefProviderActionHandler.new(self)
   end

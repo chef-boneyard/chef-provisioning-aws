@@ -4,7 +4,8 @@ require 'aws-sdk-v1'
 
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_key_pair
+  
   action :create do
     create_key(:create)
   end

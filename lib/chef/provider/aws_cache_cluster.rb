@@ -1,6 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_cache_cluster
 
   protected
 

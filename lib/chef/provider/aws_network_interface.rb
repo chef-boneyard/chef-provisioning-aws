@@ -4,6 +4,8 @@ require 'date'
 require 'retryable'
 
 class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_network_interface
+
   class NetworkInterfaceStatusTimeoutError < TimeoutError
     def initialize(new_resource, initial_status, expected_status)
       super("timed out waiting for #{new_resource} status to change from #{initial_status} to #{expected_status}!")

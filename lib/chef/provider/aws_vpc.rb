@@ -4,6 +4,7 @@ require 'chef/provisioning'
 require 'retryable'
 
 class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_vpc
 
   class NeverObtainedExistence < RuntimeError; end
 

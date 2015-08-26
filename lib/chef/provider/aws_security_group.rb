@@ -4,7 +4,8 @@ require 'ipaddr'
 require 'set'
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_security_group
+  
   def action_create
     sg = super
 

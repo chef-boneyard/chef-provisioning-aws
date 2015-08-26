@@ -1,7 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_rds_subnet_group
+  
   def create_aws_object
     converge_by "create RDS subnet group #{new_resource.name} in #{region}" do
       driver.create_db_subnet_group(desired_options)

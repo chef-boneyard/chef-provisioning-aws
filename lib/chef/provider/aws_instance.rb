@@ -1,6 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_instance
+
   def create_aws_object(instance); end
 
   def update_aws_object(instance); end

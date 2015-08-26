@@ -2,6 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'retryable'
 
 class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_dhcp_options
+
   protected
 
   def create_aws_object

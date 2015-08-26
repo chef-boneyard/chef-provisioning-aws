@@ -2,7 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'retryable'
 
 class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_route_table
+  
   def action_create
     route_table = super
 

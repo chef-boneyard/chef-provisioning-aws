@@ -2,6 +2,7 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'set'
 
 class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_auto_scaling_group
 
   protected
 

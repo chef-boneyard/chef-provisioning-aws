@@ -1,6 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_server_certificate
+
   def update_aws_object(certificate)
     Chef::Log.warn("aws_server_certificate does not support modifying an existing certificate")
   end

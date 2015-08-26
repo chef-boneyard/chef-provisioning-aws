@@ -100,8 +100,8 @@ ref_subnet_2 = aws_subnet 'ref-subnet-2' do
 end
 
 aws_rds_subnet_group "ref-db-subnet-group" do
-  db_subnet_group_description "some_description"
-  subnets ['ref-subnet', ref_subnet_2.aws_object.id]
+  description "some_description"
+  subnets ['ref-subnet', lazy { ref_subnet_2.aws_object.id} ]
 end
 
 aws_rds_instance "ref-rds-instance" do
@@ -111,7 +111,8 @@ aws_rds_instance "ref-rds-instance" do
   master_username "thechief"
   master_user_password "securesecure" # 2x security
   multi_az false
-  db_subnet_group_name "test-db-subnet-group"
+  db_subnet_group_name "ref-db-subnet-group"
+  allocated_storage 5
 end
 
 # We cover tagging the base chef-provisioning resources in aws_tags.rb

@@ -1,6 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_image
+
   def destroy_aws_object(image)
     instance_id = image.tags['From-Instance']
     Chef::Log.debug("Found From-Instance tag [#{instance_id}] on #{image.id}")

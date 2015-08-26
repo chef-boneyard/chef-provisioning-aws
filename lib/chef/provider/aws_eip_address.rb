@@ -4,6 +4,7 @@ require 'chef/provisioning/machine_spec'
 require 'cheffish'
 
 class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_eip_address
 
   def action_create
     elastic_ip = super

@@ -2,6 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'chef/resource/aws_image'
 
 class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_launch_configuration
+
   protected
 
   def create_aws_object

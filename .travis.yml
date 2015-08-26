@@ -1,3 +1,4 @@
+sudo: false
 language: ruby
 rvm:
 - 2.0.0
@@ -8,5 +9,6 @@ script:
   - bundle exec rake spec
 
 notifications:
+  email: false
   slack:
     secure: R5MWoIv3FOBb0bhawHIkIMh2b0HUzK7nkxSpovK+A3Xmkl5JDirV5bcDeYaSAWZNqUWvbfo7lw6I0o5xoU1eNjOrjiqV0HFfkZZ1tqbZYs/Zw9qSHpPYyB5xacQglFjqWn0VHobGg6J8QstnM4AEWrk2KapGtKdWMNtLK/2OR3Q=

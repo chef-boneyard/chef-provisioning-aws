@@ -84,24 +84,24 @@ describe "AWS Tagged Items" do
         ).and be_idempotent
       end
 
-      # it "aws_instance 'test_instance' created with custom tag", :super_slow do
-      #   expect_recipe {
-      #     machine 'test_instance' do
-      #       action :allocate
-      #     end
-      #   }.to create_an_aws_instance('test_instance')
-      #
-      #   expect_recipe {
-      #     aws_instance "test_instance" do
-      #       aws_tags :project => 'FUN'
-      #     end
-      #   }.to update_an_aws_instance('test_instance'
-      #   ).and have_aws_instance_tags('test_instance',
-      #                                 { 'Name' => 'test_instance',
-      #                                   'project' => 'FUN'
-      #                                 }
-      #   ).and be_idempotent
-      # end
+      it "aws_instance 'test_instance' created with custom tag", :super_slow, :pending do
+        expect_recipe {
+          machine 'test_instance' do
+            action :allocate
+          end
+        }.to create_an_aws_instance('test_instance')
+
+        expect_recipe {
+          aws_instance "test_instance" do
+            aws_tags :project => 'FUN'
+          end
+        }.to update_an_aws_instance('test_instance'
+        ).and have_aws_instance_tags('test_instance',
+                                      { 'Name' => 'test_instance',
+                                        'project' => 'FUN'
+                                      }
+        ).and be_idempotent
+      end
 
       it "machine 'test_machine' created using machine_options aws_tag", :super_slow do
         expect_recipe {

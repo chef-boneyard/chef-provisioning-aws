@@ -496,14 +496,14 @@ EOD
 
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
-      instance = instance_for(machine_spec)
+      actual_instance = instance_for(machine_spec)
       bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
-      if instance == nil || !instance.exists? || instance.state.name == "terminated"
+      if actual_instance == nil || !actual_instance.exists? || actual_instance.state.name == "terminated"
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
-          instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
+          actual_instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
         end
       end
 
@@ -1042,15 +1042,15 @@ EOD
 
       by_bootstrap_options = {}
       specs_and_options.each do |machine_spec, machine_options|
-        instance = specs_and_servers[machine_spec]
-        if instance
-          if instance.state.name == "terminated"
+        actual_instance = specs_and_servers[machine_spec]
+        if actual_instance
+          if actual_instance.state.name == "terminated"
             Chef::Log.warn "Machine #{machine_spec.name} (#{instance.id}) is terminated.  Recreating ..."
           else
             # Even though the instance has been created the tags could be incorrect if it
             # was created before tags were introduced
-            converge_tags(instance, machine_options[:aws_tags], action_handler)
-            yield machine_spec, instance if block_given?
+            converge_tags(actual_instance, machine_options[:aws_tags], action_handler)
+            yield machine_spec, actual_instance if block_given?
             next
           end
         elsif machine_spec.reference
@@ -1165,7 +1165,7 @@ EOD
         end
         machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
       end
-      %w(is_windows ssh_username sudo use_private_ip_for_ssh ssh_gateway).each do |key|
+      %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
       end
       converge_tags(instance, machine_options[:aws_tags], action_handler)

@@ -101,6 +101,31 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           end
         end
       end
+
+      #SDK V2
+      vpc_peering_connections = []
+      %w(
+        requester-vpc-info.vpc-id
+        accepter-vpc-info.vpc-id
+      ).each do |filter|
+        vpc_peering_connections += new_resource.driver.ec2_client.describe_vpc_peering_connections({
+            :filters => [
+                {
+                    :name => filter,
+                    :values => [vpc.id]
+                }
+            ]
+        }).vpc_peering_connections
+      end
+
+      vpc_peering_connections.each do |pc_type|
+        pc_resource = new_resource.driver.ec2_resource.vpc_peering_connection(pc_type.vpc_peering_connection_id)
+        Cheffish.inline_resource(self, action) do
+          aws_vpc_peering_connection pc_resource do
+            action :purge
+          end
+        end
+      end
     end
 
     # Detach or destroy the internet gateway

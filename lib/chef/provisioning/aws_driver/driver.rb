@@ -1045,7 +1045,7 @@ EOD
         actual_instance = specs_and_servers[machine_spec]
         if actual_instance
           if actual_instance.state.name == "terminated"
-            Chef::Log.warn "Machine #{machine_spec.name} (#{instance.id}) is terminated.  Recreating ..."
+            Chef::Log.warn "Machine #{machine_spec.name} (#{actual_instance.id}) is terminated.  Recreating ..."
           else
             # Even though the instance has been created the tags could be incorrect if it
             # was created before tags were introduced

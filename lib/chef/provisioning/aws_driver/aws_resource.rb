@@ -133,7 +133,7 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
                         load_provider: true,
                         id: :name,
                         aws_id_prefix: nil)
-    self.resource_name = self.dsl_name
+    self.resource_name = convert_to_snake_case(self.name.split('::')[-1])
     @aws_sdk_class = sdk_class
     @aws_sdk_class_id = id
     @aws_id_prefix = aws_id_prefix

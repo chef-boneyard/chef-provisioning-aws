@@ -11,21 +11,28 @@ require 'chef/provisioning/machine/windows_machine'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
-require 'chef/resource/aws_key_pair'
-require 'chef/resource/aws_instance'
-require 'chef/resource/aws_image'
-require 'chef/resource/aws_load_balancer'
 require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
+require 'chef/provisioning/aws_driver/credentials2'
 
 require 'yaml'
 require 'aws-sdk-v1'
+require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
+AWS_V2_SERVICES = {"EC2" => "ec2"}
+Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
+
+# Need to load the resources after the SDK because `aws_sdk_types` can mess
+# up AWS loading if they are loaded too early
+require 'chef/resource/aws_key_pair'
+require 'chef/resource/aws_instance'
+require 'chef/resource/aws_image'
+require 'chef/resource/aws_load_balancer'
 
 class Chef
 module Provisioning
@@ -60,6 +67,18 @@ module AWSDriver
         region: region || credentials[:region],
         proxy_uri: credentials[:proxy_uri] || nil,
         session_token: credentials[:aws_session_token] || nil,
+        logger: Chef::Log.logger
+      )
+
+      # TODO document how users could add something to the Aws.config themselves if they want to
+      # Right now we are supporting both V1 and V2, so we create 2 config sets
+      credentials2 = Credentials2.new(:profile_name => profile_name)
+      ::Aws.config.update(
+        credentials: credentials2.get_credentials,
+        region: region || ENV["AWS_DEFAULT_REGION"] || credentials[:region],
+        # TODO when we get rid of V1 replace the credentials class with something that knows how
+        # to read ~/.aws/config
+        :http_proxy => credentials[:proxy_uri] || nil,
         logger: Chef::Log.logger
       )
     end
@@ -480,43 +499,14 @@ EOD
       actual_instance = instance_for(machine_spec)
       bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
-      if actual_instance == nil || !actual_instance.exists? || actual_instance.status == :terminated
-
+      if actual_instance == nil || !actual_instance.exists? || actual_instance.state.name == "terminated"
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
 
-          actual_instance = ec2.instances.create(bootstrap_options.to_hash)
-          # Make sure the instance is ready to be tagged
-          wait_until_taggable(actual_instance)
-
-          # TODO add other tags identifying user / node url (same as fog)
-          actual_instance.tags['Name'] = machine_spec.name
-          actual_instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
-          machine_spec.reference = {
-              'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
-              'allocated_at' => Time.now.utc.to_s,
-              'host_node' => action_handler.host_node,
-              'image_id' => bootstrap_options[:image_id],
-              'instance_id' => actual_instance.id
-          }
-          machine_spec.driver_url = driver_url
-          machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-          # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
-          if machine_options[:use_private_ip_for_ssh]
-            unless @transport_address_location_warned
-              Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
-              @transport_address_location_warned = true
-            end
-            machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
-          end
-          %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
-            machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
-          end
+          actual_instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
         end
       end
-      # TODO because we don't want to add `provider_tags` as a base attribute,
-      # we have to update the tags here in driver.rb instead of the providers
-      converge_tags(actual_instance, machine_options[:aws_tags], action_handler)
+
     end
 
     def allocate_machines(action_handler, specs_and_options, parallelizer)
@@ -528,14 +518,15 @@ EOD
 
     def ready_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
+      converge_tags(instance, machine_options[:aws_tags], action_handler)
 
       if instance.nil?
         raise "Machine #{machine_spec.name} does not have an instance associated with it, or instance does not exist."
       end
 
-      if instance.status != :running
-        wait_until_machine(action_handler, machine_spec, instance) { instance.status != :stopping }
-        if instance.status == :stopped
+      if instance.state.name != "running"
+        wait_until_machine(action_handler, machine_spec, "finish stopping", instance) { instance.state.name != "stopping" }
+        if instance.state.name == "stopped"
           action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
             instance.start
           end
@@ -579,6 +570,20 @@ EOD
 
     def ec2
       @ec2 ||= AWS::EC2.new(config: aws_config)
+    end
+
+    AWS_V2_SERVICES.each do |load_name, short_name|
+      class_eval <<-META
+
+      def #{short_name}_client
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new
+      end
+
+      def #{short_name}_resource
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(#{short_name}_client)
+      end
+
+      META
     end
 
     def elb
@@ -667,6 +672,8 @@ EOD
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+      # These are hardcoded for now - only 1 machine at a time
+      bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type
       image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
@@ -955,28 +962,31 @@ EOD
     end
 
     def wait_until_ready_machine(action_handler, machine_spec, instance=nil)
-      wait_until_machine(action_handler, machine_spec, instance) { instance.status == :running }
+      wait_until_machine(action_handler, machine_spec, "be ready", instance) { |instance|
+        instance.state.name == "running"
+      }
     end
 
-    def wait_until_machine(action_handler, machine_spec, instance=nil, &block)
+    def wait_until_machine(action_handler, machine_spec, output_msg, instance=nil, &block)
       instance ||= instance_for(machine_spec)
-      time_elapsed = 0
-      sleep_time = 10
-      max_wait_time = 120
-      if !yield(instance)
-        if action_handler.should_perform_actions
-          action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
-          while time_elapsed < max_wait_time && !yield(instance)
-            action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be ready ..."
-            sleep(sleep_time)
-            time_elapsed += sleep_time
+      # TODO make these configurable from Chef::Config
+      max_attempts = 12
+      delay = 10
+      log_progress = Proc.new do |attempts, response|
+        action_handler.report_progress "been waiting #{delay*attempts}/#{delay*max_attempts} -- sleeping #{delay} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
+      end
+      if action_handler.should_perform_actions
+        no_wait = yield(instance)
+        unless no_wait
+          action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
+          instance.wait_until(:max_attempts => max_attempts, :delay => delay, before_wait: log_progress) do |instance|
+            yield(instance)
           end
-          unless yield(instance)
-            raise "Image #{instance.id} did not become ready within #{max_wait_time} seconds"
-          end
-          action_handler.report_progress "#{machine_spec.name} is now ready"
         end
       end
+      # We need an instance.reload here because the `wait_until` does not reload the instance it is called on,
+      # only the instance that is passed to the block
+      instance.reload
     end
 
     def wait_for_transport(action_handler, machine_spec, machine_options)
@@ -1027,16 +1037,18 @@ EOD
       default_key_name
     end
 
-    def create_servers(action_handler, specs_and_options, parallelizer, &block)
+    def create_servers(action_handler, specs_and_options, parallelizer)
       specs_and_servers = instances_for(specs_and_options.keys)
 
       by_bootstrap_options = {}
       specs_and_options.each do |machine_spec, machine_options|
         actual_instance = specs_and_servers[machine_spec]
         if actual_instance
-          if actual_instance.status == :terminated
-            Chef::Log.warn "Machine #{machine_spec.name} (#{actual_instance.id}) is terminated.  Recreating ..."
+          if actual_instance.state.name == "terminated"
+            Chef::Log.warn "Machine #{machine_spec.name} (#{instance.id}) is terminated.  Recreating ..."
           else
+            # Even though the instance has been created the tags could be incorrect if it
+            # was created before tags were introduced
             converge_tags(actual_instance, machine_options[:aws_tags], action_handler)
             yield machine_spec, actual_instance if block_given?
             next
@@ -1062,54 +1074,24 @@ EOD
         action_handler.report_progress description
         if action_handler.should_perform_actions
           # Actually create the servers
-          create_many_instances(machine_specs.size, bootstrap_options, parallelizer) do |instance|
+          parallelizer.parallelize(1.upto(machine_specs.size)) do |i|
 
             # Assign each one to a machine spec
             machine_spec = machine_specs.pop
             machine_options = specs_and_options[machine_spec]
-            machine_spec.reference = {
-              'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
-              'allocated_at' => Time.now.utc.to_s,
-              'host_node' => action_handler.host_node,
-              'image_id' => bootstrap_options[:image_id],
-              'instance_id' => instance.id
-            }
-            machine_spec.driver_url = driver_url
-            instance.tags['Name'] = machine_spec.name
-            instance.source_dest_check = machine_options[:source_dest_check] if machine_options.has_key?(:source_dest_check)
-            converge_tags(instance, machine_options[:aws_tags], action_handler)
-            machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-            # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
-            if machine_options[:use_private_ip_for_ssh]
-              unless @transport_address_location_warned
-                Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
-                @transport_address_location_warned = true
-              end
-              machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
-            end
-            %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
-              machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
-            end
+
+            clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
+            instance = create_instance_and_reference(clean_bootstrap_options, action_handler, machine_spec, machine_options)
+
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
 
             yield machine_spec, instance if block_given?
-          end
+          end.to_a
 
           if machine_specs.size > 0
             raise "Not all machines were created by create_servers"
           end
         end
-      end.to_a
-    end
-
-    def create_many_instances(num_servers, bootstrap_options, parallelizer)
-      parallelizer.parallelize(1.upto(num_servers)) do |i|
-        clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
-        instance = ec2.instances.create(clean_bootstrap_options.to_hash)
-        wait_until_taggable(instance)
-
-        yield instance if block_given?
-        instance
       end.to_a
     end
 
@@ -1150,10 +1132,44 @@ EOD
       end
     end
 
-    def wait_until_taggable(instance)
-      Retryable.retryable(:tries => 12, :sleep => 5, :on => [AWS::EC2::Errors::InvalidInstanceID::NotFound, TimeoutError]) do
-        raise TimeoutError unless instance.status == :pending || instance.status == :running
+    def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
+      instance = ec2_resource.create_instances(bootstrap_options.to_hash)[0]
+      # Make sure the instance is ready to be tagged
+      instance.wait_until_exists
+
+      # Sometimes tagging fails even though the instance 'exists'
+      Retryable.retryable(:tries => 12, :sleep => 5, :on => [::Aws::EC2::Errors::InvalidInstanceIDNotFound]) do
+        instance.create_tags({tags: [{key: "Name", value: machine_spec.name}]})
       end
+      if machine_options.has_key?(:source_dest_check)
+        instance.modify_attribute({
+          source_dest_check: {
+            value: machine_options[:source_dest_check]
+          }
+        })
+      end
+      machine_spec.reference = {
+          'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
+          'allocated_at' => Time.now.utc.to_s,
+          'host_node' => action_handler.host_node,
+          'image_id' => bootstrap_options[:image_id],
+          'instance_id' => instance.id
+      }
+      machine_spec.driver_url = driver_url
+      machine_spec.reference['key_name'] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
+      # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
+      if machine_options[:use_private_ip_for_ssh]
+        unless @transport_address_location_warned
+          Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
+          @transport_address_location_warned = true
+        end
+        machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
+      end
+      %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
+        machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
+      end
+      converge_tags(instance, machine_options[:aws_tags], action_handler)
+      instance
     end
 
     def get_listeners(listeners)

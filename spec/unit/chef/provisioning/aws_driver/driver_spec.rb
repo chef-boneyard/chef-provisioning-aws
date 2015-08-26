@@ -1,4 +1,5 @@
 require 'chef/provisioning/aws_driver/driver'
+require 'chef/provisioning/aws_driver/credentials2'
 
 describe Chef::Provisioning::AWSDriver::Driver do
 
@@ -7,6 +8,7 @@ describe Chef::Provisioning::AWSDriver::Driver do
     aws_access_key_id: "id",
     aws_secret_access_key: "secret"
   })}
+  let(:credentials2) { double("credentials2", :get_credentials => {})}
 
   before do
     expect_any_instance_of(Chef::Provisioning::AWSDriver::Driver).to receive(:aws_credentials).and_return(aws_credentials)
@@ -17,6 +19,8 @@ describe Chef::Provisioning::AWSDriver::Driver do
         region:            "us-east-1"
       })
     end
+    expect(Chef::Provisioning::AWSDriver::Credentials2).to receive(:new).and_return(credentials2)
+    expect(::Aws).to receive(:config).and_return({})
   end
 
   describe "#determine_remote_host" do

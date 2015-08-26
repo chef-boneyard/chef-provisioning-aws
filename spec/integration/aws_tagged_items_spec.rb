@@ -84,7 +84,7 @@ describe "AWS Tagged Items" do
         ).and be_idempotent
       end
 
-      it "aws_instance 'test_instance' created with custom tag", :super_slow do
+      it "aws_instance 'test_instance' created with custom tag", :super_slow, :pending do
         expect_recipe {
           machine 'test_instance' do
             action :allocate

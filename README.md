@@ -108,6 +108,7 @@ configure the machine.  These are all the available options:
 
 ```ruby
 with_machine_options({
+  # See https://github.com/chef/chef-provisioning#machine-options for options shared between drivers
   bootstrap_options: {
     # http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Resource.html#create_instances-instance_method
     # lists the available options.  The below options are the default
@@ -117,46 +118,8 @@ with_machine_options({
     key_path: "~/.chef/keys/chef_default", # only necessary if storing keys some other location
     user_data: "...", # Only defaulted on Windows instances to start winrm
   },
-  convergence_options: {
-    chef_version: "12.4.1",
-    prerelease: "false",
-    chef_client_timeout: 120*60, # Default: 2 hours
-    chef_config: "log_level :debug\\n", # String containing additional text to inject into client.rb
-    chef_server: "http://my.chef.server/", # TODO could conflict with https://github.com/chef/chef-provisioning#pointing-boxes-at-chef-servers
-    bootstrap_proxy: "http://localhost:1234",
-    ssl_verify_mode: :verify_peer,
-    client_rb_path: "/etc/chef/client.rb", # <- DEFAULT, overwrite if necessary
-    client_pem_path: "/etc/chef/client.pem", # <- DEFAULT, overwrite if necessary
-    allow_overwrite_keys: false, # If there is an existing client.pem this needs to be true to overwrite it
-    private_key_options: {}, # TODO ????? Something to do with creating node object
-    source_key: "", # ?????
-    source_key_pass_phrase: "", # ?????
-    source_key_path: "", # ?????
-    public_key_path: "", # ?????
-    public_key_format: "", # ?????
-    admin: "", # ?????
-    validator: "", # ?????
-    ohai_hints: { :ec2 => { :key => :value } }, # Map from hint file name to file contents, this would create /etc/chef/ohai/hints/ec2.json
-    # The following are only available for Linux machines
-    install_sh_url: "https://www.chef.io/chef/install.sh", # <- DEFAULT, overwrite if necessary
-    install_sh_path: "/tmp/chef-install.sh", # <- DEFAULT, overwrite if necessary
-    install_sh_arguments: "-P chef-dk", # Additional commands to pass to install.sh
-    # The following are only available for Windows machines
-    install_msi_url: "foo://bar.com"
-  },
-  ssh_options: {
-    ...
-  },
-  cached_installer: false, # ???
-  aws_tags: { :key1 => "value", "key2" => "value"},
-  source_dest_check: false, # Specifies whether to enable an instance launched in a VPC to perform NAT
-  is_windows: false, # set to true if using a Windows AMI
-  ssh_username: "ubuntu",
-  ssh_gateway: "localhost"
-  sudo: true,
   use_private_ip_for_ssh: false, # DEPRECATED, use `transport_address_location`
   transport_address_location: :public_ip, # `:public_ip` (default), `:private_ip` or `:dns`.  Defines how SSH or WinRM should find an address to communicate with the instance.
-  ...
 })
 ```
 

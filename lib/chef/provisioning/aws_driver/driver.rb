@@ -73,13 +73,15 @@ module AWSDriver
       # TODO document how users could add something to the Aws.config themselves if they want to
       # Right now we are supporting both V1 and V2, so we create 2 config sets
       credentials2 = Credentials2.new(:profile_name => profile_name)
+      Chef::Config.chef_provisioning ||= {}
       ::Aws.config.update(
         credentials: credentials2.get_credentials,
         region: region || ENV["AWS_DEFAULT_REGION"] || credentials[:region],
         # TODO when we get rid of V1 replace the credentials class with something that knows how
         # to read ~/.aws/config
         :http_proxy => credentials[:proxy_uri] || nil,
-        logger: Chef::Log.logger
+        logger: Chef::Log.logger,
+        retry_limit: Chef::Config.chef_provisioning[:aws_retry_limit] || 5
       )
     end
 

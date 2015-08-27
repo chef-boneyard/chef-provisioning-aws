@@ -5,6 +5,7 @@
 - Deprecated the machine_option `use_private_ip_for_ssh`.  Replaced it with `transport_address_location` which can have an option
   of `:public_ip`, `:private_ip` or `:dns`.  Existing ManagedEntry references will be converted and the old value will be ignored
   if the new value is present.
+- Added a configurable option for the number of times to retry [certain](https://github.com/aws/aws-sdk-ruby/blob/fb721a3ec3de2caabdb0ffa1f43bbe72b928f4ab/aws-sdk-core/lib/aws-sdk-core/plugins/retry_errors.rb) errors via the AWS SDK.  Add `chef_provisioning({:aws_retry_limit => 25})` to your `client.rb` to configure this.  Additionally, see [this documentation](https://github.com/chef/chef-provisioning/blob/master/docs/blogs/2012-05-28-machine_batch.html.markdown#max_simultaneous) in chef-provisioning for how to configure the `max_simultaneous` attribute on the machine_batch to limit the threads we use for making SDK requests.
 
 ## 1.3.1 (8/5/2015)
 

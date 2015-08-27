@@ -7,6 +7,7 @@ class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   attribute :options, :kind_of => Hash, :default => {}
   attribute :enable_website_hosting, :kind_of => [TrueClass, FalseClass], :default => false
   attribute :website_options, :kind_of => Hash, :default => {}
+  attribute :recursive_delete, :kind_of => [TrueClass, FalseClass], :default => false
 
   def aws_object
     result = driver.s3.buckets[name]

@@ -43,7 +43,11 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   def destroy_aws_object(bucket)
     converge_by "delete S3 bucket #{new_resource.name}" do
-      bucket.delete
+      if new_resource.recursive_delete
+        bucket.delete!
+      else
+        bucket.delete
+      end
     end
   end
 

@@ -4,6 +4,10 @@
 # AWS objects and clean them up.
 #
 module AWSSupport
+
+  # This pulls in some tools that let us test recipes in the context of a Chef run, instead of manually
+  # mocking the necessary objects and examining the results. See
+  # https://github.com/chef/cheffish/blob/master/README.md for details.
   require 'cheffish/rspec/chef_run_support'
   def self.extended(other)
     other.extend Cheffish::RSpec::ChefRunSupport
@@ -42,6 +46,7 @@ module AWSSupport
     end
   end
 
+  # Shared utility function to create a VPC `before` an RSpec context.
   def setup_public_vpc
     aws_vpc 'test_vpc' do
       cidr_block '10.0.0.0/24'
@@ -118,6 +123,8 @@ module AWSSupport
       # Destroys it after the last example in the context runs.  Objects created
       # in the order declared, and destroyed in reverse order.
       #
+      # These work in concert with the create/update/etc. matchers dynamically created below in
+      # WithAWSInstanceMethods.
       Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
         resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
         resource_name = resource_class.resource_name
@@ -178,10 +185,16 @@ module AWSSupport
       end
     end
 
+    # This dynamically defines five RSpec matchers for everything listed in
+    # Chef::Provisioning::AWSDriver::Resources, so you can do e.g.
     #
     # expect_recipe { }.to create_an_aws_vpc
-    # expect_recipe { }.to update_an_aws_security_object
     #
+    # These are composable in the usual RSpec way:
+    #
+    # expect_recipe { }.to update_an_aws_security_object.and be_idempotent
+    #
+    # The before/after clauses that handle prep and cleanup are above in WithAWSClassMethods.
     Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
       resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
       resource_name = resource_class.resource_name

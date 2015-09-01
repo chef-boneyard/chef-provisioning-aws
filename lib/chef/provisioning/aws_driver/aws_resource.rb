@@ -59,7 +59,9 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
                               lazy_default: proc { Chef::Provisioning::ChefManagedEntryStore.new(chef_server) }
 
   #
-  # Get the current AWS object.
+  # Get the current AWS object.  This should return the aws_object even if it has
+  # a status like 'deleted' or 'inactive'.  If there is an aws_object, we return it.
+  # Callers will need to check the status if they care.
   #
   def aws_object
     raise NotImplementedError, :aws_object

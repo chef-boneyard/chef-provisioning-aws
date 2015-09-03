@@ -14,7 +14,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 #
 class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
-  aws_sdk_type AWS::EC2::RouteTable
+  aws_sdk_type Aws::EC2::RouteTable
 
   require 'chef/resource/aws_vpc'
 
@@ -64,7 +64,8 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # - { internet_gateway: <AWS Internet Gateway ID or object> }
   # - { instance: <Chef machine name or resource, AWS Instance ID or object> }
   # - { network_interface: <AWS Network Interface ID or object> }
-  # - <AWS Internet Gateway, Instance or Network Interface <ID or object)>
+  # - { vpc_peering_connection: <AWS VPC Peering Connection ID or object> }
+  # - <AWS Internet Gateway, Instance, Network Interface or a VPC Peering Connection <ID or object)>
   # - Chef machine name
   # - Chef machine resource
   #
@@ -96,11 +97,11 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.route_tables[id] if id
+    result = driver.ec2_resource.route_table(id) if id
     begin
       # try accessing it to find out if it exists
-      result.vpc if result
-    rescue AWS::EC2::Errors::InvalidRouteTableID::NotFound
+      result.vpc_id if result
+    rescue Aws::EC2::Errors::InvalidRouteTableIDNotFound
       result = nil
     end
     result

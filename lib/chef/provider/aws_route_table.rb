@@ -20,14 +20,23 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     options = {}
-    options[:vpc] = new_resource.vpc
+    options[:vpc_id] = new_resource.vpc
     options = AWSResource.lookup_options(options, resource: new_resource)
-    self.vpc = Chef::Resource::AwsVpc.get_aws_object(options[:vpc], resource: new_resource)
+
+    ec2_resource = new_resource.driver.ec2_resource
+    self.vpc = ec2_resource.vpc(options[:vpc_id])
 
     converge_by "create route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
-      route_table = new_resource.driver.ec2.route_tables.create(options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidRouteTableID::NotFound) do
-        route_table.tags['Name'] = new_resource.name
+      route_table = vpc.create_route_table
+      retry_with_backoff(Aws::EC2::Errors::ServiceError) do
+        route_table.create_tags({
+             :tags => [
+                 {
+                     :key => "Name",
+                     :value => new_resource.name
+                 }
+             ]
+         })
       end
       route_table
     end
@@ -37,9 +46,9 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     self.vpc = route_table.vpc
 
     if new_resource.vpc
-      desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
-      if vpc != desired_vpc
-        raise "VPC of route table #{new_resource.to_s} is #{route_table.vpc.id}, but desired VPC is #{new_resource.vpc}!  The AWS SDK does not support updating the main route table except by creating a new route table."
+      desired_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
+      if vpc.id != desired_vpc_id
+        raise "VPC of route table #{new_resource.to_s} is #{vpc.id}, but desired VPC is #{desired_vpc_id}!  The AWS SDK does not support updating the main route table except by creating a new route table."
       end
     end
   end
@@ -48,7 +57,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "delete #{new_resource.to_s} in #{region}" do
       begin
         route_table.delete
-      rescue AWS::EC2::Errors::DependencyViolation
+      rescue Aws::EC2::Errors::DependencyViolation
         raise "#{new_resource.to_s} could not be deleted because it is the main route table for #{route_table.vpc.id} or it is being used by a subnet"
       end
     end
@@ -63,8 +72,9 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     current_routes = {}
     route_table.routes.each do |route|
       # Ignore the automatic local route
-      next if route.target.id == 'local'
-      next if ignore_route_targets.find { |target| route.target.id.match(/#{target}/) }
+      route_target = route.gateway_id || route.instance_id || route.network_interface_id || route.vpc_peering_connection_id
+      next if route_target == 'local'
+      next if ignore_route_targets.find { |target| route_target.match(/#{target}/) }
       current_routes[route.destination_cidr_block] = route
     end
 
@@ -75,14 +85,15 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       # If we already have a route to that CIDR block, replace it.
       if current_routes[destination_cidr_block]
         current_route = current_routes.delete(destination_cidr_block)
-        if current_route.target != target
-          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target.id}) instead of #{current_route.target.id}" do
+        current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
+        if current_target != target
+          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_route.target}" do
             current_route.replace(options)
           end
         end
       else
-        action_handler.perform_action "route #{destination_cidr_block} to #{route_target} (#{target.id})" do
-          route_table.create_route(destination_cidr_block, options)
+        action_handler.perform_action "route #{destination_cidr_block} to #{route_target} (#{target})" do
+          route_table.create_route({ :destination_cidr_block => destination_cidr_block }.merge(options))
         end
       end
     end
@@ -96,7 +107,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_virtual_private_gateways(route_table, gateway_ids)
-    current_propagating_vgw_set = route_table.client.describe_route_tables(route_table_ids: [route_table.id]).route_table_set.first.propagating_vgw_set
+    current_propagating_vgw_set = route_table.propagating_vgws
 
     # Add propagated routes
     if gateway_ids
@@ -122,7 +133,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   def get_route_target(vpc, route_target)
     case route_target
     when :internet_gateway
-      route_target = { internet_gateway: vpc.internet_gateway }
+      route_target = { internet_gateway: vpc.internet_gateways.first.id }
       if !route_target[:internet_gateway]
         raise "VPC #{new_resource.vpc} (#{vpc.id}) does not have an internet gateway to route to!  Use `internet_gateway true` on the VPC itself to create one."
       end
@@ -130,6 +141,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
+    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, Aws::EC2::AwsVpcPeeringConnection
+      route_target = { vpc_peering_connection: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
     when Chef::Resource::Machine
@@ -144,16 +157,19 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     else
       raise "Unrecognized route destination #{route_target.inspect}"
     end
+    updated_route_target = {}
     route_target.each do |name, value|
       case name
       when :instance
-        route_target[name] = Chef::Resource::AwsInstance.get_aws_object(value, resource: new_resource)
+        updated_route_target[:instance_id] = Chef::Resource::AwsInstance.get_aws_object_id(value, resource: new_resource)
       when :network_interface
-        route_target[name] = Chef::Resource::AwsNetworkInterface.get_aws_object(value, resource: new_resource)
+        updated_route_target[:network_interface_id] = Chef::Resource::AwsNetworkInterface.get_aws_object_id(value, resource: new_resource)
       when :internet_gateway
-        route_target[name] = Chef::Resource::AwsInternetGateway.get_aws_object(value, resource: new_resource)
+        updated_route_target[:gateway_id] = Chef::Resource::AwsInternetGateway.get_aws_object_id(value, resource: new_resource)
+      when :vpc_peering_connection
+        updated_route_target[:vpc_peering_connection_id] = Chef::Resource::AwsVpcPeeringConnection.get_aws_object_id(value, resource: new_resource)
       end
     end
-    route_target
+    updated_route_target
   end
 end

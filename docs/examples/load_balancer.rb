@@ -55,6 +55,13 @@ load_balancer "test-elb" do
             instance_protocol: :https,
             ssl_certificate_id: cert.aws_object.arn
           }],
+          health_check: {
+            healthy_threshold:    2,
+            unhealthy_threshold:  4,
+            interval:             12,
+            timeout:              5,
+            target:               "HTTP:80/"
+          },
           scheme: "internal",
           subnets: "subnet-1234567",
           security_groups: "test-sg"

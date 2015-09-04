@@ -1,5 +1,3 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
-
 #
 # An AWS internet gateway, allowing communication between instances inside a VPC and the internet.
 #
@@ -17,6 +15,11 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   aws_sdk_type AWS::EC2::InternetGateway
 
   require 'chef/resource/aws_vpc'
+
+  #
+  # Extend actions for the internet gateway
+  #
+  actions :create, :destroy, :detach, :purge, :nothing
 
   #
   # The name of this internet gateway.

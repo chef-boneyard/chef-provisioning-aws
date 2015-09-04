@@ -2,6 +2,12 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'retryable'
 
 class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_internet_gateway
+
+  def action_detach
+    internet_gateway = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.name, resource: new_resource)
+    detach_aws_object(internet_gateway)
+  end
 
   protected
 
@@ -36,8 +42,18 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
   def destroy_aws_object(internet_gateway)
     converge_by "delete internet gateway #{new_resource.name} in region #{region}" do
       begin
-        detach_vpc(internet_gateway)
+        detach_aws_object(internet_gateway)
         internet_gateway.delete
+      rescue AWS::EC2::Errors::InvalidInternetGatewayID::NotFound
+        raise "internet gateway #{internet_gateway.id} not found"
+      end
+    end
+  end
+
+  def detach_aws_object(internet_gateway)
+    converge_by "detach internet gateway #{new_resource.name} in region #{region}" do
+      begin
+        detach_vpc(internet_gateway)
       rescue AWS::EC2::Errors::InvalidInternetGatewayID::NotFound
         raise "internet gateway #{internet_gateway.id} not found"
       end

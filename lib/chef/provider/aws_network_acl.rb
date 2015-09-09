@@ -3,6 +3,8 @@ require 'chef/resource/aws_vpc'
 require 'retryable'
 
 class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_network_acl
 
   def action_create

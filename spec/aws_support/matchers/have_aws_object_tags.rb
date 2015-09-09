@@ -34,9 +34,9 @@ module AWSSupport
 
         # Check existence
         if @aws_object.nil?
-          differences << "#{resource_name}[#{name}] did not exist!"
+          differences << "#{resource.to_s} did not exist!"
         else
-          differences += match_hashes_failure_messages(expected_tags, aws_object_tags, "#{resource_name}[#{name}]")
+          differences += match_hashes_failure_messages(expected_tags, aws_object_tags(resource), resource.to_s)
         end
 
         differences
@@ -44,25 +44,14 @@ module AWSSupport
 
       private
 
-      def aws_object_tags
-        if @aws_object.is_a? AWS::ELB::LoadBalancer
-          resp = @example.driver.elb.client.describe_tags load_balancer_names: [@aws_object.name]
-          tags = {}
-          resp.data[:tag_descriptions] && resp.data[:tag_descriptions].each do |td|
-            td[:tags].each do |t|
-              tags[t[:key]] = t[:value]
-            end
-          end
-          tags
-        else
-          tags = @aws_object.tags
-          if tags.is_a? AWS::EC2::ResourceTagCollection
-            tags.to_h
-          else
-            Hash[tags.map {|o| [o.key, o.value]}]
-          end
-        end
+      def aws_object_tags(resource)
+        # Okay, its annoying to have to lookup the provider for a resource and duplicate a bunch of code here.
+        # But I don't want to move the `converge_tags` method into the resource and until the resource & provider
+        # are combined, this is my best idea.
+        provider = resource.provider_for_action(:create)
+        provider.aws_tagger.current_tags
       end
+
     end
   end
 end

@@ -26,6 +26,8 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 # - http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/VPC.html
 #
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+  
   aws_sdk_type AWS::EC2::VPC
 
   require 'chef/resource/aws_dhcp_options'

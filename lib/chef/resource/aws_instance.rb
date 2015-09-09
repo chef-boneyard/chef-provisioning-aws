@@ -1,14 +1,14 @@
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require 'chef/provisioning/aws_driver/aws_taggable'
 
 class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   # The require needs to be inside this class otherwise it gets loaded before the rest of the SDK
   # and starts causing issues - AWS expects to load all this stuff itself
   aws_sdk_type ::Aws::EC2::Instance,
     managed_entry_type: :machine,
     managed_entry_id_name: 'instance_id'
-
-  # TODO need to remove this for now because the SDK V2 uses a different tagging mechanism
-  undef_method(:aws_tags)
 
   attribute :name, kind_of: String, name_attribute: true
 

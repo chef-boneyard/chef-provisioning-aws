@@ -66,6 +66,12 @@ module AWSSupport
       end.converge
     end
 
+    aws_security_group 'test_security_group' do
+      vpc 'test_vpc'
+      inbound_rules '0.0.0.0/0' => [ 22, 80 ]
+      outbound_rules [ 22, 80 ] => '0.0.0.0/0'
+    end
+
     aws_subnet 'test_public_subnet' do
       vpc 'test_vpc'
       map_public_ip_on_launch true
@@ -118,8 +124,11 @@ module AWSSupport
       # Destroys it after the last example in the context runs.  Objects created
       # in the order declared, and destroyed in reverse order.
       #
-      Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
-        resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
+      aws_resources = Chef::Provisioning::AWSDriver::Resources.constants
+      aws_resources.map! {|r| Chef::Provisioning::AWSDriver::Resources.const_get(r) }
+
+      aws_resources += [Chef::Resource::Machine, Chef::Resource::MachineImage, Chef::Resource::MachineBatch, Chef::Resource::LoadBalancer]
+      aws_resources.each do |resource_class|
         resource_name = resource_class.resource_name
         # def aws_vpc(name, &block)
         define_method(resource_name) do |name, &block|

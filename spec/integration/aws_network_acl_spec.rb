@@ -102,6 +102,57 @@ describe Chef::Resource::AwsNetworkAcl do
           ).and be_idempotent
         end
       end
+
+      it "creates aws_network_acl tags" do
+        expect_recipe {
+          aws_network_acl 'test_network_acl' do
+            vpc 'test_vpc'
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_network_acl('test_network_acl')
+        .and have_aws_network_acl_tags('test_network_acl',
+          {
+            'Name' => 'test_network_acl',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_network_acl 'test_network_acl' do
+          vpc 'test_vpc'
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_network_acl tags" do
+          expect_recipe {
+            aws_network_acl 'test_network_acl' do
+              vpc 'test_vpc'
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_network_acl_tags('test_network_acl',
+            {
+              'Name' => 'test_network_acl',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_network_acl tags except Name" do
+          expect_recipe {
+            aws_network_acl 'test_network_acl' do
+              vpc 'test_vpc'
+              aws_tags {}
+            end
+          }.to have_aws_network_acl_tags('test_network_acl',
+            {
+              'Name' => 'test_network_acl'
+            }
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

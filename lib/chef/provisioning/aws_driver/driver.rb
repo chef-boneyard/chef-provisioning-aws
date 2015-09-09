@@ -12,9 +12,12 @@ require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/machine_spec'
 
 require 'chef/provisioning/aws_driver/aws_resource'
+require 'chef/provisioning/aws_driver/tagging_strategy/ec2'
+require 'chef/provisioning/aws_driver/tagging_strategy/elb'
 require 'chef/provisioning/aws_driver/version'
 require 'chef/provisioning/aws_driver/credentials'
 require 'chef/provisioning/aws_driver/credentials2'
+require 'chef/provisioning/aws_driver/aws_tagger'
 
 require 'yaml'
 require 'aws-sdk-v1'
@@ -24,7 +27,7 @@ require 'ubuntu_ami'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
-AWS_V2_SERVICES = {"EC2" => "ec2"}
+AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb"}
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess
@@ -44,6 +47,14 @@ module AWSDriver
     include Chef::Mixin::DeepMerge
 
     attr_reader :aws_config
+
+    # We add the appropriate attributes to the base resources for tagging support
+    Chef::Resource::Machine.include(Chef::Provisioning::AWSDriver::AWSTaggable)
+    Chef::Provider::Machine.additional_machine_option_keys << :aws_tags
+    Chef::Resource::MachineImage.include(Chef::Provisioning::AWSDriver::AWSTaggable)
+    Chef::Provider::MachineImage.additional_image_option_keys << :aws_tags
+    Chef::Resource::LoadBalancer.include(Chef::Provisioning::AWSDriver::AWSTaggable)
+    Chef::Provider::LoadBalancer.additional_lb_option_keys << :aws_tags
 
     # URL scheme:
     # aws:profilename:region
@@ -91,10 +102,12 @@ module AWSDriver
 
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      lb_options = AWSResource.lookup_options(lb_options || {}, managed_entry_store: lb_spec.managed_entry_store, driver: self)
+      lb_options = (lb_options || {}).to_h
+      lb_options = AWSResource.lookup_options(lb_options, managed_entry_store: lb_spec.managed_entry_store, driver: self)
       # We delete the attributes here because they are not valid in the create call
       # and must be applied afterward
       lb_attributes = lb_options.delete(:attributes)
+      lb_aws_tags = lb_options.delete(:aws_tags)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -114,12 +127,8 @@ module AWSDriver
         updates << "  with security groups #{lb_options[:security_groups]}" if lb_options[:security_groups]
         updates << "  with tags #{lb_options[:aws_tags]}" if lb_options[:aws_tags]
 
-
-        lb_aws_tags = lb_options[:aws_tags]
-        lb_options.delete(:aws_tags)
         action_handler.perform_action updates do
           actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
-          lb_options[:aws_tags] = lb_aws_tags
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -302,34 +311,7 @@ module AWSDriver
         end
       end
 
-      # GRRRR curse you AWS and your crappy tagging support for ELBs
-      read_tags_block = lambda {|aws_object|
-        resp = elb.client.describe_tags load_balancer_names: [aws_object.name]
-        tags = {}
-        resp.data[:tag_descriptions] && resp.data[:tag_descriptions].each do |td|
-          td[:tags].each do |t|
-            tags[t[:key]] = t[:value]
-          end
-        end
-        tags
-      }
-
-      set_tags_block = lambda {|aws_object, desired_tags|
-        aws_form_tags = []
-        desired_tags.each do |k, v|
-          aws_form_tags << {key: k, value: v}
-        end
-        elb.client.add_tags load_balancer_names: [aws_object.name], tags: aws_form_tags
-      }
-
-      delete_tags_block=lambda {|aws_object, tags_to_delete|
-        aws_form_tags = []
-        tags_to_delete.each do |k, v|
-          aws_form_tags << {key: k}
-        end
-        elb.client.remove_tags load_balancer_names: [aws_object.name], tags: aws_form_tags
-      }
-      converge_tags(actual_elb, lb_options[:aws_tags], action_handler, read_tags_block, set_tags_block, delete_tags_block)
+      converge_elb_tags(actual_elb, lb_aws_tags, action_handler)
 
       # Update load balancer attributes
       if lb_attributes
@@ -431,6 +413,8 @@ module AWSDriver
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
+      image_options = (image_options || {}).to_h.dup
+      machine_options = (machine_options || {}).to_h.dup
       aws_tags = image_options.delete(:aws_tags) || {}
       if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
@@ -442,13 +426,14 @@ module AWSDriver
           image_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'image_id' => actual_image.id,
-            'allocated_at' => Time.now.to_i
+            'allocated_at' => Time.now.to_i,
+            'from-instance' => image_options[:instance_id]
           }
           image_spec.driver_url = driver_url
         end
       end
       aws_tags['From-Instance'] = image_options[:instance_id] if image_options[:instance_id]
-      converge_tags(actual_image, aws_tags, action_handler)
+      converge_ec2_tags(actual_image, aws_tags, action_handler)
     end
 
     def ready_image(action_handler, image_spec, image_options)
@@ -456,11 +441,13 @@ module AWSDriver
       if actual_image.nil? || !actual_image.exists?
         raise 'Cannot ready an image that does not exist'
       else
+        image_options = (image_options || {}).to_h.dup
+        aws_tags = image_options.delete(:aws_tags) || {}
+        aws_tags['From-Instance'] = image_spec.reference['from-instance'] if image_spec.reference['from-instance']
+        converge_ec2_tags(actual_image, aws_tags, action_handler)
         if actual_image.state != :available
           action_handler.report_progress 'Waiting for image to be ready ...'
           wait_until_ready_image(action_handler, image_spec, actual_image)
-        else
-          action_handler.report_progress "Image #{image_spec.name} is ready!"
         end
       end
     end
@@ -504,11 +491,10 @@ EOD
       if instance == nil || !instance.exists? || instance.state.name == "terminated"
         action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
-
           instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
         end
       end
-
+      converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
     end
 
     def allocate_machines(action_handler, specs_and_options, parallelizer)
@@ -520,7 +506,7 @@ EOD
 
     def ready_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
-      converge_tags(instance, machine_options[:aws_tags], action_handler)
+      converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
 
       if instance.nil?
         raise "Machine #{machine_spec.name} does not have an instance associated with it, or instance does not exist."
@@ -1051,7 +1037,7 @@ EOD
           else
             # Even though the instance has been created the tags could be incorrect if it
             # was created before tags were introduced
-            converge_tags(instance, machine_options[:aws_tags], action_handler)
+            converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
             yield machine_spec, instance if block_given?
             next
           end
@@ -1084,6 +1070,7 @@ EOD
 
             clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
             instance = create_instance_and_reference(clean_bootstrap_options, action_handler, machine_spec, machine_options)
+            converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
 
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
 
@@ -1097,41 +1084,24 @@ EOD
       end.to_a
     end
 
-    # TODO This is currently duplicated from AWS Provider
-    # Set the tags on the aws object to desired_tags, while ignoring any `Name` tag
-    # If no tags need to be modified, will not perform a write call on AWS
-    def converge_tags(
-      aws_object,
-      desired_tags,
-      action_handler,
-      read_tags_block=lambda {|aws_object| aws_object.tags.to_h},
-      set_tags_block=lambda {|aws_object, desired_tags| aws_object.tags.set(desired_tags) },
-      delete_tags_block=lambda {|aws_object, tags_to_delete| aws_object.tags.delete(*tags_to_delete) }
-    )
-      # If aws_tags were not provided we exit
-      if desired_tags.nil?
-        Chef::Log.debug "aws_tags not provided, nothing to converge"
-        return
-      end
-      current_tags = read_tags_block.call(aws_object)
-      # AWS always returns tags as strings, and we don't want to overwrite a
-      # tag-as-string with the same tag-as-symbol
-      desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
-      tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
-      tags_to_delete = current_tags.keys - desired_tags.keys
-      # We don't want to delete `Name`, just all other tags
-      tags_to_delete.delete('Name')
+    def converge_ec2_tags(aws_object, tags, action_handler)
+      ec2_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::EC2.new(
+        ec2_client,
+        aws_object.id,
+        tags
+      )
+      aws_tagger = Chef::Provisioning::AWSDriver::AWSTagger.new(ec2_strategy, action_handler)
+      aws_tagger.converge_tags
+    end
 
-      unless tags_to_update.empty?
-        action_handler.perform_action "applying tags #{tags_to_update}" do
-          set_tags_block.call(aws_object, tags_to_update)
-        end
-      end
-      unless tags_to_delete.empty?
-        action_handler.perform_action "deleting tags #{tags_to_delete.inspect}" do
-          delete_tags_block.call(aws_object, tags_to_delete)
-        end
-      end
+    def converge_elb_tags(aws_object, tags, action_handler)
+      elb_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::ELB.new(
+        elb_client,
+        aws_object.name,
+        tags
+      )
+      aws_tagger = Chef::Provisioning::AWSDriver::AWSTagger.new(elb_strategy, action_handler)
+      aws_tagger.converge_tags
     end
 
     def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
@@ -1170,7 +1140,6 @@ EOD
       %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
       end
-      converge_tags(instance, machine_options[:aws_tags], action_handler)
       instance
     end
 

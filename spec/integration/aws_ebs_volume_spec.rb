@@ -44,6 +44,103 @@ describe Chef::Resource::AwsEbsVolume do
          .and be_idempotent
       end
 
+      # These tests are testing the tagging functionality - they use some example resources rather
+      # because these are integration tests so we cannot make a mock resource.
+      it "aws_ebs_volume 'test_volume' created with default Name tag" do
+        expect_recipe {
+          aws_ebs_volume "test_volume"
+        }.to create_an_aws_ebs_volume('test_volume'
+        ).and have_aws_ebs_volume_tags('test_volume',
+                       { 'Name' => 'test_volume' }
+        ).and be_idempotent
+      end
+
+      it "allows users to specify a unique Name tag" do
+        expect_recipe {
+          aws_ebs_volume "test_volume_2" do
+            aws_tags :Name => 'test_volume_new'
+          end
+        }.to create_an_aws_ebs_volume('test_volume_2'
+        ).and have_aws_ebs_volume_tags('test_volume_2',
+                                      { 'Name' => 'test_volume_new' }
+        ).and be_idempotent
+      end
+
+      it "allows tags to be specified as strings or symbols" do
+        expect_recipe {
+          aws_ebs_volume "test_volume" do
+            aws_tags({
+              :key1 => :symbol,
+              'key2' => :symbol,
+              :key3 => 'string',
+              'key4' => 'string'
+            })
+          end
+        }.to create_an_aws_ebs_volume('test_volume'
+        ).and have_aws_ebs_volume_tags('test_volume',
+                       {
+                         'key1' => 'symbol',
+                         'key2' => 'symbol',
+                         'key3' => 'string',
+                         'key4' => 'string'
+                       }
+        ).and be_idempotent
+      end
+
+      context "when there are existing tags" do
+        before(:each) do
+          converge {
+            aws_ebs_volume "test_volume_a" do
+              aws_tags :byebye => 'true'
+            end
+          }
+        end
+
+        after(:each) do
+          converge {
+            aws_ebs_volume "test_volume_a" do
+              action :purge
+            end
+          }
+        end
+
+        it "updates the tags" do
+          expect_recipe {
+            aws_ebs_volume "test_volume_a" do
+              aws_tags 'Name' => 'test_volume_b', :project => 'X'
+            end
+          }.to have_aws_ebs_volume_tags('test_volume_a',
+                                        {
+                                          'Name' => 'test_volume_b',
+                                          'project' => 'X'
+                                        }
+          ).and be_idempotent
+        end
+
+        it "deletes the tags" do
+          expect_recipe {
+            aws_ebs_volume "test_volume_a" do
+              aws_tags {}
+            end
+          }.to have_aws_ebs_volume_tags('test_volume_a',
+                                        {
+                                          'Name' => 'test_volume_a',
+                                        }
+          ).and be_idempotent
+        end
+
+        it "aws_ebs_volume 'test_volume' tags are not changed when not updated" do
+          expect_recipe {
+            #aws_ebs_volume "test_volume_a"
+          }.to have_aws_ebs_volume_tags('test_volume_a',
+                                        {
+                                          'Name' => 'test_volume_a',
+                                          'byebye' => 'true'
+                                        }
+          )
+        end
+      end
+
     end
   end
 end

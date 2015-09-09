@@ -4,8 +4,10 @@ require 'ipaddr'
 require 'set'
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_security_group
-  
+
   def action_create
     sg = super
 
@@ -22,6 +24,10 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       Chef::Log.debug("VPC: #{options[:vpc]}")
 
       sg = new_resource.driver.ec2.security_groups.create(new_resource.name, options)
+      retry_with_backoff(AWS::EC2::Errors::InvalidSecurityGroupsID::NotFound) do
+        sg.tags['Name'] = new_resource.name
+      end
+      sg
     end
   end
 

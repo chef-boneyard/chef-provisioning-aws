@@ -3,6 +3,8 @@ require 'chef/resource/aws_vpc'
 require 'chef/provisioning/aws_driver/exceptions'
 
 class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResource
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::SecurityGroup,
                id: :id,
                option_names: [:security_group, :security_group_id, :security_group_name]
@@ -10,13 +12,6 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   attribute :name,          kind_of: String, name_attribute: true
   attribute :vpc,           kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
   attribute :description,   kind_of: String
-
-  # This should be a hash of tags to apply to the AWS object
-  # TODO this is duplicated from AWSResourceWithEntry
-  #
-  # @param aws_tags [Hash] Should be a hash of keys & values to add.  Keys and values
-  #        can be provided as symbols or strings, but will be stored in AWS as strings.
-  attribute :aws_tags, kind_of: Hash
 
   #
   # Accepts rules in the format:

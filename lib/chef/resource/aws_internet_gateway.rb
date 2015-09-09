@@ -1,6 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSResource
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::InternetGateway, load_provider: false, id: :id
 
   attribute :name, kind_of: String, name_attribute: true

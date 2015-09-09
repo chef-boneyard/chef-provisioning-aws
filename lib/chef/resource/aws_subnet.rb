@@ -14,6 +14,8 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 # - http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Subnet.html
 #
 class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::Subnet
 
   require 'chef/resource/aws_vpc'

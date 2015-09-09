@@ -208,11 +208,17 @@ See [Pointing Boxes at Chef Servers](https://github.com/chef/chef-provisioning/b
 
 # Tagging Resources
 
-## Aws Resources
+## For Recipe authors
 
-All resources which extend Chef::Provisioning::AWSDriver::AWSResourceWithEntry support the ability
-to add tags, except AwsEipAddress.  AWS does not support tagging on AwsEipAddress.  To add a tag
-to any aws resource, us the `aws_tags` attribute and provide it a hash:
+All resources (incuding base resources like `machine`) that are taggable support an `aws_tags` attribute which accepts a single layer hash.  To set just the key of an AWS tag specify the value as nil.  EG, `aws_tags {my_tag_key: nil}`.  Some AWS objects cannot accept nil values and will automatically convert it to an empty string.
+
+Some AWS objects (may EC2) view the `Name` tag as unique - it shows up in a `Name` column in the AWS console.  By default we specify the `Name` tag as the resource name.  This can be overridden by specifying `aws_tags {Name: 'some other name'}`.
+
+You can remove all the tags _except_ the `Name` tag by specifying `aws_tags {}`.
+
+Tag keys and values can be specified as symbols or strings but will be converted to strings before sending to AWS.
+
+Examples:
 
 ```ruby
 aws_ebs_volume 'ref-volume' do
@@ -224,39 +230,31 @@ aws_vpc 'ref-vpc' do
 end
 ```
 
-The hash of tags can use symbols or strings for both keys and values.  The tags will be converged
-idempotently, meaning no write will occur if no tags are changing.
+## For Resource Authors
 
-We will not touch the `'Name'` tag UNLESS you specifically pass it.  If you do not pass it, we
-leave it alone.
+To enable tagging support you must make specific changes to the Resource and Attribute.  For the Resource it needs to include the `attribute aws_tags`.  This should be done by `include Chef::Provisioning::AWSDriver::AWSTaggable` on the Resource.
 
-## Base Resources
-
-Because base resources from chef-provisioning do not have the `aws_tag` attribute, they must be
-tagged in their options:
+The `AWSProvider` class will automatically try to call `converge_tags` when running the `action_create` method.  You should instantiate an instance of the `AWSTagger` and provide it a strategy depending on the client used to perform the tagging.  For example, an RDS Provider should define
 
 ```ruby
-machine 'ref-machine-1' do
-  machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
-end
-
-machine_batch "ref-batch" do
-  machine 'ref-machine-2' do
-    machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
-    converge false
-  end
-  machine 'ref-machine-3' do
-    machine_options :aws_tags => {:othercustomtags => 'byebye'}
-    converge false
+def aws_tagger
+  @aws_tagger ||= begin
+    rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
+      new_resource.driver.rds.client,
+      construct_arn(new_resource),
+      new_resource.aws_tags
+    )
+    Chef::Provisioning::AWSDriver::AWSTagger.new(rds_strategy, action_handler)
   end
 end
-
-load_balancer 'ref-elb' do
-  load_balancer_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
+def converge_tags
+  aws_tagger.converge_tags
 end
 ```
 
-See `docs/examples/aws_tags.rb` for further examples.
+The `aws_tagger` method is used by the tests to assert that the object tags are correct.  These methods can be encapsulated in an module for DRY purposes, as the EC2 strategy shows.
+
+Finally, you should add 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags {}`.  Copy the tests from an existing spec file and modify them to support your resource.  TODO make a module that copies these tests for us.  Right now it is complicated by the fact that some resources have required attributes that others don't.
 
 # Looking up AWS objects
 

@@ -13,7 +13,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   #
   def delete_managed_entry(action_handler)
     if should_have_managed_entry?
-      managed_entry_store.delete(self.class.resource_name, name, action_handler)
+      managed_entry_store.delete(self.class.managed_entry_type, name, action_handler)
     end
   end
 
@@ -31,7 +31,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   def save_managed_entry(aws_object, action_handler, existing_entry: nil)
     if should_have_managed_entry?
       managed_entry = existing_entry ||
-                      managed_entry_store.new_entry(self.class.resource_name, name)
+                      managed_entry_store.new_entry(self.class.managed_entry_type, name)
       updated = update_managed_entry(aws_object, managed_entry)
       if updated || !existing_entry
         managed_entry.save(action_handler)

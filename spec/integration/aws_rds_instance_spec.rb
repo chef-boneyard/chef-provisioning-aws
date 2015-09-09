@@ -79,6 +79,72 @@ describe Chef::Resource::AwsRdsInstance do
 
       end
 
+      tagging_id = Random.rand(1000)
+
+      it "creates aws_rds_instance tags" do
+        expect_recipe {
+          aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
+            aws_tags key1: "value"
+            allocated_storage 5
+            db_instance_class "db.t1.micro"
+            engine "postgres"
+            master_username "thechief"
+            master_user_password "securesecure"
+          end
+        }.to create_an_aws_rds_instance("test-rds-instance-tagging-#{tagging_id}")
+        .and have_aws_rds_instance_tags("test-rds-instance-tagging-#{tagging_id}",
+          {
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      # if we use let, the tagging_id method is not available in the context block
+      tagging_id = Random.rand(1000)
+
+      context "with existing tags" do
+        aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
+          aws_tags key1: "value"
+          allocated_storage 5
+          db_instance_class "db.t1.micro"
+          engine "postgres"
+          master_username "thechief"
+          master_user_password "securesecure"
+        end
+
+        it "updates aws_rds_instance tags" do
+          expect_recipe {
+            aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
+              aws_tags key1: "value2", key2: nil
+              allocated_storage 5
+              db_instance_class "db.t1.micro"
+              engine "postgres"
+              master_username "thechief"
+              master_user_password "securesecure"
+            end
+          }.to have_aws_rds_instance_tags("test-rds-instance-tagging-#{tagging_id}",
+            {
+              'key1' => 'value2',
+              'key2' => nil
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_rds_instance tags" do
+          expect_recipe {
+            aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
+              aws_tags {}
+              allocated_storage 5
+              db_instance_class "db.t1.micro"
+              engine "postgres"
+              master_username "thechief"
+              master_user_password "securesecure"
+            end
+          }.to have_aws_rds_instance_tags("test-rds-instance-tagging-#{tagging_id}", {}
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

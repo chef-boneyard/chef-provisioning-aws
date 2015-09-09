@@ -1,6 +1,9 @@
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require 'chef/provisioning/aws_driver/aws_taggable'
 
 class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   # The require needs to be inside this class otherwise it gets loaded before the rest of the SDK
   # and starts causing issues - AWS expects to load all this stuff itself
   aws_sdk_type ::Aws::EC2::Instance,

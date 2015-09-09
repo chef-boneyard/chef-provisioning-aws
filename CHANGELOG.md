@@ -6,6 +6,26 @@
   of `:public_ip`, `:private_ip` or `:dns`.  Existing ManagedEntry references will be converted and the old value will be ignored
   if the new value is present.
 - Added a configurable option for the number of times to retry [certain](https://github.com/aws/aws-sdk-ruby/blob/fb721a3ec3de2caabdb0ffa1f43bbe72b928f4ab/aws-sdk-core/lib/aws-sdk-core/plugins/retry_errors.rb) errors via the AWS SDK.  Add `chef_provisioning({:aws_retry_limit => 25})` to your `client.rb` to configure this.  Additionally, see [this documentation](https://github.com/chef/chef-provisioning/blob/master/docs/blogs/2012-05-28-machine_batch.html.markdown#max_simultaneous) in chef-provisioning for how to configure the `max_simultaneous` attribute on the machine_batch to limit the threads we use for making SDK requests.
+- Refactored tagging logic.  Made implementation more straightforward and made interface more consistent.
+  - For resource authors it should be easier to tag the managed AWS object.  Include the `Chef::Provisioning::AWSDriver::AWSTaggable` module on your resource to introduce the `aws_tags` attribute.  This is a hash which expects to receive a single layer of key -> value tags where value is nilable.  Some AWS services do not support nilable tags so will automatically convert nil value to an empty string.
+  - The `AWSProvider` base class automatically tries to call a `converge_tags` method on the provider.  Add this method to your provider.  This method should create an `AWSTagger` instance and provide it a strategy that knows how to use an individual AWS client to tag the object.  For example, an RDS provider will have the following methods:
+  ```ruby
+  def aws_tagger
+    @aws_tagger ||= begin
+      rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
+        new_resource.driver.rds.client,
+        construct_arn(new_resource),
+        new_resource.aws_tags
+      )
+      Chef::Provisioning::AWSDriver::AWSTagger.new(rds_strategy, action_handler)
+    end
+  end
+  def converge_tags
+    aws_tagger.converge_tags
+  end
+  ```
+  The `aws_tagger` method is used by the test framework to assert that the tags are correct.  Every `TaggingStrategy` should take 3 initialization parameters - a client to use for tagging, a primary key for the object being tagged, and the desired tags as a single layer hash.
+  - There are 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags {}`.  These tests are all very similar between spec files but are copy-pastaed around for now.
 
 ## 1.3.1 (8/5/2015)
 

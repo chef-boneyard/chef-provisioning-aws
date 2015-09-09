@@ -7,9 +7,6 @@ class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWi
     managed_entry_type: :machine,
     managed_entry_id_name: 'instance_id'
 
-  # TODO need to remove this for now because the SDK V2 uses a different tagging mechanism
-  undef_method(:aws_tags)
-
   attribute :name, kind_of: String, name_attribute: true
 
   attribute :instance_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {

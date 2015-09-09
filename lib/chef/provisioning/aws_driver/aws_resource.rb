@@ -1,6 +1,8 @@
 require 'aws'
 require 'chef/provisioning/aws_driver/super_lwrp'
 require 'chef/provisioning/chef_managed_entry_store'
+# Enough resources will eventually require this that we put 1 require in here
+require 'chef/provisioning/aws_driver/aws_taggable'
 
 # Common AWS resource - contains metadata that all AWS resources will need
 module Chef::Provisioning::AWSDriver
@@ -65,6 +67,13 @@ class AWSResource < Chef::Provisioning::AWSDriver::SuperLWRP
   #
   def aws_object
     raise NotImplementedError, :aws_object
+  end
+
+  def aws_object_id
+    @aws_object_id ||= begin
+      o = aws_object
+      o.public_send(self.class.aws_sdk_class_id) if o
+    end
   end
 
   #

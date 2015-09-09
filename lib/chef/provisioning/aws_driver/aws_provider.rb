@@ -3,6 +3,8 @@ require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
+# Enough providers will require this that we put it in here
+require 'chef/provisioning/aws_driver/tagging_strategy/ec2'
 require 'retryable'
 
 module Chef::Provisioning::AWSDriver
@@ -16,7 +18,7 @@ class AWSProvider < Chef::Provider::LWRPBase
       super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
     end
   end
-  
+
   def action_handler
     @action_handler ||= Chef::Provisioning::ChefProviderActionHandler.new(self)
   end
@@ -121,17 +123,17 @@ class AWSProvider < Chef::Provider::LWRPBase
       aws_object = create_aws_object
     end
 
-    # If the resource hasn't obtained full existence yet this will failed
-    # It could have different errors from different resources
-    retry_with_backoff do
-      converge_tags(aws_object)
-    end
-
     #
     # Associate the managed entry with the AWS object
     #
     if new_resource.is_a?(AWSResourceWithEntry)
       new_resource.save_managed_entry(aws_object, action_handler, existing_entry: entry)
+    end
+
+    # This has to be after the managed entry save so the `aws_object` lookup
+    # from the resource succeeds
+    if respond_to?(:converge_tags)
+      converge_tags
     end
 
     aws_object
@@ -227,46 +229,6 @@ class AWSProvider < Chef::Provider::LWRPBase
     raise NotImplementedError, :destroy_aws_object
   end
 
-  # Update AWS resource tags
-  #
-  # AWS resources which include the TaggedItem Module
-  # will have an 'aws_tags' attribute available.
-  # The 'aws_tags' Hash will apply all the tags within
-  # the hash, and remove existing tags not included within
-  # the hash.  The 'Name' tag will not removed.  The 'Name'
-  # tag can still be updated in the hash.
-  #
-  # @param aws_object Aws SDK Object to update tags
-  #
-  def converge_tags(aws_object)
-    return unless new_resource.respond_to?(:aws_tags)
-    desired_tags = new_resource.aws_tags
-    # If aws_tags were not provided we exit
-    if desired_tags.nil?
-      Chef::Log.debug "aws_tags not provided, nothing to converge"
-      return
-    end
-    current_tags = aws_object.tags.to_h
-    # AWS always returns tags as strings, and we don't want to overwrite a
-    # tag-as-string with the same tag-as-symbol
-    desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
-    tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
-    tags_to_delete = current_tags.keys - desired_tags.keys
-    # We don't want to delete `Name`, just all other tags
-    tags_to_delete.delete('Name')
-
-    unless tags_to_update.empty?
-      converge_by "applying tags #{tags_to_update}" do
-        aws_object.tags.set(tags_to_update)
-      end
-    end
-    unless tags_to_delete.empty?
-      converge_by "deleting tags #{tags_to_delete.inspect}" do
-        aws_object.tags.delete(*tags_to_delete)
-      end
-    end
-  end
-
   def wait_for_status(aws_object, expected_status, acceptable_errors = [], tries=60, sleep=5)
     wait_for(
       aws_object: aws_object,
@@ -324,7 +286,7 @@ class AWSProvider < Chef::Provider::LWRPBase
   # @param retry_on [Exception] An exception to retry on, defaults to RuntimeError
   #
   def retry_with_backoff(retry_on = RuntimeError, &block)
-    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 10].min }, :on => retry_on, &block)
+    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 16].min }, :on => retry_on, &block)
   end
 
 end

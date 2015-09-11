@@ -92,9 +92,10 @@ module AWSDriver
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options = AWSResource.lookup_options(lb_options || {}, managed_entry_store: lb_spec.managed_entry_store, driver: self)
-      # We delete the attributes here because they are not valid in the create call
+      # We delete the attributes and a health check here because they are not valid in the create call
       # and must be applied afterward
       lb_attributes = lb_options.delete(:attributes)
+      health_check  = lb_options.delete(:health_check)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -341,6 +342,20 @@ module AWSDriver
             elb.client.modify_load_balancer_attributes(
               load_balancer_name: actual_elb.name,
               load_balancer_attributes: desired.to_hash
+            )
+          end
+        end
+      end
+
+      # Update the load balancer health check, as above
+      if health_check
+        current = elb.client.describe_load_balancers(load_balancer_names: [actual_elb.name])[:load_balancer_descriptions][0][:health_check]
+        desired = deep_merge!(health_check, Marshal.load(Marshal.dump(current)))
+        if current != desired
+          perform_action.call("  updating health check to #{desired.inspect}") do
+            elb.client.configure_health_check(
+              load_balancer_name: actual_elb.name,
+              health_check: desired.to_hash
             )
           end
         end

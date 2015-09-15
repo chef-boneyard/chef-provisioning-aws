@@ -4,8 +4,8 @@ class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_image
 
   def destroy_aws_object(image)
-    instance_id = image.tags['From-Instance']
-    Chef::Log.debug("Found From-Instance tag [#{instance_id}] on #{image.id}")
+    instance_id = image.tags['from-instance']
+    Chef::Log.debug("Found from-instance tag [#{instance_id}] on #{image.id}")
     unless instance_id
       # This is an old image and doesn't have the tag added - lets try and find it from the block device mapping
       image.block_device_mappings.map do |dev, opts|

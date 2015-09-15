@@ -22,7 +22,7 @@ class AWSTagger
     end
 
     # Duplication and normalization
-    # Aws::EC2::Errors::InvalidParameterValue: Tag value cannot be null. Use empty string instead.
+    # ::Aws::EC2::Errors::InvalidParameterValue: Tag value cannot be null. Use empty string instead.
     n_desired_tags = Hash[desired_tags.map {|k,v| [k.to_s, v.to_s]}]
     n_current_tags = Hash[current_tags.map {|k,v| [k.to_s, v.to_s]}]
 

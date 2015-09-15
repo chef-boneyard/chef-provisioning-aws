@@ -12,7 +12,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 # - http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Types/VpcPeeringConnectionVpcInfo.html
 #
 class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type Aws::EC2::VpcPeeringConnection
+  aws_sdk_type ::Aws::EC2::VpcPeeringConnection
   actions :accept, :create, :destroy, :purge, :nothing
 
   require 'chef/resource/aws_vpc'
@@ -65,7 +65,7 @@ class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
     begin
       # try accessing it to find out if it exists
       result.requester_vpc if result
-    rescue Aws::EC2::Errors::InvalidVpcPeeringConnectionIDNotFound
+    rescue ::Aws::EC2::Errors::InvalidVpcPeeringConnectionIDNotFound
       result = nil
     end
     result

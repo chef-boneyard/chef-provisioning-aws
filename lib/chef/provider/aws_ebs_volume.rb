@@ -123,7 +123,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     #
     # If we were told to attach the volume to a machine, do so
     #
-    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(Aws::EC2::Instance)
+    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
       when :in_use
         # We don't want to attempt to reattach to the same instance and device

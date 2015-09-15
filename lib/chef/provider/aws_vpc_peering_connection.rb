@@ -35,7 +35,7 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
     converge_by "create peering connection #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       vpc_peering_connection = vpc.request_vpc_peering_connection(options)
 
-      retry_with_backoff(Aws::EC2::Errors::ServiceError) do
+      retry_with_backoff(::Aws::EC2::Errors::ServiceError) do
         ec2_resource.create_tags({
           :resources => [vpc_peering_connection.id],
           :tags => [

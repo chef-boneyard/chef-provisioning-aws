@@ -21,7 +21,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
 
   attribute :security_groups,        kind_of: Array #(Array<SecurityGroup>, Array<String>)
 
-  attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, Aws::EC2::Instance ]
+  attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, ::Aws::EC2::Instance ]
 
   attribute :device_index,           kind_of: Integer
 

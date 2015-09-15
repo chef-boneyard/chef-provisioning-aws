@@ -120,7 +120,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     #
     # If we were told to attach the network interface to a machine, do so
     #
-    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(Aws::EC2::Instance)
+    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
       when :available
         attach(eni)

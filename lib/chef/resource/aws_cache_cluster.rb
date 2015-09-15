@@ -13,7 +13,6 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
   # straight through to AWS, with the exception of security_groups, which
   # may contain a reference to a Chef aws_security_group resource.
 
-
   # Cluster Name
   #
   # @param :cluster_name [String] unique name for a cluster
@@ -54,7 +53,7 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
 
   # Engine Version
   #
-  # @param :engine_version [String] The version number of the cache engine to be used for this cache cluster. 
+  # @param :engine_version [String] The version number of the cache engine to be used for this cache cluster.
   attribute :engine_version, kind_of: String, required: true
 
   # Subnet Group Name

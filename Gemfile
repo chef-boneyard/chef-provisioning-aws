@@ -1,6 +1,5 @@
 source "https://rubygems.org"
 gem "simplecov"
-gemfile
 gemspec
 
 #gem 'chef-provisioning', path: '../chef-provisioning'

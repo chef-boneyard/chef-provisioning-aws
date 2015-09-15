@@ -18,7 +18,7 @@ describe Chef::Resource::AwsSubnet do
         vpc 'test_vpc'
       end
 
-      it "aws_subnet 'test_subnet' with no parameters except VPC creates a route table" do
+      it "aws_subnet 'test_subnet' with no parameters except VPC creates a subnet" do
         expect_recipe {
           aws_subnet 'test_subnet' do
             vpc 'test_vpc'
@@ -29,7 +29,7 @@ describe Chef::Resource::AwsSubnet do
         ).and be_idempotent
       end
 
-      it "aws_subnet 'test_subnet' with all parameters creates a route table" do
+      it "aws_subnet 'test_subnet' with all parameters creates a subnet" do
         az = driver.ec2.availability_zones.first.name
         expect_recipe {
           aws_subnet 'test_subnet' do
@@ -48,6 +48,55 @@ describe Chef::Resource::AwsSubnet do
           'network_acl.id' => test_network_acl.aws_object.id
         ).and be_idempotent
       end
+
+      it "creates aws_subnet tags" do
+        expect_recipe {
+          aws_subnet 'test_subnet' do
+            vpc 'test_vpc'
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_subnet('test_subnet')
+        .and have_aws_subnet_tags('test_subnet',
+          {
+            'Name' => 'test_subnet',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_subnet 'test_subnet' do
+          vpc 'test_vpc'
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_subnet tags" do
+          expect_recipe {
+            aws_subnet 'test_subnet' do
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_subnet_tags('test_subnet',
+            {
+              'Name' => 'test_subnet',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_subnet tags except Name" do
+          expect_recipe {
+            aws_subnet 'test_subnet' do
+              aws_tags {}
+            end
+          }.to have_aws_subnet_tags('test_subnet',
+            {
+              'Name' => 'test_subnet'
+            }
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

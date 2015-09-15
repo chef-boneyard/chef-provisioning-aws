@@ -1,7 +1,8 @@
 require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
 
 class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_dhcp_options
 
   protected

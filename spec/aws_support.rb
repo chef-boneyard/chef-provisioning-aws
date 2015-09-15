@@ -177,11 +177,19 @@ module AWSSupport
 
           # Destroy any objects we know got created during the test
           created_during_test.reverse_each do |resource_name, name|
-            (recipe do
-              public_send(resource_name, name) do
-                action :purge
-              end
-            end).converge
+            begin
+              (recipe do
+                public_send(resource_name, name) do
+                  action :purge
+                end
+              end).converge
+            rescue ::Chef::Exceptions::ValidationFailed
+              (recipe do
+                public_send(resource_name, name) do
+                  action :destroy
+                end
+              end).converge
+            end
           end
         end
       end

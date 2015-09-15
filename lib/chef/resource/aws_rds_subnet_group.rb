@@ -1,7 +1,10 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require 'chef/provisioning/aws_driver/aws_rds_resource'
+require 'chef/provisioning/aws_driver/aws_taggable'
 require 'chef/resource/aws_subnet'
 
-class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSResource
+class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSResource
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::RDS
 
   attribute :name, kind_of: String, name_attribute: true
@@ -10,9 +13,6 @@ class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSReso
             kind_of: [ String, Array, AwsSubnet, AWS::EC2::Subnet ],
             required: true,
             coerce: proc { |v| [v].flatten }
-  # aws_tags are going to fail for now because there isn't an AWS objects
-  # we can call `.tags` on
-  #attribute :aws_tags, kind_of: Hash
 
   def aws_object
     driver.rds.client
@@ -21,5 +21,9 @@ class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSReso
     # triggered by describe_db_subnet_groups when the group can't
     # be found
     nil
+  end
+
+  def rds_tagging_type
+    "subgrp"
   end
 end

@@ -114,6 +114,54 @@ describe Chef::Resource::AwsVpc do
         end
       end
 
+      it "creates aws_vpc tags" do
+        expect_recipe {
+          aws_vpc 'test_vpc' do
+            cidr_block '10.0.0.0/24'
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_vpc('test_vpc')
+        .and have_aws_vpc_tags('test_vpc',
+          {
+            'Name' => 'test_vpc',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_vpc 'test_vpc' do
+          cidr_block '10.0.0.0/24'
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_vpc tags" do
+          expect_recipe {
+            aws_vpc 'test_vpc' do
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_vpc_tags('test_vpc',
+            {
+              'Name' => 'test_vpc',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_vpc tags except Name" do
+          expect_recipe {
+            aws_vpc 'test_vpc' do
+              aws_tags {}
+            end
+          }.to have_aws_vpc_tags('test_vpc',
+            {
+              'Name' => 'test_vpc'
+            }
+          ).and be_idempotent
+        end
+      end
+
       it "aws_vpc 'vpc' with no attributes fails to create a VPC (must specify cidr_block)" do
         expect_converge {
           aws_vpc 'test_vpc' do

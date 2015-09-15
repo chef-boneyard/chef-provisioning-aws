@@ -3,6 +3,8 @@ require 'chef/resource/aws_vpc'
 require 'chef/resource/aws_subnet'
 
 class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::NetworkACL
 
   #

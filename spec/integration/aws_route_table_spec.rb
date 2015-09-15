@@ -54,7 +54,7 @@ describe Chef::Resource::AwsRouteTable do
                 '172.31.0.0/16' => eni
               )
             end
-  
+
             aws_route_table 'test_route_table' do
               vpc 'test_vpc'
               routes '0.0.0.0/0' => :internet_gateway
@@ -68,6 +68,57 @@ describe Chef::Resource::AwsRouteTable do
             ]
           ).and be_idempotent
       end
+
+      it "creates aws_route_table tags" do
+        expect_recipe {
+          aws_route_table 'test_route_table' do
+            vpc 'test_vpc'
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_route_table('test_route_table')
+        .and have_aws_route_table_tags('test_route_table',
+          {
+            'Name' => 'test_route_table',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_route_table 'test_route_table' do
+          vpc 'test_vpc'
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_route_table tags" do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_route_table_tags('test_route_table',
+            {
+              'Name' => 'test_route_table',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_route_table tags except Name" do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              aws_tags {}
+            end
+          }.to have_aws_route_table_tags('test_route_table',
+            {
+              'Name' => 'test_route_table'
+            }
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

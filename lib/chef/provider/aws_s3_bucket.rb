@@ -1,7 +1,25 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'chef/provisioning/aws_driver/tagging_strategy/s3'
 require 'date'
 
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
+
+  def aws_tagger
+    @aws_tagger ||= begin
+      s3_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::S3.new(
+        # I'm using the V2 client here because it has much better support for tags
+        new_resource.driver.s3_client,
+        new_resource.name,
+        new_resource.aws_tags
+      )
+      Chef::Provisioning::AWSDriver::AWSTagger.new(s3_strategy, action_handler)
+    end
+  end
+
+  def converge_tags
+    aws_tagger.converge_tags
+  end
+
   provides :aws_s3_bucket
 
   def action_create
@@ -32,9 +50,9 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     converge_by "create S3 bucket #{new_resource.name}" do
-      bucket = new_resource.driver.s3.buckets.create(new_resource.name)
-      bucket.tags['Name'] = new_resource.name
-      bucket
+      new_resource.driver.s3.buckets.create(new_resource.name)
+      # S3 buckets already have a top level name property so they don't need
+      # a 'Name' tag
     end
   end
 

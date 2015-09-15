@@ -51,6 +51,55 @@ describe Chef::Resource::AwsRdsSubnetGroup do
                                            ).and be_idempotent
       end
 
+      it "creates aws_rds_subnet_group tags" do
+        expect_recipe {
+          aws_rds_subnet_group "test-db-subnet-group" do
+            description "some_description"
+            subnets ["test_subnet", test_subnet_2.aws_object.id]
+            aws_tags key1: 'value'
+          end
+        }.to create_an_aws_rds_subnet_group("test-db-subnet-group")
+        .and have_aws_rds_subnet_group_tags("test-db-subnet-group",
+          {
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_rds_subnet_group "test-db-subnet-group" do
+          description "some_description"
+          subnets ["test_subnet", test_subnet_2.aws_object.id]
+          aws_tags key1: 'value'
+        end
+
+        it "updates aws_rds_subnet_group tags" do
+          expect_recipe {
+            aws_rds_subnet_group "test-db-subnet-group" do
+              description "some_description"
+              subnets ["test_subnet", test_subnet_2.aws_object.id]
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_rds_subnet_group_tags("test-db-subnet-group",
+            {
+              'key1' => 'value2',
+              'key2' => nil
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_rds_subnet_group tags" do
+          expect_recipe {
+            aws_rds_subnet_group "test-db-subnet-group" do
+              description "some_description"
+              subnets ["test_subnet", test_subnet_2.aws_object.id]
+              aws_tags {}
+            end
+          }.to have_aws_rds_subnet_group_tags("test-db-subnet-group", {}
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

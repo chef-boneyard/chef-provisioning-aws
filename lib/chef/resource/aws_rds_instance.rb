@@ -1,7 +1,9 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require 'chef/provisioning/aws_driver/aws_rds_resource'
+require 'chef/provisioning/aws_driver/aws_taggable'
 
+class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSResource
+  include Chef::Provisioning::AWSDriver::AWSTaggable
 
-class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::RDS::DBInstance, id: :db_instance_identifier
 
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
@@ -21,10 +23,6 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResourc
   # and that causes lookup_options to fail
   attribute :db_subnet_group_name, kind_of: String
 
-  # aws_tags are going to fail for now because there isn't an AWS objects
-  # we can call `.tags` on
-  # attribute :aws_tags, kind_of: Hash
-
   # RDS has a ton of options, allow users to set any of them via a
   # custom Hash
   attribute :additional_options, kind_of: Hash, default: {}
@@ -36,5 +34,9 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSResourc
     else
       nil
     end
+  end
+
+  def rds_tagging_type
+    "db"
   end
 end

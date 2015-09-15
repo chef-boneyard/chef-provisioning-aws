@@ -4,8 +4,10 @@ require 'date'
 require 'chef/resource/aws_vpc'
 
 class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_subnet
-  
+
   def action_create
     subnet = super
 
@@ -61,7 +63,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       p = Chef::ChefFS::Parallelizer.new(5)
       p.parallel_do(subnet.instances.to_a) do |instance|
         Cheffish.inline_resource(self, action) do
-          aws_instance instance do
+          aws_instance instance.id do
             action :purge
           end
         end

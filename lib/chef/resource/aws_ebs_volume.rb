@@ -8,7 +8,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :name,    kind_of: String, name_attribute: true
 
-  attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, Aws::EC2::Instance ]
+  attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, ::Aws::EC2::Instance ]
 
   attribute :availability_zone, kind_of: String, default: 'a'
   attribute :size,              kind_of: Integer, default: 8

@@ -28,7 +28,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = vpc.create_route_table
-      retry_with_backoff(Aws::EC2::Errors::ServiceError) do
+      retry_with_backoff(::Aws::EC2::Errors::ServiceError) do
         route_table.create_tags({
              :tags => [
                  {
@@ -57,7 +57,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "delete #{new_resource.to_s} in #{region}" do
       begin
         route_table.delete
-      rescue Aws::EC2::Errors::DependencyViolation
+      rescue ::Aws::EC2::Errors::DependencyViolation
         raise "#{new_resource.to_s} could not be deleted because it is the main route table for #{route_table.vpc.id} or it is being used by a subnet"
       end
     end
@@ -141,13 +141,13 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, Aws::EC2::AwsVpcPeeringConnection
+    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::AwsVpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
     when Chef::Resource::Machine
       route_target = { instance: route_target.name }
-    when AWS::EC2::Instance, Aws::EC2::Instance
+    when AWS::EC2::Instance, ::Aws::EC2::Instance
       route_target = { instance: route_target.id }
     when Hash
       if route_target.size != 1

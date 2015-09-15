@@ -14,7 +14,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 #
 class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
-  aws_sdk_type Aws::EC2::RouteTable
+  aws_sdk_type ::Aws::EC2::RouteTable
 
   require 'chef/resource/aws_vpc'
 
@@ -101,7 +101,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
     begin
       # try accessing it to find out if it exists
       result.vpc_id if result
-    rescue Aws::EC2::Errors::InvalidRouteTableIDNotFound
+    rescue ::Aws::EC2::Errors::InvalidRouteTableIDNotFound
       result = nil
     end
     result

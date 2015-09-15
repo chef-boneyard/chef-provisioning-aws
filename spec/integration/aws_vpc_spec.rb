@@ -168,6 +168,31 @@ describe Chef::Resource::AwsVpc do
           end
         }.to raise_error(AWS::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
       end
+
+      context "When having two VPC's and a peering connection between them" do
+        aws_vpc "test_vpc_1" do
+          cidr_block '20.0.0.0/24'
+        end
+
+        aws_vpc "test_vpc_2" do
+          cidr_block '21.0.0.0/24'
+        end
+
+        aws_vpc_peering_connection "test_peering_connection" do
+          vpc "test_vpc_1"
+          peer_vpc "test_vpc_2"
+        end
+
+        it "deletes the peer connection when one of the vpc's is deleted." do
+          expect_recipe {
+            aws_vpc "test_vpc_1" do
+              action :purge
+            end
+          }.to match_an_aws_vpc_peering_connection('test_peering_connection',
+              :'status.code' => 'deleted'
+          )
+        end
+      end
     end
   end
 end

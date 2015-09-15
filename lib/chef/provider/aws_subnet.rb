@@ -121,12 +121,12 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         # we have work to do here: we need to make the relationship explicit so that
         # it won't be changed when the main route table of the VPC changes.
         converge_by "set route table of subnet #{new_resource.name} to #{new_resource.route_table}" do
-          subnet.route_table = route_table
+          subnet.route_table = route_table.id
         end
-      elsif current_route_table_association.route_table != route_table
+      elsif current_route_table_association.route_table.id != route_table.id
         # The route table is different now.  Change it.
         converge_by "change route table of subnet #{new_resource.name} to #{new_resource.route_table} (was #{current_route_table_association.route_table.id})" do
-          subnet.route_table = route_table
+          subnet.route_table = route_table.id
         end
       end
     end

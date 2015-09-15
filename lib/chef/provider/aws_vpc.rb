@@ -83,8 +83,21 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           end
         end
       end
-      vpc.route_tables.each do |rt|
-        unless rt.main?
+
+      vpc.security_groups.each do |sg|
+        unless sg.name == 'default'
+          Cheffish.inline_resource(self, action) do
+            aws_security_group sg do
+              action :purge
+            end
+          end
+        end
+      end
+
+      #SDK V2
+      vpc_new_sdk = new_resource.driver.ec2_resource.vpc(vpc.id)
+      vpc_new_sdk.route_tables.each do |rt|
+        unless rt.associations.any? { |association| association.main }
           Cheffish.inline_resource(self, action) do
             aws_route_table rt do
               action :purge
@@ -92,12 +105,27 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           end
         end
       end
-      vpc.security_groups.each do |sg|
-        unless sg.name == 'default'
-          Cheffish.inline_resource(self, action) do
-            aws_security_group sg do
-              action :purge
-            end
+
+      vpc_peering_connections = []
+      %w(
+        requester-vpc-info.vpc-id
+        accepter-vpc-info.vpc-id
+      ).each do |filter|
+        vpc_peering_connections += new_resource.driver.ec2_client.describe_vpc_peering_connections({
+            :filters => [
+                {
+                    :name => filter,
+                    :values => [vpc.id]
+                }
+            ]
+        }).vpc_peering_connections
+      end
+
+      vpc_peering_connections.each do |pc_type|
+        pc_resource = new_resource.driver.ec2_resource.vpc_peering_connection(pc_type.vpc_peering_connection_id)
+        Cheffish.inline_resource(self, action) do
+          aws_vpc_peering_connection pc_resource do
+            action :purge
           end
         end
       end
@@ -198,7 +226,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   def update_main_route_table(vpc)
     desired_route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
     current_route_table = vpc.route_tables.main_route_table
-    if current_route_table != desired_route_table
+    if current_route_table.id != desired_route_table.id
       main_association = current_route_table.associations.select { |a| a.main? }.first
       if !main_association
         raise "No main route table association found for #{new_resource.to_s} current main route table #{current_route_table.id}: error!  Probably a race condition."
@@ -219,7 +247,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     # creating the VPC
     main_route_table ||= vpc.route_tables.main_route_table
     main_routes = new_resource.main_routes
-    aws_route_table main_route_table do
+    aws_route_table main_route_table.id do
       vpc vpc
       routes main_routes
     end

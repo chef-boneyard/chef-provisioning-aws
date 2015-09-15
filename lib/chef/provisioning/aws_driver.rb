@@ -28,3 +28,5 @@ require "chef/resource/aws_sns_topic"
 require "chef/resource/aws_sqs_queue"
 require "chef/resource/aws_subnet"
 require "chef/resource/aws_vpc"
+require "chef/resource/aws_vpc_peering_connection"
+

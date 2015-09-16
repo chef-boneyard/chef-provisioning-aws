@@ -33,7 +33,11 @@ module AWSSupport
       name = self.name
       example.recipe do
         public_send(resource_type, name) do
-          action :purge
+          if allowed_actions.include?(:purge)
+            action :purge
+          else
+            action :destroy
+          end
         end
       end.converge
     end

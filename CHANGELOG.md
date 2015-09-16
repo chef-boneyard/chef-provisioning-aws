@@ -1,214 +1,419 @@
-# Changelog
+# Change Log
 
-## 1.4.0 (TBD)
+## [1.4.0](https://github.com/chef/chef-provisioning-aws/tree/1.4.0) (2015-09-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.3.1...1.4.0)
 
-- Deprecated the machine_option `use_private_ip_for_ssh`.  Replaced it with `transport_address_location` which can have an option
-  of `:public_ip`, `:private_ip` or `:dns`.  Existing ManagedEntry references will be converted and the old value will be ignored
-  if the new value is present.
-- Added a configurable option for the number of times to retry [certain](https://github.com/aws/aws-sdk-ruby/blob/fb721a3ec3de2caabdb0ffa1f43bbe72b928f4ab/aws-sdk-core/lib/aws-sdk-core/plugins/retry_errors.rb) errors via the AWS SDK.  Add `chef_provisioning({:aws_retry_limit => 25})` to your `client.rb` to configure this.  Additionally, see [this documentation](https://github.com/chef/chef-provisioning/blob/master/docs/blogs/2012-05-28-machine_batch.html.markdown#max_simultaneous) in chef-provisioning for how to configure the `max_simultaneous` attribute on the machine_batch to limit the threads we use for making SDK requests.
-- Refactored tagging logic.  Made implementation more straightforward and made interface more consistent.
-  - For resource authors it should be easier to tag the managed AWS object.  Include the `Chef::Provisioning::AWSDriver::AWSTaggable` module on your resource to introduce the `aws_tags` attribute.  This is a hash which expects to receive a single layer of key -> value tags where value is nilable.  Some AWS services do not support nilable tags so will automatically convert nil value to an empty string.
-  - The `AWSProvider` base class automatically tries to call a `converge_tags` method on the provider.  Add this method to your provider.  This method should create an `AWSTagger` instance and provide it a strategy that knows how to use an individual AWS client to tag the object.  For example, an RDS provider will have the following methods:
-  ```ruby
-  def aws_tagger
-    @aws_tagger ||= begin
-      rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
-        new_resource.driver.rds.client,
-        construct_arn(new_resource),
-        new_resource.aws_tags
-      )
-      Chef::Provisioning::AWSDriver::AWSTagger.new(rds_strategy, action_handler)
-    end
-  end
-  def converge_tags
-    aws_tagger.converge_tags
-  end
-  ```
-  The `aws_tagger` method is used by the test framework to assert that the tags are correct.  Every `TaggingStrategy` should take 3 initialization parameters - a client to use for tagging, a primary key for the object being tagged, and the desired tags as a single layer hash.
-  - There are 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags {}`.  These tests are all very similar between spec files but are copy-pastaed around for now.
+**Implemented enhancements:**
 
-## 1.3.1 (8/5/2015)
+- Update resources to allow route tables with pcx [\#312](https://github.com/chef/chef-provisioning-aws/pull/312) ([joaogbcravo](https://github.com/joaogbcravo))
+- Add aws\_vpc\_peering\_connection. [\#305](https://github.com/chef/chef-provisioning-aws/pull/305) ([joaogbcravo](https://github.com/joaogbcravo))
+- Adding api V2 for machine create and destroy, fixes \#216 [\#293](https://github.com/chef/chef-provisioning-aws/pull/293) ([tyler-ball](https://github.com/tyler-ball))
+- Initial commit of aws\_rds\_subnet\_group resource [\#276](https://github.com/chef/chef-provisioning-aws/pull/276) ([stevendanna](https://github.com/stevendanna))
+- Add support for aws\_server\_certificate resource/provider. [\#274](https://github.com/chef/chef-provisioning-aws/pull/274) ([tylercloke](https://github.com/tylercloke))
+- Initial commit of aws\_cloudsearch\_domain resource [\#273](https://github.com/chef/chef-provisioning-aws/pull/273) ([stevendanna](https://github.com/stevendanna))
+- Initial commit of aws\_rds\_instance resource [\#272](https://github.com/chef/chef-provisioning-aws/pull/272) ([stevendanna](https://github.com/stevendanna))
 
-- Exponentially backoff when trying to tag resources ([#263][], [@tyler-ball][])
-- Only apply default `user_data` in Windows if it has not been set by the user ([#270][], [@brumschlag][])
-- Fix load balancer SSL certificates ([#275][], [@stevendanna][])
+**Fixed bugs:**
 
-## 1.3.0 (7/17/2015)
+- chef-recipe ArgumentError unknown directive: “\n” [\#298](https://github.com/chef/chef-provisioning-aws/issues/298)
+- Provisoner's IAM roles are not used [\#292](https://github.com/chef/chef-provisioning-aws/issues/292)
+- Remove dsl\_name deprecation warnings introduced by Chef 12.4.0 [\#288](https://github.com/chef/chef-provisioning-aws/issues/288)
+- Add code coverage metrics for chef-provisioning-aws [\#285](https://github.com/chef/chef-provisioning-aws/issues/285)
+- Command line is too long. [\#284](https://github.com/chef/chef-provisioning-aws/issues/284)
+- Better support for tags [\#281](https://github.com/chef/chef-provisioning-aws/issues/281)
+- Intermittent AWS AuthFailure executing aws\_key\_pair [\#268](https://github.com/chef/chef-provisioning-aws/issues/268)
+- Can't connect to EC2 instance in VPC with public IP [\#267](https://github.com/chef/chef-provisioning-aws/issues/267)
+- AWS::EC2::Errors::InvalidInstanceID::NotFound When creating a `machine`  [\#264](https://github.com/chef/chef-provisioning-aws/issues/264)
+- Investigate AWS::EC2::Errors::InvalidVpcID::NotFound [\#251](https://github.com/chef/chef-provisioning-aws/issues/251)
+- AWS::EC2::Errors::RequestLimitExceeded: Request limit exceeded - when launching many instances in a batch [\#214](https://github.com/chef/chef-provisioning-aws/issues/214)
+- cannot build machine using from\_image in AWS  [\#193](https://github.com/chef/chef-provisioning-aws/issues/193)
+- Machines and images report connectable even if they time out [\#122](https://github.com/chef/chef-provisioning-aws/issues/122)
+- Allow specifying health check on ELB [\#107](https://github.com/chef/chef-provisioning-aws/issues/107)
+- Specified AMI not being used [\#102](https://github.com/chef/chef-provisioning-aws/issues/102)
+- bootstrap tagging options [\#21](https://github.com/chef/chef-provisioning-aws/issues/21)
+- Ensuring all V2 aws classes are prepended with :: to limit namespace scope [\#323](https://github.com/chef/chef-provisioning-aws/pull/323) ([tyler-ball](https://github.com/tyler-ball))
+- Tagging Refactor Part 1, fixes \#281 [\#314](https://github.com/chef/chef-provisioning-aws/pull/314) ([tyler-ball](https://github.com/tyler-ball))
+- Update resources to allow route tables with pcx [\#312](https://github.com/chef/chef-provisioning-aws/pull/312) ([joaogbcravo](https://github.com/joaogbcravo))
+- Adding provides syntax to all providers to get rid of 12.4.0 chef warnings [\#303](https://github.com/chef/chef-provisioning-aws/pull/303) ([tyler-ball](https://github.com/tyler-ball))
+- Renaming actual\_instance because I don't think it provides more information than just instance [\#302](https://github.com/chef/chef-provisioning-aws/pull/302) ([tyler-ball](https://github.com/tyler-ball))
+- Adding configurable option for retry\_limit on the AWS SDK, fixes \#214 [\#301](https://github.com/chef/chef-provisioning-aws/pull/301) ([tyler-ball](https://github.com/tyler-ball))
+- Add recursive\_delete attribute to a aws\_s3\_bucket [\#300](https://github.com/chef/chef-provisioning-aws/pull/300) ([stevendanna](https://github.com/stevendanna))
+- Add recursive\\_delete attribute to a aws\\_s3\\_bucket [\#300](https://github.com/chef/chef-provisioning-aws/pull/300) ([stevendanna](https://github.com/stevendanna))
+- Adding api V2 for machine create and destroy, fixes \\#216 [\#293](https://github.com/chef/chef-provisioning-aws/pull/293) ([tyler-ball](https://github.com/tyler-ball))
+- Add from\_image support [\#291](https://github.com/chef/chef-provisioning-aws/pull/291) ([Fodoj](https://github.com/Fodoj))
+- Update README.md [\#282](https://github.com/chef/chef-provisioning-aws/pull/282) ([larrywright](https://github.com/larrywright))
+- Adding retry logic around tagging for resources which don't have a Name tag [\#280](https://github.com/chef/chef-provisioning-aws/pull/280) ([tyler-ball](https://github.com/tyler-ball))
+- Replacing use\_private\_ip\_for\_ssh with transport\_address\_location, fixes \#267 [\#269](https://github.com/chef/chef-provisioning-aws/pull/269) ([tyler-ball](https://github.com/tyler-ball))
 
-- Adding support for Elasticache ([#212][])
-- Adding support for Network ACLs ([#241][])
-- Adding support for ELB attributes which enables cross-zone load balancing ([#199][])
-- Fixing machine destroy when using EC2 classic ([#209][])
-- Use the `ubuntu_ami` gem to query Ubuntu AMIs instead of hardcoding them ([#197][])
-- Fixing security group rule comparison when a protocol is specified ([#237][])
-- Wait for VPC to be created before attempting to tag it ([#245][])
-- Adding support for Chef 12.4.x ([#250][])
-- Adding a new RSPEC matcher which does not perform any CRUD operations, only validation ([#248][])
-- Documentation updates ([#234][], [#236][], [#239][])
+**Closed issues:**
 
-## 1.2.1 (5/27/2015)
+- Retrieve windows instance passwords via Aws::EC2::Client\#get\_password\_data [\#313](https://github.com/chef/chef-provisioning-aws/issues/313)
+- Update `aws-sdk-v1` version [\#307](https://github.com/chef/chef-provisioning-aws/issues/307)
+- Introduce the AWS SDK V2 to the code [\#216](https://github.com/chef/chef-provisioning-aws/issues/216)
 
-- I didn't actually fix [#158][] and [#204][] - fixing and adding test coverage
+**Merged pull requests:**
 
-## 1.2.0 (5/27/2015)
+- Make chef a development dependency [\#321](https://github.com/chef/chef-provisioning-aws/pull/321) ([ksubrama](https://github.com/ksubrama))
+- Adding a CONTRIBUTING document [\#316](https://github.com/chef/chef-provisioning-aws/pull/316) ([tyler-ball](https://github.com/tyler-ball))
+- Generate code coverage with specs. [\#287](https://github.com/chef/chef-provisioning-aws/pull/287) ([randomcamel](https://github.com/randomcamel))
+- edit strings for consistency, branding \(AWS\) [\#283](https://github.com/chef/chef-provisioning-aws/pull/283) ([jamescott](https://github.com/jamescott))
 
-- Security groups can be referenced by group-name, don't need a data bag entry ([#194][])
-- Added support for tags across almost all resources.  See the README for examples ([#190][])
-- Updated `aws_route_table` with the ability to ignore routes with regex matching.  This supports AWS performing automatic route switching for HA purposes without chef-provisioning interfering with that logic. ([@dblessing][], [#172][])
-- Updated `aws_route_table` to propogate routes from provided virtual gateways.  See the comments in the resource for specifics.  ([@dblessing][], [#151][])
-- Updated the `docs/examples/ref_*` examples to execute correctly and fixed broken integration tests ([@tyler-ball][])
+## [v1.3.1](https://github.com/chef/chef-provisioning-aws/tree/v1.3.1) (2015-08-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.3.0...v1.3.1)
 
-## 1.1.1 (4/28/2015)
+**Fixed bugs:**
 
-- Fixed bug where refering to the same `machine` an an `aws_instance` would would raise a RuntimeError ([@patrick-wright][], [@tyler-ball][] [#191][])
-- Added new `destroy_an_aws_object` matcher for use in integration tests ([@patrick-wright][] [#186][])
-- Add ability to turn off source/dest check ([@dblessing][])
+- machine\_batch exits with error  - NoMethodError: undefined method `encoding' for nil:NilClass [\#277](https://github.com/chef/chef-provisioning-aws/issues/277)
+- AWS Driver does not return credentials with machine\_batch [\#260](https://github.com/chef/chef-provisioning-aws/issues/260)
+- Elastic Load Balancers: SSL works on create, but not update [\#258](https://github.com/chef/chef-provisioning-aws/issues/258)
+- Error re signing request when running integration tests [\#235](https://github.com/chef/chef-provisioning-aws/issues/235)
+- Machine with name that could be instance id is not being destroyed [\#232](https://github.com/chef/chef-provisioning-aws/issues/232)
+- running bundle exec rake rspec fails without a valid /etc/chef/client.pem [\#231](https://github.com/chef/chef-provisioning-aws/issues/231)
+- Support Network ACLs [\#168](https://github.com/chef/chef-provisioning-aws/issues/168)
+- Fix handling of lb server certificates, fixes \#258 [\#275](https://github.com/chef/chef-provisioning-aws/pull/275) ([stevendanna](https://github.com/stevendanna))
+- only update bootstrap\_options\[:user\_data\] in windows, if one hasn't been provided [\#270](https://github.com/chef/chef-provisioning-aws/pull/270) ([brumschlag](https://github.com/brumschlag))
+- Adding exponential backoff when checking taggable status [\#263](https://github.com/chef/chef-provisioning-aws/pull/263) ([tyler-ball](https://github.com/tyler-ball))
+- load balancer example [\#262](https://github.com/chef/chef-provisioning-aws/pull/262) ([avleen](https://github.com/avleen))
 
-## 1.1.0 (4/16/2015)
+**Closed issues:**
 
-- Added `aws_network_interface` resource ([@patrick-wright][] [#167][])
-- Added integration tests which automatically destroy AWS resources after use ([@jkeiser][] [#152][])
-- Added `action :purge` support on aws resources, will delete all dependent resources in addition to the current resource ([@jkeiser][] [@tyler-ball][] [#152][] [#187][])
-  - EG, `action :purge` on the VPC will delete the subnet, machines, etc.
-- Update `docs/examples` to be consistent with current codebase ([@msonnabaum][] [#181][] [#179][])
-- Added version constraint for aws-sdk to support required features ([@msonnabaum][] [#178][])
-- Updated `aws_ebs_volume` `:availability_zone` attribute to only require letter instead of full region and letter ([@patrick-wright][] [#185][])
-  - IE, use `availability_zone 'a'` instead of `availability_zone 'us-east-1a'`
-- Added AWS Proxy & Session Token Support ([@afiune][] [#177][])
+- Cannot create security groups when creating an ec2 instance.  [\#271](https://github.com/chef/chef-provisioning-aws/issues/271)
+- when an audit-mode recipe is part of the node's specified run\_list, provisioning run stack traces [\#259](https://github.com/chef/chef-provisioning-aws/issues/259)
+- aws\_launch\_configuration doesn't respect key\_name [\#255](https://github.com/chef/chef-provisioning-aws/issues/255)
+- Ability to tag machines [\#252](https://github.com/chef/chef-provisioning-aws/issues/252)
+- bootstrap instances to chef-server [\#246](https://github.com/chef/chef-provisioning-aws/issues/246)
+- Can not create load\_balancer with out machines [\#243](https://github.com/chef/chef-provisioning-aws/issues/243)
+- Load Balancer Destroy does not work with 'internal' load balancers [\#173](https://github.com/chef/chef-provisioning-aws/issues/173)
 
-## 1.0.4 (4/7/2015)
+**Merged pull requests:**
 
-- Removed resource cloning again
-- Moved chef-zero to a development dependence because it is only used for testing
+- Expanding machine\_options documentation [\#265](https://github.com/chef/chef-provisioning-aws/pull/265) ([tyler-ball](https://github.com/tyler-ball))
+- Adding documentation for key\_pair on launch configuration, fixes \#255 [\#261](https://github.com/chef/chef-provisioning-aws/pull/261) ([tyler-ball](https://github.com/tyler-ball))
+- yard doc first pass on elasticache code [\#233](https://github.com/chef/chef-provisioning-aws/pull/233) ([metadave](https://github.com/metadave))
 
-## 1.0.3 (4/7/2015)
+## [v1.3.0](https://github.com/chef/chef-provisioning-aws/tree/v1.3.0) (2015-07-17)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.2.1...v1.3.0)
 
-- Unpinning cheffish, using dependency from chef-provisioning
+**Implemented enhancements:**
 
-## 1.0.2 (4/6/2015)
+- Support for elasticache [\#207](https://github.com/chef/chef-provisioning-aws/issues/207)
+- Adding a matcher which doesn't do any CRUD operations [\#248](https://github.com/chef/chef-provisioning-aws/pull/248) ([tyler-ball](https://github.com/tyler-ball))
+- Network acl [\#241](https://github.com/chef/chef-provisioning-aws/pull/241) ([dblessing](https://github.com/dblessing))
+- Elasticache support [\#212](https://github.com/chef/chef-provisioning-aws/pull/212) ([dblessing](https://github.com/dblessing))
 
-- Use released 4.2.0 version of chef-zero instead of pointing towards github
+**Fixed bugs:**
 
-## 1.0.1 (4/6/2015)
+- Specs fail with stack overflow message [\#240](https://github.com/chef/chef-provisioning-aws/issues/240)
+- Failure when attempting to tag an aws\_vpc [\#218](https://github.com/chef/chef-provisioning-aws/issues/218)
+- from\_image doesnt seem to work [\#211](https://github.com/chef/chef-provisioning-aws/issues/211)
+- AWS Security Groups cannot be tagged [\#204](https://github.com/chef/chef-provisioning-aws/issues/204)
+- machine converge instance not found error AWS::EC2::Errors::InvalidInstanceID::NotFound [\#158](https://github.com/chef/chef-provisioning-aws/issues/158)
+- Should you get t1.micro instances by default? [\#29](https://github.com/chef/chef-provisioning-aws/issues/29)
+- How about something for creating and assigning an IAM role to the server? [\#1](https://github.com/chef/chef-provisioning-aws/issues/1)
+- Updating for Chef 12.4.x, fixes \#240 [\#250](https://github.com/chef/chef-provisioning-aws/pull/250) ([tyler-ball](https://github.com/tyler-ball))
+- Adding a matcher which doesn't do any CRUD operations [\#248](https://github.com/chef/chef-provisioning-aws/pull/248) ([tyler-ball](https://github.com/tyler-ball))
+- use wait\_for\_state before tagging VPC's, fixes \#218 [\#245](https://github.com/chef/chef-provisioning-aws/pull/245) ([metadave](https://github.com/metadave))
+- Fix security group rule comparison [\#237](https://github.com/chef/chef-provisioning-aws/pull/237) ([dblessing](https://github.com/dblessing))
+- Make destroy\_aws\_object work when using ec2-classic [\#209](https://github.com/chef/chef-provisioning-aws/pull/209) ([brainiac744](https://github.com/brainiac744))
+- Support elb attributes, fixes \#138 [\#199](https://github.com/chef/chef-provisioning-aws/pull/199) ([dblessing](https://github.com/dblessing))
+- Query Ubuntu for current AMI [\#197](https://github.com/chef/chef-provisioning-aws/pull/197) ([whiteley](https://github.com/whiteley))
 
-- Use released 1.0.0 version of chef-provisioning instead of pointing towards github
+**Closed issues:**
 
-## 1.0.0 (4/2/2015)
-## 1.0.0.rc.1 (3/31/2015)
+- S3 Bucket [\#222](https://github.com/chef/chef-provisioning-aws/issues/222)
+- \(basic\_chef\_client::block line 57\) had an error: Net::HTTPServerException: 404 "Not Found" [\#217](https://github.com/chef/chef-provisioning-aws/issues/217)
+- Cannot find AWS Credentials [\#210](https://github.com/chef/chef-provisioning-aws/issues/210)
+- Ask Ubuntu for the latest Ubuntu image as the default image instead of hardcoding [\#196](https://github.com/chef/chef-provisioning-aws/issues/196)
+- NoMethodError: undefined method `id' for "ami-e7f8d6d7" for aws\_launch\_configuration [\#160](https://github.com/chef/chef-provisioning-aws/issues/160)
+- ELB attributes not supported [\#138](https://github.com/chef/chef-provisioning-aws/issues/138)
+- Update of subnet fails due to incorrect comparison [\#137](https://github.com/chef/chef-provisioning-aws/issues/137)
+- AWS::AutoScaling::Errors::ValidationError: At least one Availability Zone or VPC Subnet is required. [\#135](https://github.com/chef/chef-provisioning-aws/issues/135)
+- Re-converging instances that were created with driver version \< 0.2.0 fails [\#86](https://github.com/chef/chef-provisioning-aws/issues/86)
+- aws\_driver does not honor "with\_data\_center \[region\]" setting. [\#85](https://github.com/chef/chef-provisioning-aws/issues/85)
+- Security Groups  [\#67](https://github.com/chef/chef-provisioning-aws/issues/67)
+- Cleaner handling when trying :disassociate action on an already disassociated aws\_eip\_address [\#59](https://github.com/chef/chef-provisioning-aws/issues/59)
+- bootstrap\_options need to be clarified [\#58](https://github.com/chef/chef-provisioning-aws/issues/58)
+- aws\_security\_group doesn't show \(up to date\) message [\#50](https://github.com/chef/chef-provisioning-aws/issues/50)
+- Remove update\_load\_balancer? [\#19](https://github.com/chef/chef-provisioning-aws/issues/19)
 
-- Fix issue with load balancer failing on the second run
+**Merged pull requests:**
 
-## 0.5.0 (3/26/2015)
+- Update README.md [\#239](https://github.com/chef/chef-provisioning-aws/pull/239) ([ryancragun](https://github.com/ryancragun))
+- additional documentation [\#236](https://github.com/chef/chef-provisioning-aws/pull/236) ([brandocorp](https://github.com/brandocorp))
+- update README with rspec info [\#234](https://github.com/chef/chef-provisioning-aws/pull/234) ([metadave](https://github.com/metadave))
 
-- Expanded `docs/examples` with many more references
-- Refactored the data_bag storage for easier development.  This should not affect existing cookbooks. ([@jkeiser][])
-- All resources which reference an `aws_resource` can be referenced by resource name, AWS object or AWS object identifier.  See `docs/examples/attribute_reference.rb` for an example. ([@jkeiser][])
-- Existing AWS resources can be 'imported' (have a data bag managed entry created) by specifying their identifier in the resource's aws_id_attribute.  EG,
-```ruby
-aws_security_group "my_group" do
-  security_group_id 'sg-123456'
-end
-```
-([@jkeiser][])
-- Updated `aws_vpc` to support an `internet_gateway true/false` flag ([@jkeiser][])
-- Updated `aws_security_group` inbound/outbound rules for easier readability.  See `docs/examples/sg_test.rb` for an example. ([@jkeiser][])
-- Added new `aws_dhcp_options`, `aws_route_table` resource/provider ([@jkeiser][])
-- Added new `aws_ebs_volume` resource/provider ([@patrick-wright][])
-- Deprecated `action :delete` across all `aws_*` resources - use `action :destroy` instead.
+## [v1.2.1](https://github.com/chef/chef-provisioning-aws/tree/v1.2.1) (2015-05-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.2.0...v1.2.1)
 
-## 0.4.0 (3/4/2015)
+**Merged pull requests:**
 
-- Add `driver` and `with_driver` support to AWS resources, remove `region` as a resource attribute and remove `with_data_center` ([@jkeiser][])
-- `load_balancer` can now be created without any associated machines ([@christinedraper][])
-- Set region from credentials if not specified in driver url ([@christinedraper][])
-- Added support for scheme and subnet attributes in the `load_balancer` resource ([@erikvanbrakel][] & [@tyler-ball][])
-- Renamed `load_balancer_options` security_group_id to security_group_ids and security_group_name to security_group_names.  These now accept an array of Strings. ([@erikvanbrakel][] & [@tyler-ball][])
+- Fixing \#158 and \#204 [\#213](https://github.com/chef/chef-provisioning-aws/pull/213) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v1.2.0](https://github.com/chef/chef-provisioning-aws/tree/v1.2.0) (2015-05-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.1.1...v1.2.0)
+
+**Fixed bugs:**
+
+- Tags are not converging idempotently [\#205](https://github.com/chef/chef-provisioning-aws/issues/205)
+- Load Balancer no longer accepts security groups by name [\#203](https://github.com/chef/chef-provisioning-aws/issues/203)
+- security\_groups bootstrap option doesn't work with an existing group [\#174](https://github.com/chef/chef-provisioning-aws/issues/174)
+- Security groups can be referenced by group-name, don't need a data bag entry [\#194](https://github.com/chef/chef-provisioning-aws/pull/194) ([tyler-ball](https://github.com/tyler-ball))
+- Feature: Propagate Virtual Private Gateway Routes for `aws\_route\_table` resource [\#151](https://github.com/chef/chef-provisioning-aws/pull/151) ([dblessing](https://github.com/dblessing))
+
+**Closed issues:**
+
+- ChefDK 0.6.0 and Client 12.3 with chef-provisioning AWS doesn't work in socketless mode [\#202](https://github.com/chef/chef-provisioning-aws/issues/202)
+-  Invalid value 'Must specify both from and to ports with TCP/UDP.' for portRange. [\#183](https://github.com/chef/chef-provisioning-aws/issues/183)
+- Unable to destroy on latest master [\#141](https://github.com/chef/chef-provisioning-aws/issues/141)
+- Creation of aws\_security\_group fails if run from multiple machines \[local mode\] [\#49](https://github.com/chef/chef-provisioning-aws/issues/49)
+
+**Merged pull requests:**
+
+- Fixing a myriad of tests [\#208](https://github.com/chef/chef-provisioning-aws/pull/208) ([tyler-ball](https://github.com/tyler-ball))
+- Updating ref files to run correctly [\#192](https://github.com/chef/chef-provisioning-aws/pull/192) ([tyler-ball](https://github.com/tyler-ball))
+- Aws Tags [\#190](https://github.com/chef/chef-provisioning-aws/pull/190) ([patrick-wright](https://github.com/patrick-wright))
+
+## [v1.1.1](https://github.com/chef/chef-provisioning-aws/tree/v1.1.1) (2015-04-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.1.0...v1.1.1)
+
+**Closed issues:**
+
+- machine :destroy RuntimeError when aws\_instance resource has been used in the recipe [\#189](https://github.com/chef/chef-provisioning-aws/issues/189)
+- Can't provision windows server in a vpc [\#188](https://github.com/chef/chef-provisioning-aws/issues/188)
+
+**Merged pull requests:**
+
+- Updating to use the new \*spec.driver\_url syntax exposed in chef-provisioning 1.0 [\#191](https://github.com/chef/chef-provisioning-aws/pull/191) ([tyler-ball](https://github.com/tyler-ball))
+- add destroy\_an\_aws\_object [\#186](https://github.com/chef/chef-provisioning-aws/pull/186) ([patrick-wright](https://github.com/patrick-wright))
+
+## [v1.1.0](https://github.com/chef/chef-provisioning-aws/tree/v1.1.0) (2015-04-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.2.2...v1.1.0)
+
+**Fixed bugs:**
+
+- enhance aws\_ebs\_volume :availability\_zone to accept an AZ letter designation [\#184](https://github.com/chef/chef-provisioning-aws/issues/184)
+
+**Closed issues:**
+
+- Updating chef-provisioning-aws breaks chef-client -z functionality with ChefDK 0.4.0 \(current version\). [\#182](https://github.com/chef/chef-provisioning-aws/issues/182)
+
+**Merged pull requests:**
+
+- Updating destroy to remove instances and images on non-purge destroy [\#187](https://github.com/chef/chef-provisioning-aws/pull/187) ([tyler-ball](https://github.com/tyler-ball))
+- update aws\_ebs\_volume :availability\_zone to exclude region setting [\#185](https://github.com/chef/chef-provisioning-aws/pull/185) ([patrick-wright](https://github.com/patrick-wright))
+- Updated security group examples to use the correct hash key for ports. [\#181](https://github.com/chef/chef-provisioning-aws/pull/181) ([msonnabaum](https://github.com/msonnabaum))
+- Fixed incorrect resource params in vpc example. [\#179](https://github.com/chef/chef-provisioning-aws/pull/179) ([msonnabaum](https://github.com/msonnabaum))
+- Added version constraint for aws-sdk. [\#178](https://github.com/chef/chef-provisioning-aws/pull/178) ([msonnabaum](https://github.com/msonnabaum))
+- AWS Proxy & Session Token Support [\#177](https://github.com/chef/chef-provisioning-aws/pull/177) ([afiune](https://github.com/afiune))
+- network interface \(create, update, destroy\) [\#167](https://github.com/chef/chef-provisioning-aws/pull/167) ([patrick-wright](https://github.com/patrick-wright))
+- Better AWS tests [\#152](https://github.com/chef/chef-provisioning-aws/pull/152) ([jkeiser](https://github.com/jkeiser))
+
+## [v0.2.2](https://github.com/chef/chef-provisioning-aws/tree/v0.2.2) (2015-04-10)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.4...v0.2.2)
+
+## [v1.0.4](https://github.com/chef/chef-provisioning-aws/tree/v1.0.4) (2015-04-07)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.3...v1.0.4)
+
+**Closed issues:**
+
+- Cloning resource attributes warnings at start of chef run [\#159](https://github.com/chef/chef-provisioning-aws/issues/159)
+
+**Merged pull requests:**
+
+- Potential fix for resource cloning showing back up [\#166](https://github.com/chef/chef-provisioning-aws/pull/166) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v1.0.3](https://github.com/chef/chef-provisioning-aws/tree/v1.0.3) (2015-04-07)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.2...v1.0.3)
+
+**Merged pull requests:**
+
+- Allow AwsDriver to work even if you haven't explicitly required 'chef/pr... [\#156](https://github.com/chef/chef-provisioning-aws/pull/156) ([jkeiser](https://github.com/jkeiser))
+
+## [v1.0.2](https://github.com/chef/chef-provisioning-aws/tree/v1.0.2) (2015-04-06)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.1...v1.0.2)
+
+## [v1.0.1](https://github.com/chef/chef-provisioning-aws/tree/v1.0.1) (2015-04-06)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0...v1.0.1)
+
+## [v1.0.0](https://github.com/chef/chef-provisioning-aws/tree/v1.0.0) (2015-04-02)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0.rc.1...v1.0.0)
+
+**Fixed bugs:**
+
+- Add ability to ignore certain routes [\#172](https://github.com/chef/chef-provisioning-aws/pull/172) ([dblessing](https://github.com/dblessing))
+
+**Closed issues:**
+
+- Load Balancer deletion not working in 1.0.0.rc.1 [\#171](https://github.com/chef/chef-provisioning-aws/issues/171)
+
+## [v1.0.0.rc.1](https://github.com/chef/chef-provisioning-aws/tree/v1.0.0.rc.1) (2015-04-01)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.5.0...v1.0.0.rc.1)
+
+**Closed issues:**
+
+- :stop action has disappeared on machine and machine\_image [\#161](https://github.com/chef/chef-provisioning-aws/issues/161)
+- Second run on load balancer fails with AWS::Core::OptionGrammar::FormatError [\#130](https://github.com/chef/chef-provisioning-aws/issues/130)
+
+**Merged pull requests:**
+
+- Changelog and version for 0.5.0 release [\#153](https://github.com/chef/chef-provisioning-aws/pull/153) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v0.5.0](https://github.com/chef/chef-provisioning-aws/tree/v0.5.0) (2015-03-26)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.4.0...v0.5.0)
+
+**Closed issues:**
+
+- VPC main route table reference is impossible [\#146](https://github.com/chef/chef-provisioning-aws/issues/146)
+- OpenSSL::SSL::SSLError connect error on machine converge [\#140](https://github.com/chef/chef-provisioning-aws/issues/140)
+- `aws\_dhcp\_options` not able to be referenced by `aws\_vpc` resource [\#139](https://github.com/chef/chef-provisioning-aws/issues/139)
+- Add the option to add AWS tags in the machine\_options [\#134](https://github.com/chef/chef-provisioning-aws/issues/134)
+- Error when creating security group on VPC with outbound rule of 0.0.0.0/0 [\#129](https://github.com/chef/chef-provisioning-aws/issues/129)
+- Cannot refer to a security group by security\_group\_id [\#128](https://github.com/chef/chef-provisioning-aws/issues/128)
+- Converge fails if instance is deleted [\#125](https://github.com/chef/chef-provisioning-aws/issues/125)
+- aws\_security\_group out of sync [\#121](https://github.com/chef/chef-provisioning-aws/issues/121)
+- Unable to set subnet on a load\_balancer. [\#115](https://github.com/chef/chef-provisioning-aws/issues/115)
+
+**Merged pull requests:**
+
+- aws\_ebs\_volume \(jk/based on create\_update\_delete branch\) [\#142](https://github.com/chef/chef-provisioning-aws/pull/142) ([patrick-wright](https://github.com/patrick-wright))
+- Standardize create/update/delete [\#136](https://github.com/chef/chef-provisioning-aws/pull/136) ([jkeiser](https://github.com/jkeiser))
+- Make security groups idempotent, add better syntax [\#132](https://github.com/chef/chef-provisioning-aws/pull/132) ([jkeiser](https://github.com/jkeiser))
+- Add DHCP options support [\#127](https://github.com/chef/chef-provisioning-aws/pull/127) ([jkeiser](https://github.com/jkeiser))
+- Used managed entries for data bags, make resources responsible for referencing their object and entry [\#126](https://github.com/chef/chef-provisioning-aws/pull/126) ([jkeiser](https://github.com/jkeiser))
+
+## [v0.4.0](https://github.com/chef/chef-provisioning-aws/tree/v0.4.0) (2015-03-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.3...v0.4.0)
+
+**Closed issues:**
+
+- Not able to create instance without public IP [\#120](https://github.com/chef/chef-provisioning-aws/issues/120)
+- with\_driver no longer getting region from profile [\#116](https://github.com/chef/chef-provisioning-aws/issues/116)
+- AWS::Core::OptionGrammar::FormatError updating a load balancer [\#114](https://github.com/chef/chef-provisioning-aws/issues/114)
+- Exceptions when try to update load balancer [\#109](https://github.com/chef/chef-provisioning-aws/issues/109)
+- No address associated with hostname" when using a proxy? [\#103](https://github.com/chef/chef-provisioning-aws/issues/103)
+- AWS Profile not honored for aws\_vpc \(and possibly others\) [\#75](https://github.com/chef/chef-provisioning-aws/issues/75)
+
+**Merged pull requests:**
+
+- Fix \#116 and \#114 [\#117](https://github.com/chef/chef-provisioning-aws/pull/117) ([christinedraper](https://github.com/christinedraper))
+- Security groups, subnets and schemes can be updated [\#108](https://github.com/chef/chef-provisioning-aws/pull/108) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v0.3](https://github.com/chef/chef-provisioning-aws/tree/v0.3) (2015-02-26)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/verbose_specs...v0.3)
+
+**Fixed bugs:**
+
+- machine resource not idempotent [\#15](https://github.com/chef/chef-provisioning-aws/issues/15)
+
+**Closed issues:**
+
+- destroying a machine image doesnt delete snapshots [\#94](https://github.com/chef/chef-provisioning-aws/issues/94)
+- machine provisioning doesn't work for windows target [\#84](https://github.com/chef/chef-provisioning-aws/issues/84)
+- Error on destroying a loadbalancer [\#82](https://github.com/chef/chef-provisioning-aws/issues/82)
+- Multiple listeners defined in `load\_balancer` [\#81](https://github.com/chef/chef-provisioning-aws/issues/81)
+- Provisioning only creates t1.micros [\#63](https://github.com/chef/chef-provisioning-aws/issues/63)
+- machine\_file resource not working as the connect\_to\_machine method is not implemented [\#60](https://github.com/chef/chef-provisioning-aws/issues/60)
+- Failure when creating security groups [\#57](https://github.com/chef/chef-provisioning-aws/issues/57)
+- Feature: VPC subnet [\#38](https://github.com/chef/chef-provisioning-aws/issues/38)
+
+**Merged pull requests:**
+
+- Bug fixes for creating load balancers [\#106](https://github.com/chef/chef-provisioning-aws/pull/106) ([tyler-ball](https://github.com/tyler-ball))
+- Fix undefined local variable or method `image\_id’ error [\#105](https://github.com/chef/chef-provisioning-aws/pull/105) ([schisamo](https://github.com/schisamo))
+
+## [verbose_specs](https://github.com/chef/chef-provisioning-aws/tree/verbose_specs) (2015-02-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.2.1...verbose_specs)
+
+**Closed issues:**
+
+- aws\_security\_group throws an error on action :delete \(No resource, method, or local variable named `existing\_vpc'\) [\#92](https://github.com/chef/chef-provisioning-aws/issues/92)
+- machine from\_image doesnt pick correct image [\#89](https://github.com/chef/chef-provisioning-aws/issues/89)
+- No resource, method, or local variable named `existing\_vpc' when delete security group [\#74](https://github.com/chef/chef-provisioning-aws/issues/74)
+- Delete action for aws\_vpc doesnt work [\#73](https://github.com/chef/chef-provisioning-aws/issues/73)
+- image\_id should be a bootstrap\_options instead of machine\_option? [\#46](https://github.com/chef/chef-provisioning-aws/issues/46)
+- driver image methods are empty [\#42](https://github.com/chef/chef-provisioning-aws/issues/42)
+
+**Merged pull requests:**
+
+- Fix specs require [\#99](https://github.com/chef/chef-provisioning-aws/pull/99) ([pburkholder](https://github.com/pburkholder))
+- Fix VPC example to use aws\_subnet [\#78](https://github.com/chef/chef-provisioning-aws/pull/78) ([christinedraper](https://github.com/christinedraper))
+- Ensure we pass a Hash to aws-sdk instances [\#72](https://github.com/chef/chef-provisioning-aws/pull/72) ([schisamo](https://github.com/schisamo))
+
+## [v0.2.1](https://github.com/chef/chef-provisioning-aws/tree/v0.2.1) (2015-01-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.2...v0.2.1)
+
+**Merged pull requests:**
+
+- We must ensure that the transport is ready [\#71](https://github.com/chef/chef-provisioning-aws/pull/71) ([afiune](https://github.com/afiune))
+
+## [v0.2](https://github.com/chef/chef-provisioning-aws/tree/v0.2) (2015-01-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.3...v0.2)
+
+**Fixed bugs:**
+
+- implement connect\_to\_machine [\#11](https://github.com/chef/chef-provisioning-aws/issues/11)
+
+**Closed issues:**
+
+- Add security\_group\_names to bootstrap\_options [\#48](https://github.com/chef/chef-provisioning-aws/issues/48)
+- Can't specify ssh\_username via machine\_options [\#44](https://github.com/chef/chef-provisioning-aws/issues/44)
+
+**Merged pull requests:**
+
+- Adding website endpoint as stored attribute [\#39](https://github.com/chef/chef-provisioning-aws/pull/39) ([jaym](https://github.com/jaym))
+
+## [v0.1.3](https://github.com/chef/chef-provisioning-aws/tree/v0.1.3) (2014-12-15)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.2...v0.1.3)
+
+**Closed issues:**
+
+- EC2 node attributes not available through ohai [\#37](https://github.com/chef/chef-provisioning-aws/issues/37)
+- Default key doesn't work when creating machine resource [\#35](https://github.com/chef/chef-provisioning-aws/issues/35)
+- Support ~/.aws/credentials [\#33](https://github.com/chef/chef-provisioning-aws/issues/33)
+- :destroy action on load\_balancer is a noop [\#28](https://github.com/chef/chef-provisioning-aws/issues/28)
+- What are the sane defaults for complete and converge in the machine resource? [\#25](https://github.com/chef/chef-provisioning-aws/issues/25)
+- Default load\_balancer security group not working [\#24](https://github.com/chef/chef-provisioning-aws/issues/24)
+- :destroy does not remove local client and node data [\#6](https://github.com/chef/chef-provisioning-aws/issues/6)
+
+**Merged pull requests:**
+
+- :allocate should ensure instance isn't terminated [\#40](https://github.com/chef/chef-provisioning-aws/pull/40) ([lynchc](https://github.com/lynchc))
+- No support for EIP Addresses [\#36](https://github.com/chef/chef-provisioning-aws/pull/36) ([lynchc](https://github.com/lynchc))
+
+## [v0.1.2](https://github.com/chef/chef-provisioning-aws/tree/v0.1.2) (2014-11-24)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.1...v0.1.2)
+
+**Fixed bugs:**
+
+- load\_balancer doesn't add machines on create [\#14](https://github.com/chef/chef-provisioning-aws/issues/14)
+- Thoughts on using aws-sdk-core \(Version 2 of the sdk\)? [\#2](https://github.com/chef/chef-provisioning-aws/issues/2)
+
+**Closed issues:**
+
+- instance created when key name is not configured [\#7](https://github.com/chef/chef-provisioning-aws/issues/7)
+- Implement security groups [\#4](https://github.com/chef/chef-provisioning-aws/issues/4)
+
+**Merged pull requests:**
+
+- Initial work for security groups and VPCs [\#34](https://github.com/chef/chef-provisioning-aws/pull/34) ([johnewart](https://github.com/johnewart))
+- Default key support [\#26](https://github.com/chef/chef-provisioning-aws/pull/26) ([johnewart](https://github.com/johnewart))
+- Combine update and create load balancer into idempotent action [\#22](https://github.com/chef/chef-provisioning-aws/pull/22) ([jkeiser](https://github.com/jkeiser))
+- Make AWS machines convergent [\#18](https://github.com/chef/chef-provisioning-aws/pull/18) ([jkeiser](https://github.com/jkeiser))
+- rename fog to aws [\#16](https://github.com/chef/chef-provisioning-aws/pull/16) ([patrick-wright](https://github.com/patrick-wright))
+
+## [v0.1.1](https://github.com/chef/chef-provisioning-aws/tree/v0.1.1) (2014-11-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1...v0.1.1)
+
+**Merged pull requests:**
+
+- Rename to chef-provisioning-aws [\#9](https://github.com/chef/chef-provisioning-aws/pull/9) ([jkeiser](https://github.com/jkeiser))
+
+## [v0.1](https://github.com/chef/chef-provisioning-aws/tree/v0.1) (2014-11-03)
+**Merged pull requests:**
+
+- Require V1 of AWS SDK [\#5](https://github.com/chef/chef-provisioning-aws/pull/5) ([jkeiser](https://github.com/jkeiser))
+- Add EC2 auto-scaling groups and launch configs [\#3](https://github.com/chef/chef-provisioning-aws/pull/3) ([raskchanky](https://github.com/raskchanky))
 
 
-## 0.3 (2/25/2015)
 
-- WinRM support! ([@erikvanbrakel][])
-- Make load balancers much more updateable ([@tyler-ball][])
-- Load balancer crash fixes ([@lynchc][])
-- Fix machine_batch to pick an image when image is not specified ([@jkeiser][])
-- Delete snapshot when deleting image ([@christinedraper][])
-- Support bootstrap_options => { image_id: 'ami-234243225' } ([@christinedraper][])
-- Support load_balancers and desired_capacity in aws_auto_scaling_group ([@christinedraper][])
-- Get aws_security_group :destroy working ([@christinedraper][])
-- Fixes for merged machine_options (add_machine_options, etc.) ([@schisamo][] [@jkeiser][])
-
-## 0.2.1 (1/27/2015)
-
-- Fix issue with not waiting for ssh transport to be up ([@afiune][])
-- Don't require lb_options when defaults will do ([@bbbco][])
-
-## 0.2 (1/27/2015)
-
-- `aws_subnet` support ([@meekmichael][])
-- `aws_s3_bucket` static website support ([@jdmundrawala][])
-- `machine_image` support ([@miguelcnf][])
-- Make `machine_batch` parallelize requests ([@lynchc][])
-- Support profile name and region in driver URL (aws:profilename:us-east-1)
-- Make `machine_execute` and `machine_file` work (implement `connect_to_machine`) ([@miguelcnf][])
-
-- Make `ssh_username` work again
-- Fix issues waiting for pending machines or waiting for machines on the second run
-
-## 0.1.3
-
-## 0.1.2
-
-## 0.1.1
-
-## 0.1 (9/18/2014)
-
-- Initial revision.  Use at own risk :)
-
-<!--- The following link definition list is generated by PimpMyChangelog --->
-[#151]: https://github.com/chef/chef-provisioning-aws/issues/151
-[#152]: https://github.com/chef/chef-provisioning-aws/issues/152
-[#158]: https://github.com/chef/chef-provisioning-aws/issues/158
-[#167]: https://github.com/chef/chef-provisioning-aws/issues/167
-[#172]: https://github.com/chef/chef-provisioning-aws/issues/172
-[#177]: https://github.com/chef/chef-provisioning-aws/issues/177
-[#178]: https://github.com/chef/chef-provisioning-aws/issues/178
-[#179]: https://github.com/chef/chef-provisioning-aws/issues/179
-[#181]: https://github.com/chef/chef-provisioning-aws/issues/181
-[#185]: https://github.com/chef/chef-provisioning-aws/issues/185
-[#186]: https://github.com/chef/chef-provisioning-aws/issues/186
-[#187]: https://github.com/chef/chef-provisioning-aws/issues/187
-[#190]: https://github.com/chef/chef-provisioning-aws/issues/190
-[#191]: https://github.com/chef/chef-provisioning-aws/issues/191
-[#194]: https://github.com/chef/chef-provisioning-aws/issues/194
-[#197]: https://github.com/chef/chef-provisioning-aws/issues/197
-[#199]: https://github.com/chef/chef-provisioning-aws/issues/199
-[#204]: https://github.com/chef/chef-provisioning-aws/issues/204
-[#209]: https://github.com/chef/chef-provisioning-aws/issues/209
-[#212]: https://github.com/chef/chef-provisioning-aws/issues/212
-[#234]: https://github.com/chef/chef-provisioning-aws/issues/234
-[#236]: https://github.com/chef/chef-provisioning-aws/issues/236
-[#237]: https://github.com/chef/chef-provisioning-aws/issues/237
-[#239]: https://github.com/chef/chef-provisioning-aws/issues/239
-[#241]: https://github.com/chef/chef-provisioning-aws/issues/241
-[#245]: https://github.com/chef/chef-provisioning-aws/issues/245
-[#248]: https://github.com/chef/chef-provisioning-aws/issues/248
-[#250]: https://github.com/chef/chef-provisioning-aws/issues/250
-[#263]: https://github.com/chef/chef-provisioning-aws/issues/263
-[#270]: https://github.com/chef/chef-provisioning-aws/issues/270
-[#275]: https://github.com/chef/chef-provisioning-aws/issues/275
-[@afiune]: https://github.com/afiune
-[@bbbco]: https://github.com/bbbco
-[@brumschlag]: https://github.com/brumschlag
-[@christinedraper]: https://github.com/christinedraper
-[@dblessing]: https://github.com/dblessing
-[@erikvanbrakel]: https://github.com/erikvanbrakel
-[@jdmundrawala]: https://github.com/jdmundrawala
-[@jkeiser]: https://github.com/jkeiser
-[@lynchc]: https://github.com/lynchc
-[@meekmichael]: https://github.com/meekmichael
-[@miguelcnf]: https://github.com/miguelcnf
-[@msonnabaum]: https://github.com/msonnabaum
-[@patrick-wright]: https://github.com/patrick-wright
-[@schisamo]: https://github.com/schisamo
-[@stevendanna]: https://github.com/stevendanna
-[@tyler-ball]: https://github.com/tyler-ball
+\* *This Change Log was automatically generated by [github_changelog_generator](https://github.com/skywinder/Github-Changelog-Generator)*

@@ -691,6 +691,7 @@ EOD
       bootstrap_options[:instance_type] ||= default_instance_type
       image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
       bootstrap_options[:image_id] = image_id
+      bootstrap_options.delete(:key_path)
       if !bootstrap_options[:key_name]
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)

@@ -20,7 +20,7 @@ describe Chef::Resource::LoadBalancer do
                   :instance_protocol => :http,
               }],
               subnets: ["test_public_subnet"],
-              security_groups: [default_security_group.id],
+              security_groups: ["test_security_group"],
               health_check: {
                 target: "HTTP:80/",
                 interval: 10,
@@ -28,6 +28,8 @@ describe Chef::Resource::LoadBalancer do
                 unhealthy_threshold: 2,
                 healthy_threshold: 2
               }
+              # 'only 1 of subnets or availability_zones may be specified'
+              # availability_zones: [test_public_subnet.aws_object.availability_zone_name]
            })
           end
         }.to create_an_aws_load_balancer('test-load-balancer', {
@@ -37,8 +39,8 @@ describe Chef::Resource::LoadBalancer do
               :instance_port => 80,
               :instance_protocol => :http,
           }],
-          subnets: [test_public_subnet.aws_object.id],
-          security_groups: [default_security_group.id],
+          subnets: [test_public_subnet.aws_object],
+          security_groups: [test_security_group.aws_object],
           health_check: {
             target: "HTTP:80/",
             interval: 10,

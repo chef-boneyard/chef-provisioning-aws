@@ -58,8 +58,9 @@ module AWSSupport
       image = driver.ec2.images.filter('name', 'test_machine_image').first
       image.delete if image
 
+      default_sg = test_vpc.aws_object.security_groups.filter('group-name', 'default').first
       recipe do
-        aws_security_group default_security_group do
+        aws_security_group default_sg do
           inbound_rules '0.0.0.0/0' => 22
         end
       end.converge
@@ -253,10 +254,6 @@ module AWSSupport
 
     def default_vpc
       @default_vpc ||= driver.ec2.vpcs.filter('isDefault', 'true').first
-    end
-
-    def default_security_group
-      @default_sg ||= test_vpc.aws_object.security_groups.filter('group-name', 'default').first
     end
 
     def driver

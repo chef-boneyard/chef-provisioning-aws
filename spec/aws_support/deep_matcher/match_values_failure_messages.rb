@@ -78,6 +78,9 @@ module AWSSupport
         different = false
 
         expected_list = expected_list.map { |v| ExpectedValue.new(v) }
+        unless actual_list.class <= Array
+          actual_list = actual_list.to_a
+        end
         Diff::LCS.sdiff(expected_list, actual_list) do |change|
           case change.action
           when '='

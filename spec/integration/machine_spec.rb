@@ -223,7 +223,53 @@ describe Chef::Resource::Machine do
             subnet_id: test_public_subnet.aws_object.id
           ).and be_idempotent
         end
+	  end
 
+      context "with a custom iam role" do
+        # TODO when we have IAM support, use the resources
+        before(:context) do
+          assume_role_policy_document = '{"Version":"2008-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":["ec2.amazonaws.com"]},"Action":["sts:AssumeRole"]}]}'
+          driver.iam_client.create_role({
+            role_name: "machine_test_custom_role",
+            assume_role_policy_document: assume_role_policy_document
+          }).role
+          driver.iam_client.create_instance_profile({
+            instance_profile_name: "machine_test_custom_role"
+          })
+          driver.iam_client.add_role_to_instance_profile({
+            instance_profile_name: "machine_test_custom_role",
+            role_name: "machine_test_custom_role"
+          })
+          sleep 5 # grrrrrr, the resource should take care of the polling for us
+        end
+
+        after(:context) do
+          driver.iam_client.remove_role_from_instance_profile({
+            instance_profile_name: "machine_test_custom_role",
+            role_name: "machine_test_custom_role"
+          })
+          driver.iam_client.delete_instance_profile({
+            instance_profile_name: "machine_test_custom_role"
+          })
+          driver.iam_client.delete_role({
+            role_name: "machine_test_custom_role"
+          })
+        end
+
+        it "converts iam_instance_profile from a string to a hash", :super_slow do
+          expect_recipe {
+            machine 'test_machine' do
+              machine_options bootstrap_options: {
+                subnet_id: 'test_public_subnet',
+                key_name: 'test_key_pair',
+                iam_instance_profile: "machine_test_custom_role"
+              }
+              action :allocate
+            end
+          }.to create_an_aws_instance('test_machine',
+            iam_instance_profile: {arn: /machine_test_custom_role/}
+          ).and be_idempotent
+        end
       end
 
       it "machine with from_image option is created from correct image", :super_slow do
@@ -327,7 +373,7 @@ describe Chef::Resource::Machine do
           ).and be_idempotent
         end
       end
-    end
 
+    end
   end
 end

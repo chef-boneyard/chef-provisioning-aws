@@ -54,6 +54,27 @@ describe Chef::Resource::Machine do
         ).and be_idempotent
       end
 
+      it "base64 encodes the user data", :super_slow do
+        uniq = Random.rand(100)
+        expect_recipe {
+          machine "test_machine_#{uniq}" do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair',
+              user_data: 'echo \'foo\''
+            }
+            action :allocate
+          end
+        }.to create_an_aws_instance("test_machine_#{uniq}"
+        ).and be_idempotent
+        expect(
+          driver.ec2_client.describe_instance_attribute(
+            instance_id: driver.ec2_resource.instances(filters: [{name: "tag:Name", values:["test_machine_#{uniq}"]}]).first.id,
+            attribute: "userData"
+          ).user_data.value
+        ).to eq("ZWNobyAnZm9vJw==\n")
+      end
+
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe {
 

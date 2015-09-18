@@ -24,6 +24,7 @@ require 'aws-sdk-v1'
 require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
+require 'base64'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -695,6 +696,9 @@ EOD
       if !bootstrap_options[:key_name]
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
+      end
+      if bootstrap_options[:user_data]
+        bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
       if machine_options[:is_windows]

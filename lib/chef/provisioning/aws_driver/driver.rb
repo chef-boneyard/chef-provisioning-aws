@@ -24,6 +24,7 @@ require 'aws-sdk-v1'
 require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
+require 'base64'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
@@ -696,12 +697,8 @@ EOD
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
       end
-
-      if machine_options[:is_windows]
-        Chef::Log.debug "Setting WinRM userdata..."
-        bootstrap_options[:user_data] = user_data if bootstrap_options[:user_data].nil?
-      else
-        Chef::Log.debug "Non-windows, not setting userdata"
+      if bootstrap_options[:user_data]
+        bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)

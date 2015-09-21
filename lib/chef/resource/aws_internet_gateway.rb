@@ -19,7 +19,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   #
   # Extend actions for the internet gateway
   #
-  actions :create, :destroy, :detach, :purge, :nothing
+  actions :create, :destroy, :detach
 
   #
   # The name of this internet gateway.

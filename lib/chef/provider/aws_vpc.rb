@@ -194,6 +194,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
               action :detach
             end
           end
+          aws_internet_gateway new_ig do
+            vpc vpc.id
+          end
         end
       when true
         if !current_ig

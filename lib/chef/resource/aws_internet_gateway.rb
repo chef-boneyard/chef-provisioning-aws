@@ -7,7 +7,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
 
   attribute :name, kind_of: String, name_attribute: true
 
-  attribute :internet_gateway_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :internet_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^igw-[a-f0-9]{8}$/ ? name : nil
   }
 

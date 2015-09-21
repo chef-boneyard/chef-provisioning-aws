@@ -86,7 +86,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   attribute :network_acl, kind_of: [ String, AwsNetworkAcl, AWS::EC2::NetworkACL ]
 
-  attribute :subnet_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :subnet_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^subnet-[a-f0-9]{8}$/ ? name : nil
   }
 

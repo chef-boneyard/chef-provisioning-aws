@@ -19,7 +19,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   attribute :encrypted,         kind_of: [ TrueClass, FalseClass ]
   attribute :device,            kind_of: String
 
-  attribute :volume_id,         kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :volume_id,         kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
   }
 

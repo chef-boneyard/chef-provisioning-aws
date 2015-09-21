@@ -10,7 +10,7 @@ class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResourceWithE
 
   attribute :name, kind_of: String,  name_attribute: true
 
-  attribute :image_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :image_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^ami-[a-f0-9]{8}$/ ? name : nil
   }
 

@@ -4,7 +4,7 @@ class Chef::Resource::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type AWS::SNS::Topic
 
   attribute :name, kind_of: String, name_attribute: true
-  attribute :arn,  kind_of: String, lazy_default: proc { driver.build_arn(service: 'sns', resource: name) }
+  attribute :arn,  kind_of: String, default: lazy { driver.build_arn(service: 'sns', resource: name) }
 
   def aws_object
     result = driver.sns.topics[arn]

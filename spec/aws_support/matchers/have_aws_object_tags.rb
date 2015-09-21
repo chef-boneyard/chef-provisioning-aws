@@ -27,7 +27,7 @@ module AWSSupport
         differences = []
 
         # Check for object existence and properties
-        resource = resource_class.new(name, nil)
+        resource = resource_class.new(name, recipe.client.run_context)
         resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         @aws_object = resource.aws_object

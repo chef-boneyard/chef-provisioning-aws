@@ -4,19 +4,18 @@ describe "AwsNetworkInterface" do
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
     with_aws "when connected to AWS" do
 
-      context "setting up public VPC", :super_slow do
+      context "setting up public VPC" do
 
-        # Putting this in its own context so it doesn't slow down other tests
         setup_public_vpc
 
-        it "creates an aws_network_interface resource with maximum attributes" do
+        it "creates an aws_network_interface resource with maximum attributes", :super_slow do
           expect_recipe {
             machine "test_machine" do
               machine_options bootstrap_options: {
                 subnet_id: 'test_public_subnet',
                 security_group_ids: ['test_security_group']
               }
-              action :allocate
+              action :ready
             end
 
             aws_network_interface 'test_network_interface' do

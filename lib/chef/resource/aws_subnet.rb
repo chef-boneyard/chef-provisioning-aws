@@ -16,7 +16,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::Subnet
+  aws_sdk_type AWS::EC2::Subnet, :id => :id
 
   require 'chef/resource/aws_vpc'
   require 'chef/resource/aws_network_acl'

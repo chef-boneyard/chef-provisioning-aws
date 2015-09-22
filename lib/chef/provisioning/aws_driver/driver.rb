@@ -701,6 +701,13 @@ EOD
         bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
+      if machine_options[:is_windows]
+        Chef::Log.debug "Setting Default WinRM userdata for windows..."
+        bootstrap_options[:user_data] = Base64.encode64(user_data) if bootstrap_options[:user_data].nil?
+      else
+        Chef::Log.debug "Non-windows, not setting userdata"
+      end
+
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options

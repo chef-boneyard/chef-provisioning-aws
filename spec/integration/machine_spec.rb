@@ -75,6 +75,117 @@ describe Chef::Resource::Machine do
         ).to eq("ZWNobyAnZm9vJw==\n")
       end
 
+      it "respects the network_interfaces block with maximum attributes", :super_slow do
+        private_ip_address_start = Random.rand(30)+10
+        expect_recipe {
+          machine "test_machine" do
+            machine_options bootstrap_options: {
+              key_name: 'test_key_pair',
+              instance_type: 'm3.medium',
+              network_interfaces: [
+                {
+                  # Cannot set associate_public_ip_address and network_interface_id
+                  # network_interface_id: "eth0",
+                  device_index: 0,
+                  subnet_id: test_public_subnet.aws_object.id,
+                  description: "network interface description",
+                  private_ip_address: "10.0.0.#{private_ip_address_start}",
+                  delete_on_termination: true,
+                  groups: [test_security_group.aws_object.id],
+                  private_ip_addresses: [
+                    {
+                      private_ip_address: "10.0.0.#{private_ip_address_start+1}",
+                      primary: false
+                    },
+                    {
+                      private_ip_address: "10.0.0.#{private_ip_address_start+2}",
+                      primary: false
+                    }
+                  ],
+                  # cannot specify both `private_ip_addresses` and `secondary_private_ip_address_count`
+                  #secondary_private_ip_address_count: 2,
+                  associate_public_ip_address: true
+                }
+              ]
+            }
+            action :ready
+          end
+        }.to create_an_aws_instance("test_machine",
+          network_interfaces: [{
+            network_interface_id: /^eni-/,
+            subnet_id: test_public_subnet.aws_object.id,
+            vpc_id: test_vpc.aws_object.id,
+            description: "network interface description",
+            status: "in-use",
+            private_ip_address: "10.0.0.#{private_ip_address_start}",
+            groups: [{group_name: 'test_security_group'}],
+            attachment: {
+              device_index: 0,
+              delete_on_termination: true,
+              status: "attached"
+            },
+            private_ip_addresses: [
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start}",
+                primary: true,
+                # the action must be :ready to give the public ip time to be assigned
+                association: {
+                  public_ip: /\d+/
+                }
+              },
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start+1}",
+                primary: false
+              },
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start+2}",
+                primary: false
+              }
+            ]
+          }]
+        ).and be_idempotent
+      end
+
+      it "converts associate_public_ip_address at the top level to the network interface", :super_slow do
+        private_ip_address_start = Random.rand(30)+10
+        expect_recipe {
+          machine "test_machine" do
+            machine_options bootstrap_options: {
+              key_name: 'test_key_pair',
+              instance_type: 'm3.medium',
+              associate_public_ip_address: true,
+              subnet_id: test_public_subnet.aws_object.id,
+              security_group_ids: [test_security_group.aws_object.id],
+              private_ip_address: "10.0.0.#{private_ip_address_start}"
+            }
+            action :ready
+          end
+        }.to create_an_aws_instance("test_machine",
+          network_interfaces: [{
+            network_interface_id: /^eni-/,
+            subnet_id: test_public_subnet.aws_object.id,
+            vpc_id: test_vpc.aws_object.id,
+            status: "in-use",
+            private_ip_address: "10.0.0.#{private_ip_address_start}",
+            groups: [{group_name: 'test_security_group'}],
+            attachment: {
+              device_index: 0,
+              delete_on_termination: true,
+              status: "attached"
+            },
+            private_ip_addresses: [
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start}",
+                primary: true,
+                association: {
+                  public_ip: /\d+/
+                }
+              }
+            ]
+          }]
+        ).and be_idempotent
+      end
+
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe {
 

@@ -702,6 +702,31 @@ EOD
       end
 
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
+
+      # In the migration from V1 to V2 we still support associate_public_ip_address at the top level
+      # we do this after the lookup because we have to copy any present subnets, etc. into the
+      # network interfaces block
+      unless bootstrap_options.fetch(:associate_public_ip_address, nil).nil?
+        if bootstrap_options[:network_interfaces]
+          raise "If you specify network_interfaces you must specify associate_public_ip_address in that list"
+        end
+        network_interface = {
+          :device_index => 0,
+          :associate_public_ip_address => bootstrap_options.delete(:associate_public_ip_address),
+          :delete_on_termination => true
+        }
+        if bootstrap_options[:subnet_id]
+          network_interface[:subnet_id] = bootstrap_options.delete(:subnet_id)
+        end
+        if bootstrap_options[:private_ip_address]
+          network_interface[:private_ip_address] = bootstrap_options.delete(:private_ip_address)
+        end
+        if bootstrap_options[:security_group_ids]
+          network_interface[:groups] = bootstrap_options.delete(:security_group_ids)
+        end
+        bootstrap_options[:network_interfaces] = [network_interface]
+      end
+
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options
     end

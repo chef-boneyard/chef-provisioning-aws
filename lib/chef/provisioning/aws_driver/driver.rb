@@ -28,7 +28,7 @@ require 'base64'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
-AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb"}
+AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb", "IAM" => "iam"}
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess
@@ -697,12 +697,15 @@ EOD
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
       end
+      if bootstrap_options[:iam_instance_profile] && bootstrap_options[:iam_instance_profile].is_a?(String)
+        bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
+      end
       if bootstrap_options[:user_data]
         bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
       # V1 -> V2 backwards compatability support
-      unless bootstrap_options.fetch(:monitoring_enabled, nil?).nil?
+      unless bootstrap_options.fetch(:monitoring_enabled, nil).nil?
         bootstrap_options[:monitoring] = {enabled: bootstrap_options.delete(:monitoring_enabled)}
       end
       placement = {}

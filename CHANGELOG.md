@@ -1,7 +1,28 @@
 # Change Log
 
-## [1.4.0](https://github.com/chef/chef-provisioning-aws/tree/1.4.0) (2015-09-16)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.3.1...1.4.0)
+## [1.4.1](https://github.com/chef/chef-provisioning-aws/tree/1.4.1) (2015-09-22)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.0...1.4.1)
+
+**Fixed bugs:**
+
+- associate\_public\_ip\_address no longer working [\#338](https://github.com/chef/chef-provisioning-aws/issues/338)
+- Invalid BASE64 encoding of user data in 1.4.0 [\#325](https://github.com/chef/chef-provisioning-aws/issues/325)
+- Unable to create ec2 instance with multiple IPs [\#322](https://github.com/chef/chef-provisioning-aws/issues/322)
+- ERROR: :aws\_instance\_profile bootstrap option expects a hash \(between 1.3.1 and master\) [\#309](https://github.com/chef/chef-provisioning-aws/issues/309)
+- Making machine bootstrap\_options backwards compatible to the V1 API [\#339](https://github.com/chef/chef-provisioning-aws/pull/339) ([tyler-ball](https://github.com/tyler-ball))
+- Latest tagging refactors depend on chef-provisioning 1.4, updating the gemspec to reflect this [\#335](https://github.com/chef/chef-provisioning-aws/pull/335) ([tyler-ball](https://github.com/tyler-ball))
+- V1 SDK automatically accepted ENV\[AWS\_CONFIG\_FILE\] but V2 doesn't, so we need to update to support that [\#334](https://github.com/chef/chef-provisioning-aws/pull/334) ([tyler-ball](https://github.com/tyler-ball))
+- removing non-base64 windows user\_data [\#330](https://github.com/chef/chef-provisioning-aws/pull/330) ([hh](https://github.com/hh))
+- Converting iam profile from a string to a hash to support v1 to v2 migration, fixes \#309 [\#328](https://github.com/chef/chef-provisioning-aws/pull/328) ([tyler-ball](https://github.com/tyler-ball))
+- user\_data needs to be base64 encoded in SDK V2, fixes \#325 [\#327](https://github.com/chef/chef-provisioning-aws/pull/327) ([tyler-ball](https://github.com/tyler-ball))
+- Strip key\_path from the bootstrap options [\#295](https://github.com/chef/chef-provisioning-aws/pull/295) ([ryancragun](https://github.com/ryancragun))
+
+**Closed issues:**
+
+- machine :converge\_only ignores chef\_server param when run via chef-zero [\#329](https://github.com/chef/chef-provisioning-aws/issues/329)
+
+## [v1.4.0](https://github.com/chef/chef-provisioning-aws/tree/v1.4.0) (2015-09-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.3.1...v1.4.0)
 
 **Implemented enhancements:**
 

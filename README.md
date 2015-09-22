@@ -177,7 +177,6 @@ The available parameters for `load_balancer_options` can be viewed in the [aws d
 NOTES:
 
 1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
-2. Instead of specifying `tags` in the `load_balancer_options`, you should specify `aws_tags`.  See the note on [tagging base resources](https://github.com/chef/chef-provisioning-aws#base-resources).
 
 # RDS Instance Options
 

@@ -141,7 +141,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::AwsVpcPeeringConnection
+    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }

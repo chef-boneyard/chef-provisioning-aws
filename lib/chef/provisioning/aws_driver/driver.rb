@@ -705,7 +705,7 @@ EOD
       end
 
       # V1 -> V2 backwards compatability support
-      unless bootstrap_options.fetch(:monitoring_enabled, nil?).nil?
+      unless bootstrap_options.fetch(:monitoring_enabled, nil).nil?
         bootstrap_options[:monitoring] = {enabled: bootstrap_options.delete(:monitoring_enabled)}
       end
       placement = {}

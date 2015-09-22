@@ -186,6 +186,46 @@ describe Chef::Resource::Machine do
         ).and be_idempotent
       end
 
+      context "with a placement group" do
+        before(:context) {
+          driver.ec2_client.create_placement_group({
+            group_name: "agroup",
+            strategy: "cluster"
+          })
+        }
+
+        # Must do after the context so we have waited for the instance to terminate
+        after(:context) {
+          driver.ec2_client.delete_placement_group group_name: "agroup"
+        }
+
+        it "converts V1 keys to V2 keys", :super_slow do
+          expect_recipe {
+            machine "test_machine" do
+              machine_options bootstrap_options: {
+                key_name: 'test_key_pair',
+                instance_type: 'm4.large',
+                monitoring_enabled: false,
+                availability_zone: test_public_subnet.aws_object.availability_zone_name,
+                placement_group: "agroup",
+                dedicated_tenancy: false, # cannot do true, was getting API error
+                subnet: 'test_public_subnet'
+              }
+              action :allocate
+            end
+          }.to create_an_aws_instance("test_machine",
+            monitoring: {state: "disabled"},
+            placement: {
+              availability_zone: test_public_subnet.aws_object.availability_zone_name,
+              group_name: "agroup",
+              tenancy: "default",
+            },
+            subnet_id: test_public_subnet.aws_object.id
+          ).and be_idempotent
+        end
+
+      end
+
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe {
 
@@ -287,7 +327,7 @@ describe Chef::Resource::Machine do
           ).and be_idempotent
         end
       end
-
     end
+
   end
 end

@@ -701,6 +701,27 @@ EOD
         bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
+      # V1 -> V2 backwards compatability support
+      unless bootstrap_options.fetch(:monitoring_enabled, nil?).nil?
+        bootstrap_options[:monitoring] = {enabled: bootstrap_options.delete(:monitoring_enabled)}
+      end
+      placement = {}
+      if bootstrap_options[:availability_zone]
+        placement[:availability_zone] = bootstrap_options.delete(:availability_zone)
+      end
+      if bootstrap_options[:placement_group]
+        placement[:group_name] = bootstrap_options.delete(:placement_group)
+      end
+      unless bootstrap_options.fetch(:dedicated_tenancy, nil).nil?
+        placement[:tenancy] = bootstrap_options.delete(:dedicated_tenancy) ? "dedicated" : "default"
+      end
+      unless placement.empty?
+        bootstrap_options[:placement] = placement
+      end
+      if bootstrap_options[:subnet]
+        bootstrap_options[:subnet_id] = bootstrap_options.delete(:subnet)
+      end
+
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
 
       # In the migration from V1 to V2 we still support associate_public_ip_address at the top level

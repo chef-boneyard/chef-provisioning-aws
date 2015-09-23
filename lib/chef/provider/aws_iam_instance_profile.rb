@@ -1,5 +1,4 @@
 require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
 
 class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_iam_instance_profile

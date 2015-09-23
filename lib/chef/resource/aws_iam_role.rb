@@ -10,7 +10,7 @@ require 'chef/provisioning/aws_driver/aws_resource'
 # - http://docs.aws.amazon.com/sdkforruby/api/Aws/IAM.html
 #
 class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type ::Aws::IAM::Role, id: :name
+  aws_sdk_type ::Aws::IAM::Role
 
   #
   # The name of the role to create.

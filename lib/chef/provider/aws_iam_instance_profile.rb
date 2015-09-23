@@ -6,22 +6,29 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
   def action_create
     iam_instance_profile = super
 
-    if new_resource.role && !iam_instance_profile.roles.map(&:name).include?(new_resource.role)
-      converge_by "associating role #{new_resource.role} with instance profile #{new_resource.name}" do
-        # Despite having collection methods for roles, instance profile can only have single role associated
-        clear_roles(iam_instance_profile)
-        iam_instance_profile.add_role({
-          role_name: new_resource.role
-        })
-      end
-    end
+    update_attached_role(iam_instance_profile)
   end
 
   protected
 
-  def clear_roles(iam_instance_profile)
+  def detach_role(iam_instance_profile)
     iam_instance_profile.roles.each do |r|
       iam_instance_profile.remove_role(role_name: r.name)
+    end
+  end
+
+  def update_attached_role(iam_instance_profile)
+    options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options({ iam_role: new_resource.role }, resource: new_resource)
+    role = options[:iam_role]
+
+    if new_resource.role && !iam_instance_profile.roles.map(&:name).include?(role)
+      converge_by "associating role #{role} with instance profile #{new_resource.name}" do
+        # Despite having collection methods for roles, instance profile can only have single role associated
+        detach_role(iam_instance_profile)
+        iam_instance_profile.add_role({
+          role_name: role
+        })
+      end
     end
   end
 
@@ -30,18 +37,19 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
     converge_by "create IAM instance profile #{new_resource.name}" do
       iam.create_instance_profile({
-        path: new_resource.path,
+        path: new_resource.path || "/",
         instance_profile_name: new_resource.name
       })
     end
   end
 
   def update_aws_object(iam_instance_profile)
+    update_attached_role(iam_instance_profile)
   end
 
   def destroy_aws_object(iam_instance_profile)
-    converge_by "delete #{new_resource.to_s}" do
-      clear_roles(iam_instance_profile)
+    converge_by "delete #{iam_instance_profile.name}" do
+      detach_role(iam_instance_profile)
       iam_instance_profile.delete
     end
   end

@@ -3,10 +3,6 @@ require 'chef/provisioning/aws_driver/aws_provider'
 class Chef::Provider::AwsIamRole < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_iam_role
 
-  def action_create
-    iam_role = super
-  end
-
   protected
 
   def create_aws_object
@@ -25,9 +21,17 @@ class Chef::Provider::AwsIamRole < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(iam_role)
-    converge_by "delete #{new_resource.to_s}" do
+    converge_by "delete IAM role #{iam_role.name}" do
       iam_role.instance_profiles.each do |profile|
         profile.remove_role(role_name: iam_role.name)
+      end
+      iam_role.policies.each do |policy|
+        Cheffish.inline_resource(self, action) do
+          aws_iam_role_policy policy.name do
+            role iam_role.name
+            action :destroy
+          end
+        end
       end
       iam_role.delete
     end

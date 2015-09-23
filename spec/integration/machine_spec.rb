@@ -368,6 +368,7 @@ describe Chef::Resource::Machine do
                 key_name: key_pair_name,
                 key_path: private_key_path
               }
+              action :allocate
             end
           }.to create_an_aws_instance('test_machine'
           ).and be_idempotent

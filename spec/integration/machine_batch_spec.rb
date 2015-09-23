@@ -24,6 +24,7 @@ describe Chef::Resource::MachineBatch do
                 action :allocate
               end
             end
+            action :allocate
           end
         }.to create_an_aws_instance('test_machine1',
           source_dest_check: false

@@ -28,7 +28,7 @@ require 'base64'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
-AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb"}
+AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb", "IAM" => "iam"}
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess

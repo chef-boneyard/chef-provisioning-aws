@@ -8,7 +8,7 @@ class Chef::Resource::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSResour
 
   attribute :name, kind_of: String,  name_attribute: true
 
-  attribute :load_balancer_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :load_balancer_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^elb-[a-f0-9]{8}$/ ? name : nil
   }
 

@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
 
   # chef-zero is only a development dependency because we leverage its RSpec support
   s.add_development_dependency 'chef-zero', '~> 4.2'
-  s.add_development_dependency 'chef', '>= 11.16.4'
+  s.add_development_dependency 'chef', '~> 12.4'
   s.add_development_dependency 'rspec', '~> 3.0'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'pry'

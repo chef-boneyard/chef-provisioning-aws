@@ -54,7 +54,7 @@ class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   #
   attribute :peer_owner_id, kind_of: String
 
-  attribute :vpc_peering_connection_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :vpc_peering_connection_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^pcx-[a-f0-9]{8}$/ ? name : nil
   }
 

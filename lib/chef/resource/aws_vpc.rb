@@ -128,7 +128,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   attribute :enable_dns_hostnames, equal_to: [ true, false ]
 
-  attribute :vpc_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :vpc_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^vpc-[a-f0-9]{8}$/ ? name : nil
   }
 

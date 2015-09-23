@@ -96,11 +96,6 @@ module AWSSupport
       aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
       when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
     else
-#       warn <<EOM
-# --------------------------------------------------------------------------------------------------------------------------
-# AWS_TEST_DRIVER not set ... cannot run AWS test.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS.
-# --------------------------------------------------------------------------------------------------------------------------
-# EOM
       skip "AWS_TEST_DRIVER not set ... cannot run AWS tests.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS." do
         context description, *tags, &context_block
       end

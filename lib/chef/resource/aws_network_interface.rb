@@ -9,7 +9,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
 
   attribute :name,                   kind_of: String, name_attribute: true
 
-  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^eni-[a-f0-9]{8}$/ ? name : nil
   }
 

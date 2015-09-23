@@ -5,7 +5,7 @@ require 'retryable'
 
 class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
-  
+
   provides :aws_vpc
 
   class NeverObtainedExistence < RuntimeError; end
@@ -247,9 +247,11 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     # creating the VPC
     main_route_table ||= vpc.route_tables.main_route_table
     main_routes = new_resource.main_routes
-    aws_route_table main_route_table.id do
-      vpc vpc
-      routes main_routes
+    Cheffish.inline_resource(self, action) do
+      aws_route_table main_route_table.id do
+        vpc vpc
+        routes main_routes
+      end
     end
     main_route_table
   end

@@ -25,10 +25,11 @@ class Chef::Provider::AwsIamRole < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(iam_role)
-    converge_by "delete #{new_resource.to_s}" do
+    converge_by "delete #{iam_role.name}" do
       iam_role.instance_profiles.each do |profile|
         profile.remove_role(role_name: iam_role.name)
       end
+      iam_role.policies.map(&:delete)
       iam_role.delete
     end
   end

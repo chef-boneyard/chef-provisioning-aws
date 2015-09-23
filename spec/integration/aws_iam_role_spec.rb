@@ -24,6 +24,26 @@ def ec2_role_policy
 EOF
 end
 
+def rds_role_policy
+<<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1441787971000",
+      "Effect": "Allow",
+      "Action": [
+          "rds:*"
+      ],
+      "Resource": [
+          "*"
+      ]
+    }
+  ]
+}
+EOF
+end
+
 describe Chef::Resource::AwsIamRole do
   extend AWSSupport
 
@@ -67,6 +87,31 @@ describe Chef::Resource::AwsIamRole do
         end
       end
 
+      context "create role with role policy profile" do
+        role_name = mk_role_name
+
+        it "aws_iam_role_policy 'rds_full_access' creates a role policy for role" do
+          expect_recipe {
+
+            aws_iam_role role_name do
+              assume_role_policy_document ec2_role_policy
+            end
+
+            aws_iam_role_policy "rds_full_access" do
+              role role_name
+              policy_document rds_role_policy
+            end
+
+          }.to create_an_aws_iam_role(role_name).and be_idempotent
+
+          role = driver.iam_resource.role(role_name)
+
+          policy = role.policies.first
+
+          expect(role.policies.count).to eq 1
+          expect(policy.name).to eq("rds_full_access")
+        end
+      end
     end
 
   end

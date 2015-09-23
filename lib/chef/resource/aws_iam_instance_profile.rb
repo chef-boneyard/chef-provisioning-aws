@@ -21,7 +21,7 @@ class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWS
   #
   # The path to the instance profile. For more information about paths, see http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html
   #
-  attribute :path,    kind_of: [ String ]
+  attribute :path,    kind_of: String
 
   attribute :role,    kind_of: [ String, AwsIamRole, ::Aws::IAM::Role]
 

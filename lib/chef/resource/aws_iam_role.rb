@@ -20,7 +20,7 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   #
   # The path to the role. For more information about paths, see http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html
   #
-  attribute :path,    kind_of: [ String ]
+  attribute :path,    kind_of: String
 
   #
   # The policy that grants an entity permission to assume the role.

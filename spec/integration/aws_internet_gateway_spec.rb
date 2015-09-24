@@ -14,74 +14,148 @@ describe Chef::Resource::AwsInternetGateway do
         cidr_block '10.0.1.0/24'
       end
 
-      context 'add an internet gateway' do
-        it "aws_internet_gateway 'test_internet_gateway' with no parameters" do
+      it "creates an aws_internet_gateway with no parameters" do
+        expect_recipe {
+          aws_internet_gateway 'test_internet_gateway'
+        }.to create_an_aws_internet_gateway('test_internet_gateway').and be_idempotent
+      end
+
+      it "creates an aws_internet_gateway and attaches it to the specified VPC" do
+        expect_recipe {
+          aws_internet_gateway 'test_internet_gateway' do
+            vpc test_vpc_igw_a.aws_object.id
+          end
+        }.to create_an_aws_internet_gateway('test_internet_gateway',
+          vpc: test_vpc_igw_a.aws_object
+        ).and be_idempotent
+      end
+
+      context 'with the IGW attached to an existing VPC' do
+        aws_internet_gateway 'test_internet_gateway' do
+          vpc test_vpc_igw_a.aws_object.id
+        end
+
+        it "updates it to the new VPC" do
           expect_recipe {
-            aws_internet_gateway 'test_internet_gateway'
-          }.to create_an_aws_internet_gateway('test_internet_gateway').and be_idempotent
+            aws_internet_gateway 'test_internet_gateway' do
+              vpc test_vpc_igw_b
+            end
+          }.to update_an_aws_internet_gateway('test_internet_gateway',
+            vpc: test_vpc_igw_b.aws_object
+          ).and be_idempotent
         end
       end
 
-      context 'add an internet gateway and attach a vpc' do
-        it "aws_internet_gateway 'test_internet_gateway' attach vpc" do
+      context 'with the IGW attached to an existing VPC' do
+        aws_internet_gateway 'test_internet_gateway' do
+          vpc test_vpc_igw_a.aws_object.id
+        end
+
+        it "detaches it from the VPC" do
           expect_recipe {
-            aws_internet_gateway 'test_internet_gateway' do
-              vpc test_vpc_igw_a.aws_object.id
-            end
-          }.to create_an_aws_internet_gateway('test_internet_gateway',
-                                              vpc: test_vpc_igw_a.aws_object).and be_idempotent
-        end
-      end
-
-      context 'update the attached vpc of an internet gateway' do
-        it "aws_internet_gateway 'test_internet_gateway' update vpc" do
-          converge {
-            aws_internet_gateway 'test_internet_gateway' do
-              vpc test_vpc_igw_a.aws_object.id
-            end
-
-            aws_internet_gateway 'test_internet_gateway' do
-              vpc test_vpc_igw_b.aws_object.id
-            end
-          }
-
-          expect(test_vpc_igw_b.aws_object.internet_gateway).not_to be_nil
-        end
-      end
-
-      context 'detach an internet gateway from a vpc' do
-        it "aws_internet_gateway 'test_internet_gateway' detach vpc" do
-          converge {
-            aws_internet_gateway 'test_internet_gateway' do
-              vpc test_vpc_igw_a.aws_object.id
-            end
-
             aws_internet_gateway 'test_internet_gateway' do
               action :detach
             end
-          }
-
-          expect(test_vpc_igw_a.aws_object.internet_gateway).to be_nil
+          }.to update_an_aws_internet_gateway('test_internet_gateway',
+            vpc: nil
+          ).and be_idempotent
         end
       end
-    end
 
-    with_aws 'with an Internet Gateway' do
-      with_converge {
-        aws_internet_gateway 'test_internet_gateway'
-      }
+      context 'with the IGW attached to an existing VPC' do
+        aws_internet_gateway 'test_internet_gateway' do
+          vpc test_vpc_igw_a.aws_object.id
+        end
 
-      context 'destroy an internet gateway' do
-        it "aws_internet_gateway 'test_internet_gateway'" do
+        it "detaches the VPC and destroys the IGW" do
           r = recipe {
             aws_internet_gateway 'test_internet_gateway' do
               action :destroy
             end
           }
-
           expect(r).to destroy_an_aws_internet_gateway('test_internet_gateway').and be_idempotent
+
+          expect(test_vpc_igw_a.aws_object.internet_gateway).to eq(nil)
+        end
+
+        context 'with a VPC with its own managed internet gateway' do
+          aws_vpc 'test_vpc_preexisting_igw' do
+            cidr_block '10.0.1.0/24'
+            internet_gateway true
+          end
+
+          it "deletes the old managed IGW and attaches the new one" do
+            existing_igw = test_vpc_preexisting_igw.aws_object.internet_gateway
+
+            expect_recipe {
+              aws_internet_gateway 'test_internet_gateway' do
+                vpc test_vpc_preexisting_igw.aws_object
+              end
+            }.to create_an_aws_internet_gateway('test_internet_gateway',
+              vpc: test_vpc_preexisting_igw.aws_object
+            ).and be_idempotent
+
+            expect(existing_igw.exists?).to eq(false)
+          end
+        end
+
+        context 'with a VPC and an attached aws_internet_gateway resource' do
+          aws_internet_gateway 'test_internet_gateway'
+          aws_vpc 'test_vpc_preexisting_igw' do
+            cidr_block '10.0.1.0/24'
+            internet_gateway test_internet_gateway
+          end
+
+          it "leaves the attachment alone if internet_gateway is set to true" do
+            expect(test_vpc_preexisting_igw.aws_object.internet_gateway).to eq(test_internet_gateway.aws_object)
+            expect_recipe {
+              aws_vpc 'test_vpc_preexisting_igw' do
+                cidr_block '10.0.1.0/24'
+                internet_gateway true
+              end
+            }.to match_an_aws_vpc('test_vpc_preexisting_igw',
+              internet_gateway: test_internet_gateway.aws_object
+            ).and be_idempotent
+          end
+
+          it "deletes the attachment if internet_gateway is set to false" do
+            expect_recipe {
+              aws_vpc 'test_vpc_preexisting_igw' do
+                cidr_block '10.0.1.0/24'
+                internet_gateway false
+              end
+            }.to match_an_aws_vpc('test_vpc_preexisting_igw',
+              internet_gateway: nil
+            ).and match_an_aws_internet_gateway('test_internet_gateway',
+              vpc: nil
+            ).and be_idempotent
+          end
+        end
+
+        context 'with a VPC and an attached aws_internet_gateway resource' do
+          aws_internet_gateway 'test_internet_gateway1'
+          aws_internet_gateway 'test_internet_gateway2'
+          aws_vpc 'test_vpc_preexisting_igw' do
+            cidr_block '10.0.1.0/24'
+            internet_gateway test_internet_gateway1.aws_object
+          end
+
+          it "switches the attachment to a newly specified aws_internet_gateway" do
+            expect(test_vpc_preexisting_igw.aws_object.internet_gateway).to eq(test_internet_gateway1.aws_object)
+            expect_recipe {
+              aws_internet_gateway 'test_internet_gateway2' do
+                vpc 'test_vpc_preexisting_igw'
+              end
+            }.to match_an_aws_internet_gateway('test_internet_gateway1',
+              vpc: nil
+            ).and match_an_aws_internet_gateway('test_internet_gateway2',
+              vpc: test_vpc_preexisting_igw.aws_object
+            ).and be_idempotent
+          end
+
         end
       end
     end
+
   end
 end

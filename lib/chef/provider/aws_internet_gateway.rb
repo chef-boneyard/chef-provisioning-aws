@@ -2,6 +2,8 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'retryable'
 
 class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
   provides :aws_internet_gateway
 
   def action_detach
@@ -48,11 +50,17 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
   private
 
-  attr_accessor :vpc
-
-  def attach_vpc(vpc, internet_gateway)
-    converge_by "attach vpc #{vpc.id} to #{internet_gateway.id}" do
-      internet_gateway.vpc = vpc
+  def attach_vpc(vpc, desired_gateway)
+    if vpc.internet_gateway && vpc.internet_gateway != desired_gateway
+      Cheffish.inline_resource(self, action) do
+        aws_vpc vpc.id do
+          cidr_block vpc.cidr_block
+          internet_gateway false
+        end
+      end
+    end
+    converge_by "attach vpc #{vpc.id} to #{desired_gateway.id}" do
+      desired_gateway.vpc = vpc
     end
   end
 

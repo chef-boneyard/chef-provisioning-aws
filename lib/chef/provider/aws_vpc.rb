@@ -183,34 +183,44 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
         new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
         if !current_ig
-          aws_internet_gateway new_ig do
-            vpc vpc.id
-          end
-        elsif current_ig != new_ig
-          aws_internet_gateway current_ig do
-            if current_ig.tags['OwnedByVPC'] == vpc.id
-              action :destroy
-            else
-              action :detach
+          Cheffish.inline_resource(self, action) do
+            aws_internet_gateway new_ig do
+              vpc vpc.id
             end
           end
-          aws_internet_gateway new_ig do
-            vpc vpc.id
+        elsif current_ig != new_ig
+          Cheffish.inline_resource(self, action) do
+            aws_internet_gateway current_ig do
+              if current_ig.tags['OwnedByVPC'] == vpc.id
+                action :destroy
+              else
+                action :detach
+              end
+            end
+            aws_internet_gateway new_ig do
+              vpc vpc.id
+            end
           end
         end
       when true
         if !current_ig
-          aws_internet_gateway "igw-managed-by-#{vpc.id}" do
-            vpc vpc.id
-            aws_tags 'OwnedByVPC' => vpc.id
+          Cheffish.inline_resource(self, action) do
+            aws_internet_gateway "igw-managed-by-#{vpc.id}" do
+              vpc vpc.id
+              aws_tags 'OwnedByVPC' => vpc.id
+            end
           end
         end
       when false
-        aws_internet_gateway current_ig do
-          if current_ig.tags['OwnedByVPC'] == vpc.id
-            action :destroy
-          else
-            action :detach
+        if current_ig
+          Cheffish.inline_resource(self, action) do
+            aws_internet_gateway current_ig.id do
+              if current_ig.tags['OwnedByVPC'] == vpc.id
+                action :destroy
+              else
+                action :detach
+              end
+            end
           end
         end
     end

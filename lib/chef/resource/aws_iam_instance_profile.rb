@@ -11,10 +11,10 @@ require 'chef/provisioning/aws_driver/aws_resource'
 # - http://docs.aws.amazon.com/sdkforruby/api/Aws/IAM/InstanceProfile.html
 #
 class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type ::Aws::IAM::InstanceProfile, id: :name
+  aws_sdk_type ::Aws::IAM::InstanceProfile
 
   #
-  # The name of the role to create.
+  # The name of the instance profile to create.
   #
   attribute :name,   kind_of: String, name_attribute: true
 

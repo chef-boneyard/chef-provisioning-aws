@@ -9,7 +9,7 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
     if new_resource.role && !iam_instance_profile.roles.map(&:name).include?(new_resource.role)
       converge_by "associating role #{new_resource.role} with instance profile #{new_resource.name}" do
         # Despite having collection methods for roles, instance profile can only have single role associated
-        clear_roles(iam_instance_profile)
+        detach_role(iam_instance_profile)
         iam_instance_profile.add_role({
           role_name: new_resource.role
         })
@@ -19,7 +19,7 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
   protected
 
-  def clear_roles(iam_instance_profile)
+  def detach_role(iam_instance_profile)
     iam_instance_profile.roles.each do |r|
       iam_instance_profile.remove_role(role_name: r.name)
     end
@@ -30,7 +30,7 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
     converge_by "create IAM instance profile #{new_resource.name}" do
       iam.create_instance_profile({
-        path: new_resource.path,
+        path: new_resource.path || "/",
         instance_profile_name: new_resource.name
       })
     end
@@ -41,7 +41,7 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
   def destroy_aws_object(iam_instance_profile)
     converge_by "delete #{iam_instance_profile.name}" do
-      clear_roles(iam_instance_profile)
+      detach_role(iam_instance_profile)
       iam_instance_profile.delete
     end
   end

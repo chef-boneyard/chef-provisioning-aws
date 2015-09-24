@@ -82,18 +82,18 @@ describe Chef::Resource::AwsIamRole do
       context "create role with instance profile" do
         role_name = mk_role_name
 
+        aws_iam_role role_name do
+          assume_role_policy_document ec2_role_policy
+        end
+
         it "aws_iam_instance_profile '#{role_name}' creates an instance profile with role" do
           expect_recipe {
-
-            aws_iam_role role_name do
-              assume_role_policy_document ec2_role_policy
-            end
 
             aws_iam_instance_profile role_name do
               role role_name
             end
 
-          }.to create_an_aws_iam_role(role_name).and be_idempotent
+          }.to create_an_aws_iam_instance_profile(role_name).and be_idempotent
 
           role = driver.iam_resource.role(role_name)
 

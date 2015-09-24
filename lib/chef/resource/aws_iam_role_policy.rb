@@ -20,7 +20,7 @@ class Chef::Resource::AwsIamRolePolicy < Chef::Provisioning::AWSDriver::AWSResou
   #
   # The name of the role policy belongs to
   #
-  attribute :role, kind_of: String, required: true
+  attribute :role, kind_of: [ String, AwsIamRole, ::Aws::IAM::Role], required: true
 
   #
   # JSON that actually describes permissions to AWS services
@@ -28,7 +28,8 @@ class Chef::Resource::AwsIamRolePolicy < Chef::Provisioning::AWSDriver::AWSResou
   attribute :policy_document, kind_of: String, required: true
 
   def aws_object
-    driver.iam_resource.role(role).policy(name).load
+    options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options({ role: role }, resource: self)
+    driver.iam_resource.role(options[:role]).policy(name).load
   rescue ::Aws::IAM::Errors::NoSuchEntity
     nil
   end

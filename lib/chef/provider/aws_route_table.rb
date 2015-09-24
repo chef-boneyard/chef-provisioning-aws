@@ -100,7 +100,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     # Delete anything that's left (that wasn't replaced)
     current_routes.values.each do |current_route|
-      action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_route.target.id}" do
+      current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
+      action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_target}" do
         current_route.delete
       end
     end

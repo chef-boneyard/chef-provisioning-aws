@@ -28,8 +28,8 @@ class Chef::Resource::AwsIamRolePolicy < Chef::Provisioning::AWSDriver::AWSResou
   attribute :policy_document, kind_of: String, required: true
 
   def aws_object
-    options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options({ role: role }, resource: self)
-    driver.iam_resource.role(options[:role]).policy(name).load
+    options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options({ iam_role: role }, resource: self)
+    driver.iam_resource.role(options[:iam_role]).policy(name).load
   rescue ::Aws::IAM::Errors::NoSuchEntity
     nil
   end

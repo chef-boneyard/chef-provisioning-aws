@@ -84,6 +84,73 @@ describe Chef::Resource::AwsRouteTable do
         ).and be_idempotent
       end
 
+      context "with an existing routing table" do
+        aws_route_table 'test_route_table' do
+          vpc 'test_vpc'
+          routes '0.0.0.0/0' => :internet_gateway
+        end
+
+        it "updates an existing routing table" do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              routes '0.0.0.0/0' => :internet_gateway,
+                    '10.1.0.0/24' => :internet_gateway
+            end
+          }.to update_an_aws_route_table('test_route_table',
+            routes: [
+              { destination_cidr_block: '10.1.0.0/24', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+              { destination_cidr_block: '10.0.0.0/24', gateway_id: 'local', state: "active" },
+              { destination_cidr_block: '0.0.0.0/0', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+            ]
+          ).and be_idempotent
+        end
+      end
+
+      context "with machines", :super_slow do
+        purge_all
+        setup_public_vpc
+
+        machine 'test_machine' do
+          machine_options bootstrap_options: {
+            subnet_id: 'test_public_subnet',
+            key_name: 'test_key_pair'
+          }
+          action :ready # The box has to be online for AWS to accept it as routable
+        end
+
+        it "can route to a machine", :super_slow do
+          test_machine_aws_obj = nil
+          expect_recipe {
+            ruby_block 'look up test machine' do
+              block do
+                test_machine_aws_obj = Chef::Resource::AwsInstance.get_aws_object(
+                  'test_machine',
+                  run_context: run_context,
+                  driver: run_context.chef_provisioning.current_driver,
+                  managed_entry_store: Chef::Provisioning.chef_managed_entry_store(run_context.cheffish.current_chef_server)
+                )
+              end
+            end
+          }
+
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              routes '0.0.0.0/0'   => :internet_gateway,
+                     '10.1.0.0/16' => 'test_machine'
+            end
+
+          }.to create_an_aws_route_table('test_route_table',
+            routes: [
+                { destination_cidr_block: '10.0.0.0/24', gateway_id: 'local', state: "active" },
+                { destination_cidr_block: '10.1.0.0/16', instance_id: test_machine_aws_obj.id, state: "active" },
+                { destination_cidr_block: '0.0.0.0/0', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+              ]
+          ).and be_idempotent
+        end
+      end
+
       context "with existing tags" do
         aws_route_table 'test_route_table' do
           vpc 'test_vpc'

@@ -7,6 +7,9 @@ with_driver 'aws::us-east-1'
 # results, we prevent domain names from ending with a dot.
 aws_route53_hosted_zone "feegle.com."
 
+# a corollary to this is that chef-provisioning-aws does not support having two AWS HostedZones with the same
+# zone name, even though AWS itself does support this.
+
 # create a Route 53 Hosted Zone (which AWS will normalize to "feegle.com.").
 aws_route53_hosted_zone "feegle.com"
 
@@ -34,7 +37,7 @@ end
 aws_route53_hosted_zone "feegle.com" do
   record_sets {
     # the resource name can serve as the RR name.
-    aws_route53_record_set "tiffany.feegle.com" do
+    aws_route53_record_set "tiffany" do
       type "CNAME"
       ttl 1800
       resource_records ["a-different-host"]    # always an array of strings.
@@ -50,13 +53,30 @@ aws_route53_hosted_zone "feegle.com" do
         "192.168.10.89"
       ]
     end
+
+    # the RecordSet inherits the zone name, but you can specify it if you like.
+    aws_route53_record_set "tiffany.feegle.com" do
+      type "CNAME"
+      ttl 1800
+      resource_records ["a-different-host"]
+    end
+
+    # however, this is an error, since the domain here doesn't match the parent HostedZone.
+    aws_route53_record_set "tiffany.not-feegle.com" do
+      type "CNAME"
+      ttl 1800
+      resource_records ["a-different-host"]
+    end
   }
 end
 
 # some RR types have restrictions on the resource_records values:
+#
 #  MX:    "<integer priority> <mail server hostname>"
 #  SRV:   "<integer priority> <integer weight> <integer port> <server hostname>"
 #  CNAME: may only have a single value.
+#
+# chef-provisioning-aws does some validation for these, but we let AWS handle much of it.
 
 # delete an individual RecordSet. the values must be the same as those currently in Route 53, or else an AWS
 # error will bubble up.
@@ -75,4 +95,24 @@ end
 # calling :destroy on a zone will unconditionally wipe all of its RecordSets.
 aws_route53_hosted_zone "feegle.com" do
   action :destroy
+end
+
+# Compressing Recipes
+# you can set defaults for a zone that will be inherited (or overridden) by RecordSets.
+# currently supported defaultable attributes are :ttl and :type.
+aws_route53_hosted_zone "feegle.com" do
+  defaults ttl: 1800, type: "CNAME"
+
+  record_sets {
+    # type CNAME, TTL 1800.
+    aws_route53_record_set "host1" do
+      resource_records ["a-different-host"]
+    end
+
+    # type A, TTL 1800.
+    aws_route53_record_set "host2" do
+      type "A"
+      resource_records ["8.8.8.8"]
+    end
+  }
 end

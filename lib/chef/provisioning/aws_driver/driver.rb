@@ -812,10 +812,8 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
+      winrm_transport_options = machine_options[:winrm_transport]
 
-      port = machine_spec.reference['winrm_port'] || 5985
-      endpoint = "http://#{remote_host}:#{port}/wsman"
-      type = :plaintext
       pem_bytes = get_private_key(instance.key_name)
       encrypted_admin_password = wait_for_admin_password(machine_spec)
 
@@ -823,14 +821,36 @@ EOD
       private_key = OpenSSL::PKey::RSA.new(pem_bytes)
       decrypted_password = private_key.private_decrypt decoded
 
-      winrm_options = {
+      shared_winrm_options = {
         :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => decrypted_password,
-        :disable_sspi => true,
-        :basic_auth_only => true
+        :pass => machine_options[:password] || decrypted_password
       }
 
-      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+      if(winrm_transport_options['https'] || winrm_transport_options[:https]  )
+        port = machine_spec.reference['winrm_port'] || '5986'
+        endpoint = "https://#{remote_host}:#{port}/wsman"
+        type = :ssl
+        winrm_options = {
+          :disable_sspi => winrm_transport_options['https'][:disable_sspi] || false, # default to Negotiate
+          :basic_auth_only => winrm_transport_options['https'][:basic_auth_only] || false, # disallow Basic auth by default
+          :no_ssl_peer_verification => winrm_transport_options['https'][:no_ssl_peer_verification] || false #disallow MITM potential by default
+        }
+      end
+
+      if(winrm_transport_options['http'] || winrm_transport_options[:http]  )
+        port = machine_spec.reference['winrm_port'] || '5985'
+        port = tcp_endpoint[:public_port] || '5986'
+        endpoint = "http://#{remote_host}:#{port}/wsman"
+        type = :plaintext
+        winrm_options = {
+          :disable_sspi => winrm_transport_options['http']['disable_sspi'] || false, # default to Negotiate
+          :basic_auth_only => winrm_transport_options['http']['basic_auth_only'] || false # disallow Basic auth by default
+        }
+      end
+
+      merged_winrm_options = winrm_options.merge(shared_winrm_options)
+      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, merged_winrm_options, {})
+
     end
 
     def wait_for_admin_password(machine_spec)

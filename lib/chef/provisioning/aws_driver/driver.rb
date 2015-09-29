@@ -163,22 +163,9 @@ module AWSDriver
         end
 
         # TODO: refactor this whole giant method into many smaller method calls
-        # TODO if we update scheme, we don't need to run any of the other updates.
-        # Also, if things aren't specified (such as machines / listeners), we
-        # need to grab them from the actual load balancer so we don't lose them.
-        # i.e. load_balancer 'blah' do
-        #   lb_options: { scheme: 'other_scheme' }
-        # end
-        # TODO we will leak the actual_elb if we fail to finish creating it
-        # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
-        # ELB and create a new one
         if lb_options[:scheme] && lb_options[:scheme].downcase != actual_elb.scheme
-          desc = ["  updating scheme to #{lb_options[:scheme]}"]
-          desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
-          perform_action.call(desc) do
-            old_elb = actual_elb
-            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
-          end
+          # TODO CloudFormation automatically recreates the load_balancer, we should too
+          raise "Scheme is immutable - you need to :destroy and :create the load_balancer to recreated it with the new scheme"
         end
 
         # Update security groups
@@ -254,12 +241,13 @@ module AWSDriver
                   load_balancer_name: actual_elb.name,
                   subnets: attach_subnets
                 )
-              rescue AWS::ELB::Errors::InvalidConfigurationRequest
-                raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
+              rescue AWS::ELB::Errors::InvalidConfigurationRequest => e
+                Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
                     "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
                     "existing ELB named #{actual_elb.name}"
+                raise e
               end
             end
           end

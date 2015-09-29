@@ -44,7 +44,7 @@ module AWSSupport
 
   def setup_public_vpc
     aws_vpc 'test_vpc' do
-      cidr_block '10.0.0.0/24'
+      cidr_block '10.0.0.0/16'
       internet_gateway true
       enable_dns_hostnames true
       main_routes '0.0.0.0/0' => :internet_gateway
@@ -72,9 +72,12 @@ module AWSSupport
       outbound_rules [ 22, 80 ] => '0.0.0.0/0'
     end
 
+    azs = driver.ec2_client.describe_availability_zones.availability_zones.map {|r| r.zone_name}
     aws_subnet 'test_public_subnet' do
       vpc 'test_vpc'
+      cidr_block '10.0.0.0/24'
       map_public_ip_on_launch true
+      availability_zone azs.first
     end
   end
 

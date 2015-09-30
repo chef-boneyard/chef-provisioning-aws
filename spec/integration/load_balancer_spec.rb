@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'securerandom'
 
 describe Chef::Resource::LoadBalancer do
   extend AWSSupport
@@ -9,7 +10,7 @@ describe Chef::Resource::LoadBalancer do
       purge_all
       setup_public_vpc
 
-      bucket_name = "test_load_balancer_bucket#{Random.rand(1000)}"
+      bucket_name = "chef.provisioning.test.#{SecureRandom.hex(8)}"
       aws_s3_bucket bucket_name do
         options acl: "public-read-write"
         recursive_delete true

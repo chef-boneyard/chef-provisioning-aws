@@ -59,6 +59,24 @@ class Resource
 end
 end
 
+require 'chef/provider/load_balancer'
+class Chef
+class Provider
+  class LoadBalancer
+    # We override this so we can specify a machine name as `i-123456`
+    # This is totally a hack until we move away from base resources
+    def get_machine_spec!(machine_name)
+      if machine_name =~ /^i-[a-f0-9]{8}$/
+        Struct.new(:name, :reference).new(machine_name, {'instance_id' => machine_name})
+      else
+        Chef::Log.debug "Getting machine spec for #{machine_name}"
+        Provisioning.chef_managed_entry_store(new_resource.chef_server).get!(:machine, machine_name)
+      end
+    end
+  end
+end
+end
+
 Chef::Provider::Machine.additional_machine_option_keys << :aws_tags
 Chef::Provider::MachineImage.additional_image_option_keys << :aws_tags
 Chef::Provider::LoadBalancer.additional_lb_option_keys << :aws_tags
@@ -112,6 +130,26 @@ module AWSDriver
         logger: Chef::Log.logger,
         retry_limit: Chef::Config.chef_provisioning[:aws_retry_limit] || 5
       )
+
+      driver = self
+      Chef::Resource::Machine.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsInstance.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
+      Chef::Resource::MachineImage.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsImage.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
+      Chef::Resource::LoadBalancer.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsLoadBalancer.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
     end
 
     def self.canonicalize_url(driver_url, config)
@@ -147,7 +185,10 @@ module AWSDriver
         updates << "  with tags #{lb_options[:aws_tags]}" if lb_options[:aws_tags]
 
         action_handler.perform_action updates do
-          actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          # IAM says the server certificate exists, but ELB throws this error
+          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(AWS::ELB::Errors::CertificateNotFound) do
+            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          end
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,

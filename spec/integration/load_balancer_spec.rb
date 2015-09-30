@@ -9,7 +9,8 @@ describe Chef::Resource::LoadBalancer do
       purge_all
       setup_public_vpc
 
-      aws_s3_bucket "test_load_balancer_bucket" do
+      bucket_name = "test_load_balancer_bucket#{Random.rand(1000)}"
+      aws_s3_bucket bucket_name do
         options acl: "public-read-write"
         recursive_delete true
       end
@@ -57,7 +58,7 @@ describe Chef::Resource::LoadBalancer do
                 },
                 access_log: {
                   enabled: true,
-                  s3_bucket_name: "test_load_balancer_bucket",
+                  s3_bucket_name: bucket_name,
                   emit_interval: 5,
                   s3_bucket_prefix: "AccessLogPrefix",
                 },
@@ -91,7 +92,7 @@ describe Chef::Resource::LoadBalancer do
             {
               :port => 443,
               :protocol => :https,
-              :instance_port => 8080,
+              :instance_port => 81,
               :instance_protocol => :http,
               :server_certificate => {arn: load_balancer_cert.aws_object.arn}
             }
@@ -113,7 +114,7 @@ describe Chef::Resource::LoadBalancer do
           cross_zone_load_balancing: {enabled: true},
           access_log: {
             enabled: true,
-            s3_bucket_name: "test_load_balancer_bucket",
+            s3_bucket_name: bucket_name,
             emit_interval: 5,
             s3_bucket_prefix: "AccessLogPrefix",
           },
@@ -167,7 +168,7 @@ describe Chef::Resource::LoadBalancer do
               },
               access_log: {
                 enabled: true,
-                s3_bucket_name: "test_load_balancer_bucket",
+                s3_bucket_name: bucket_name,
                 emit_interval: 5,
                 s3_bucket_prefix: "AccessLogPrefix",
               },
@@ -210,7 +211,7 @@ describe Chef::Resource::LoadBalancer do
                   },
                   access_log: {
                     enabled: true,
-                    s3_bucket_name: "test_load_balancer_bucket",
+                    s3_bucket_name: bucket_name,
                     emit_interval: 60,
                     s3_bucket_prefix: "AccessLogPrefix2",
                   },
@@ -251,7 +252,7 @@ describe Chef::Resource::LoadBalancer do
             },
             access_log: {
               enabled: true,
-              s3_bucket_name: "test_load_balancer_bucket",
+              s3_bucket_name: bucket_name,
               emit_interval: 60,
               s3_bucket_prefix: "AccessLogPrefix2",
             },
@@ -286,12 +287,23 @@ describe Chef::Resource::LoadBalancer do
               })
               machines ['test_load_balancer_machine1']
             end
-          }.to create_an_aws_load_balancer('test-load-balancer').and be_idempotent
-          instance_health = driver.elb_client.describe_instance_health(load_balancer_name: "test-load-balancer").instance_states
-          expect(instance_health.size).to eq(1)
-          machine_1 = driver.ec2_resource.instances(instance_ids: [instance_health[0].instance_id]).first
-          t = Hash[machine_1.tags.map {|t| [t.key, t.value]}]
-          expect(t['Name']).to eq("test_load_balancer_machine1")
+          }.to create_an_aws_load_balancer('test-load-balancer',
+            :instances => [{id: test_load_balancer_machine1.aws_object.id}]
+          ).and be_idempotent
+        end
+
+        it "can reference machines by name or id" do
+          expect_recipe {
+            load_balancer 'test-load-balancer' do
+              load_balancer_options({
+                subnets: ["test_public_subnet"],
+                security_groups: ["test_security_group"]
+              })
+              machines ['test_load_balancer_machine1', test_load_balancer_machine2.aws_object.id]
+            end
+          }.to create_an_aws_load_balancer('test-load-balancer',
+            :instances => [{id: test_load_balancer_machine1.aws_object.id}, {id: test_load_balancer_machine2.aws_object.id}]
+          ).and be_idempotent
         end
 
         context "with an existing load_balancer with machine1 attached" do
@@ -312,12 +324,9 @@ describe Chef::Resource::LoadBalancer do
                 })
                 machines ['test_load_balancer_machine2']
               end
-            }.to match_an_aws_load_balancer('test-load-balancer').and be_idempotent
-            instance_health = driver.elb_client.describe_instance_health(load_balancer_name: "test-load-balancer").instance_states
-            expect(instance_health.size).to eq(1)
-            machine_2 = driver.ec2_resource.instances(instance_ids: [instance_health[0].instance_id]).first
-            t = Hash[machine_2.tags.map {|t| [t.key, t.value]}]
-            expect(t['Name']).to eq("test_load_balancer_machine2")
+            }.to match_an_aws_load_balancer('test-load-balancer',
+              :instances => [{id: test_load_balancer_machine2.aws_object.id}]
+            ).and be_idempotent
           end
         end
       end
@@ -330,11 +339,12 @@ describe Chef::Resource::LoadBalancer do
         end
 
         it 'successfully deletes the load_balancer with the :destroy action' do
-          expect_recipe {
+          r = recipe {
             load_balancer 'test-load-balancer' do
               action :destroy
             end
-          }.to destroy_an_aws_load_balancer('test-load-balancer').and be_idempotent
+          }
+          expect(r).to destroy_an_aws_load_balancer('test-load-balancer').and be_idempotent
         end
       end
 

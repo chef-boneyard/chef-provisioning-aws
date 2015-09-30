@@ -1,12 +1,23 @@
 sudo: false
 language: ruby
 rvm:
-- 2.0.0
-- 2.1.1
+- 2.1.6
+
+env:
+  global:
+    secure: NZ0xxPozZde0log+6S5geCUazOyprh4278dXHcdqw7YuaaywtKD1VrYJGSsNnMl/UCy7KLJEcK9Gs9aD4cqXtxR9gzgkUj1tnB3VHPquo+r3Vh7tjXN+FuuTXsimNoyA/B0NMrfDszXIc204OJSzCdNr7L0BiawbkFeUfRtATZI=
+  matrix:
+  - RAKE_TASK=spec
+  # We run the tests in different environments so they don't try to overwrite each other (deleting, creating the same VPC)
+  # If we need to we can get rid of this but its nice for speed
+  - RAKE_TASK="travis[integration]" AWS_TEST_DRIVER=aws::us-east-1
+  - RAKE_TASK="travis[super_slow]" AWS_TEST_DRIVER=aws::us-west-1
+
+before_script: mkdir -p /home/travis/.chef
 
 script:
-  - bundle exec rake build
-  - bundle exec rake spec
+- bundle exec rake build
+- bundle exec rake $RAKE_TASK
 
 notifications:
   email: false

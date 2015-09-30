@@ -269,11 +269,11 @@ class AWSProvider < Chef::Provider::LWRPBase
     sleep = opts[:sleep] || 5
 
     Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_responses.inspect}..."
-      Chef::Log.debug("Current exception is #{exception.inspect}")
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
+      Chef::Log.debug("Current exception in wait_for is #{exception.inspect}")
       begin
         current_response = aws_object.send(query_method)
-        Chef::Log.debug("Current response from [#{query_method}] is #{current_response}")
+        Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
         unless expected_responses.include?(current_response)
           raise StatusTimeoutError.new(aws_object, current_response, expected_responses)
         end
@@ -285,8 +285,15 @@ class AWSProvider < Chef::Provider::LWRPBase
   # Retry a block with an doubling backoff time (maximum wait of 10 seconds).
   # @param retry_on [Exception] An exception to retry on, defaults to RuntimeError
   #
+  def self.retry_with_backoff(retry_on = RuntimeError)
+    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 16].min }, :on => retry_on) do |retries, exception|
+      Chef::Log.debug("Current exception in retry_with_backoff is #{exception.inspect}")
+      yield
+    end
+  end
+
   def retry_with_backoff(retry_on = RuntimeError, &block)
-    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 16].min }, :on => retry_on, &block)
+    self.class.retry_with_backoff(retry_on, &block)
   end
 
 end

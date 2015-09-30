@@ -87,6 +87,15 @@ module AWSDriver
       end
     end
 
+    def load_env_variables
+      if ENV["AWS_ACCESS_KEY_ID"] && ENV["AWS_SECRET_ACCESS_KEY"]
+        @credentials["default"] = {
+          aws_access_key_id: ENV["AWS_ACCESS_KEY_ID"],
+          aws_secret_access_key: ENV["AWS_SECRET_ACCESS_KEY"]
+        }
+      end
+    end
+
     def load_default
       config_file = ENV['AWS_CONFIG_FILE'] || File.expand_path('~/.aws/config')
       credentials_file = ENV['AWS_CREDENTIAL_FILE'] || File.expand_path('~/.aws/credentials')
@@ -96,6 +105,9 @@ module AWSDriver
         else
           load_inis(config_file)
         end
+      end
+      if @credentials.size == 0
+        load_env_variables
       end
     end
 

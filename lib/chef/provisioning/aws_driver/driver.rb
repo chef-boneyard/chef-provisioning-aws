@@ -59,6 +59,24 @@ class Resource
 end
 end
 
+require 'chef/provider/load_balancer'
+class Chef
+class Provider
+  class LoadBalancer
+    # We override this so we can specify a machine name as `i-123456`
+    # This is totally a hack until we move away from base resources
+    def get_machine_spec!(machine_name)
+      if machine_name =~ /^i-[a-f0-9]{8}$/
+        Struct.new(:name, :reference).new(machine_name, {'instance_id' => machine_name})
+      else
+        Chef::Log.debug "Getting machine spec for #{machine_name}"
+        Provisioning.chef_managed_entry_store(new_resource.chef_server).get!(:machine, machine_name)
+      end
+    end
+  end
+end
+end
+
 Chef::Provider::Machine.additional_machine_option_keys << :aws_tags
 Chef::Provider::MachineImage.additional_image_option_keys << :aws_tags
 Chef::Provider::LoadBalancer.additional_lb_option_keys << :aws_tags
@@ -112,6 +130,26 @@ module AWSDriver
         logger: Chef::Log.logger,
         retry_limit: Chef::Config.chef_provisioning[:aws_retry_limit] || 5
       )
+
+      driver = self
+      Chef::Resource::Machine.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsInstance.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
+      Chef::Resource::MachineImage.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsImage.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
+      Chef::Resource::LoadBalancer.send(:define_method, :aws_object) do
+        resource = Chef::Resource::AwsLoadBalancer.new(name, nil)
+        resource.driver driver
+        resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
+        resource.aws_object
+      end
     end
 
     def self.canonicalize_url(driver_url, config)
@@ -147,7 +185,10 @@ module AWSDriver
         updates << "  with tags #{lb_options[:aws_tags]}" if lb_options[:aws_tags]
 
         action_handler.perform_action updates do
-          actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          # IAM says the server certificate exists, but ELB throws this error
+          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(AWS::ELB::Errors::CertificateNotFound) do
+            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          end
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -163,22 +204,9 @@ module AWSDriver
         end
 
         # TODO: refactor this whole giant method into many smaller method calls
-        # TODO if we update scheme, we don't need to run any of the other updates.
-        # Also, if things aren't specified (such as machines / listeners), we
-        # need to grab them from the actual load balancer so we don't lose them.
-        # i.e. load_balancer 'blah' do
-        #   lb_options: { scheme: 'other_scheme' }
-        # end
-        # TODO we will leak the actual_elb if we fail to finish creating it
-        # Update scheme - scheme is immutable once set, so if it is changing we need to delete the old
-        # ELB and create a new one
         if lb_options[:scheme] && lb_options[:scheme].downcase != actual_elb.scheme
-          desc = ["  updating scheme to #{lb_options[:scheme]}"]
-          desc << "  WARN: scheme is immutable, so deleting and re-creating the ELB"
-          perform_action.call(desc) do
-            old_elb = actual_elb
-            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
-          end
+          # TODO CloudFormation automatically recreates the load_balancer, we should too
+          raise "Scheme is immutable - you need to :destroy and :create the load_balancer to recreated it with the new scheme"
         end
 
         # Update security groups
@@ -254,12 +282,13 @@ module AWSDriver
                   load_balancer_name: actual_elb.name,
                   subnets: attach_subnets
                 )
-              rescue AWS::ELB::Errors::InvalidConfigurationRequest
-                raise "You cannot currently move from 1 subnet to another in the same availability zone. " +
+              rescue AWS::ELB::Errors::InvalidConfigurationRequest => e
+                Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
                     "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
                     "existing ELB named #{actual_elb.name}"
+                raise e
               end
             end
           end

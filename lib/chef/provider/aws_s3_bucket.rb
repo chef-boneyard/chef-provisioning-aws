@@ -50,7 +50,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     converge_by "create S3 bucket #{new_resource.name}" do
-      new_resource.driver.s3.buckets.create(new_resource.name)
+      new_resource.driver.s3.buckets.create(new_resource.name, new_resource.options)
       # S3 buckets already have a top level name property so they don't need
       # a 'Name' tag
     end
@@ -60,6 +60,9 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(bucket)
+    if purging
+      new_resource.recursive_delete(true)
+    end
     converge_by "delete S3 bucket #{new_resource.name}" do
       if new_resource.recursive_delete
         bucket.delete!

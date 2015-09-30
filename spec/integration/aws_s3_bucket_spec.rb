@@ -3,7 +3,7 @@ require 'securerandom'
 
 def mk_bucket_name
   bucket_postfix = SecureRandom.hex(8)
-  "chef_provisioning_test_bucket_#{bucket_postfix}"
+  "chef.provisioning.test.#{bucket_postfix}"
 end
 
 describe Chef::Resource::AwsS3Bucket do

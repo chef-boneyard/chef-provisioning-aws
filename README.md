@@ -9,7 +9,7 @@ This README is a work in progress.  Please add to it!
 There are 3 ways you can provide your AWS Credentials.  We will look for credentials in the order from below and use the first one found.  This precedence order is taken from http://docs.aws.amazon.com/sdkforruby/api/index.html#Configuration:
 
 1. Through the environment variables `ENV["AWS_ACCESS_KEY_ID"]`, `ENV["AWS_SECRET_ACCESS_KEY"]` and optionally `ENV["AWS_SESSION_TOKEN"]`
-2. The shared credentials ini file.  The default location is `~/.aws/credentials` but you can overwrite this by specifying `ENV["AWS_CONFIG_FILE"]`.  You can specify 
+2. The shared credentials ini file.  The default location is `~/.aws/credentials` but you can overwrite this by specifying `ENV["AWS_CONFIG_FILE"]`.  You can specify
 multiple profiles in this file and select one with the `ENV["AWS_DEFAULT_PROFILE"]`
 environment variable or via the driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.  If you do not specify a profile then the `default` one is used.  Read
 [this](http://blogs.aws.amazon.com/security/post/Tx3D6U6WSFGOK2H/A-New-and-Standardized-Way-to-Manage-Credentials-in-the-AWS-SDKs) for more information about profiles.
@@ -30,9 +30,6 @@ in your client.rb for the provisioning workstation.  The default `:aws_retry_lim
 
 TODO: List out weird/unique things about resources here.  We don't need to document every resource
 because users can look at the resource model.
-
-TODO: document `aws_object` and `get_aws_object` and how you can get the aws object for a base
-chef-provisioning resource like machine or load_balancer
 
 ## aws_key_pair
 
@@ -265,8 +262,11 @@ Finally, you should add 3 standard tests for taggable objects - 1) Tags can be c
 
 ## \#aws\_object
 
-All chef-provisioning-aws resources have a `aws_object` method that will return the AWS object.  The AWS
-object won't exist until the resource converges, however.  An example of how to do this looks like:
+All chef-provisioning-aws resources have a `aws_object` method that will return the AWS object.  The base
+resources `machine`, `machine_image` and `load_balancer` are monkeypatched to also include the `aws_object`
+method and should respond to it like all other resources.
+
+The AWS object won't exist until the resource converges, however.  An example of how to do this looks like:
 
 ```ruby
 my_vpc = aws_vpc 'my_vpc' do
@@ -340,37 +340,6 @@ When specifying `bootstrap_options` and any attributes which reference another a
 perform [lookup_options](https://github.com/chef/chef-provisioning-aws/blob/master/lib/chef/provisioning/aws_driver/aws_resource.rb#L63-L91).
 This tries to turn elements with names like `vpc`, `security_group_ids`, `machines`, `launch_configurations`,
 `load_balancers`, etc. to the correct AWS object.
-
-## Looking up chef-provisioning resources
-
-The base chef-provisioning resources (machine, machine_batch, load_balancer, machine_image) don't
-have the `aws_object` method defined on them because they are not `AWSResource` classes.  To
-look them up use the class method `get_aws_object` defined on the chef-provisioning-aws specific
-resource:
-
-```ruby
-machine_image 'my_image' do
-  ...
-end
-
-ruby_block "look up machine_image object" do
-  block do
-    aws_object = Chef::Resource::AwsImage.get_aws_object(
-      'my_image',
-      run_context: run_context,
-      driver: run_context.chef_provisioning.current_driver,
-      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(run_context.cheffish.current_chef_server)
-    )
-  end
-end
-```
-
-To look up a machine, use the `AwsInstance` class, to look up a load balancer use the `AwsLoadBalancer`
-class, etc.  The first parameter you pass should be the same resource name as used in the base
-chef-provisioning resource.
-
-Again, the AWS object will not exist until the converge phase, so the aws_object will only be
-available using a `lazy` attribute modifier or in a `ruby_block`.
 
 # Running Integration Tests
 

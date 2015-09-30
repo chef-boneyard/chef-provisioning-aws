@@ -100,7 +100,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     # Delete anything that's left (that wasn't replaced)
     current_routes.values.each do |current_route|
-      action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_route.target.id}" do
+      current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
+      action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_target}" do
         current_route.delete
       end
     end
@@ -141,7 +142,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { internet_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::AwsVpcPeeringConnection
+    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }

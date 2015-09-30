@@ -75,6 +75,203 @@ describe Chef::Resource::Machine do
         ).to eq("ZWNobyAnZm9vJw==\n")
       end
 
+      it "respects the network_interfaces block with maximum attributes", :super_slow do
+        private_ip_address_start = Random.rand(30)+10
+        expect_recipe {
+          machine "test_machine" do
+            machine_options bootstrap_options: {
+              key_name: 'test_key_pair',
+              instance_type: 'm3.medium',
+              network_interfaces: [
+                {
+                  # Cannot set associate_public_ip_address and network_interface_id
+                  # network_interface_id: "eth0",
+                  device_index: 0,
+                  subnet_id: test_public_subnet.aws_object.id,
+                  description: "network interface description",
+                  private_ip_address: "10.0.0.#{private_ip_address_start}",
+                  delete_on_termination: true,
+                  groups: [test_security_group.aws_object.id],
+                  private_ip_addresses: [
+                    {
+                      private_ip_address: "10.0.0.#{private_ip_address_start+1}",
+                      primary: false
+                    },
+                    {
+                      private_ip_address: "10.0.0.#{private_ip_address_start+2}",
+                      primary: false
+                    }
+                  ],
+                  # cannot specify both `private_ip_addresses` and `secondary_private_ip_address_count`
+                  #secondary_private_ip_address_count: 2,
+                  associate_public_ip_address: true
+                }
+              ]
+            }
+            action :ready
+          end
+        }.to create_an_aws_instance("test_machine",
+          network_interfaces: [{
+            network_interface_id: /^eni-/,
+            subnet_id: test_public_subnet.aws_object.id,
+            vpc_id: test_vpc.aws_object.id,
+            description: "network interface description",
+            status: "in-use",
+            private_ip_address: "10.0.0.#{private_ip_address_start}",
+            groups: [{group_name: 'test_security_group'}],
+            attachment: {
+              device_index: 0,
+              delete_on_termination: true,
+              status: "attached"
+            },
+            private_ip_addresses: [
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start}",
+                primary: true,
+                # the action must be :ready to give the public ip time to be assigned
+                association: {
+                  public_ip: /\d+/
+                }
+              },
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start+1}",
+                primary: false
+              },
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start+2}",
+                primary: false
+              }
+            ]
+          }]
+        ).and be_idempotent
+      end
+
+      it "converts associate_public_ip_address at the top level to the network interface", :super_slow do
+        private_ip_address_start = Random.rand(30)+10
+        expect_recipe {
+          machine "test_machine" do
+            machine_options bootstrap_options: {
+              key_name: 'test_key_pair',
+              instance_type: 'm3.medium',
+              associate_public_ip_address: true,
+              subnet_id: test_public_subnet.aws_object.id,
+              security_group_ids: [test_security_group.aws_object.id],
+              private_ip_address: "10.0.0.#{private_ip_address_start}"
+            }
+            action :ready
+          end
+        }.to create_an_aws_instance("test_machine",
+          network_interfaces: [{
+            network_interface_id: /^eni-/,
+            subnet_id: test_public_subnet.aws_object.id,
+            vpc_id: test_vpc.aws_object.id,
+            status: "in-use",
+            private_ip_address: "10.0.0.#{private_ip_address_start}",
+            groups: [{group_name: 'test_security_group'}],
+            attachment: {
+              device_index: 0,
+              delete_on_termination: true,
+              status: "attached"
+            },
+            private_ip_addresses: [
+              {
+                private_ip_address: "10.0.0.#{private_ip_address_start}",
+                primary: true,
+                association: {
+                  public_ip: /\d+/
+                }
+              }
+            ]
+          }]
+        ).and be_idempotent
+      end
+
+      context "with a placement group" do
+        before(:context) {
+          driver.ec2_client.create_placement_group({
+            group_name: "agroup",
+            strategy: "cluster"
+          })
+        }
+
+        # Must do after the context so we have waited for the instance to terminate
+        after(:context) {
+          driver.ec2_client.delete_placement_group group_name: "agroup"
+        }
+
+        it "converts V1 keys to V2 keys", :super_slow do
+          expect_recipe {
+            machine "test_machine" do
+              machine_options bootstrap_options: {
+                key_name: 'test_key_pair',
+                instance_type: 'm4.large',
+                monitoring_enabled: false,
+                availability_zone: test_public_subnet.aws_object.availability_zone_name,
+                placement_group: "agroup",
+                dedicated_tenancy: false, # cannot do true, was getting API error
+                subnet: 'test_public_subnet'
+              }
+              action :allocate
+            end
+          }.to create_an_aws_instance("test_machine",
+            monitoring: {state: "disabled"},
+            placement: {
+              availability_zone: test_public_subnet.aws_object.availability_zone_name,
+              group_name: "agroup",
+              tenancy: "default",
+            },
+            subnet_id: test_public_subnet.aws_object.id
+          ).and be_idempotent
+        end
+	  end
+
+      context "with a custom iam role" do
+        # TODO when we have IAM support, use the resources
+        before(:context) do
+          assume_role_policy_document = '{"Version":"2008-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":["ec2.amazonaws.com"]},"Action":["sts:AssumeRole"]}]}'
+          driver.iam_client.create_role({
+            role_name: "machine_test_custom_role",
+            assume_role_policy_document: assume_role_policy_document
+          }).role
+          driver.iam_client.create_instance_profile({
+            instance_profile_name: "machine_test_custom_role"
+          })
+          driver.iam_client.add_role_to_instance_profile({
+            instance_profile_name: "machine_test_custom_role",
+            role_name: "machine_test_custom_role"
+          })
+          sleep 5 # grrrrrr, the resource should take care of the polling for us
+        end
+
+        after(:context) do
+          driver.iam_client.remove_role_from_instance_profile({
+            instance_profile_name: "machine_test_custom_role",
+            role_name: "machine_test_custom_role"
+          })
+          driver.iam_client.delete_instance_profile({
+            instance_profile_name: "machine_test_custom_role"
+          })
+          driver.iam_client.delete_role({
+            role_name: "machine_test_custom_role"
+          })
+        end
+
+        it "converts iam_instance_profile from a string to a hash", :super_slow do
+          expect_recipe {
+            machine 'test_machine' do
+              machine_options bootstrap_options: {
+                subnet_id: 'test_public_subnet',
+                key_name: 'test_key_pair',
+                iam_instance_profile: "machine_test_custom_role"
+              }
+              action :allocate
+            end
+          }.to create_an_aws_instance('test_machine',
+            iam_instance_profile: {arn: /machine_test_custom_role/}
+          ).and be_idempotent
+        end
+      end
+
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe {
 
@@ -171,6 +368,7 @@ describe Chef::Resource::Machine do
                 key_name: key_pair_name,
                 key_path: private_key_path
               }
+              action :allocate
             end
           }.to create_an_aws_instance('test_machine'
           ).and be_idempotent

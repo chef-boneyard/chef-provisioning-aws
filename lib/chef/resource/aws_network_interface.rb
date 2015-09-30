@@ -5,11 +5,11 @@ require 'chef/resource/aws_eip_address'
 class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::NetworkInterface
+  aws_sdk_type AWS::EC2::NetworkInterface, option_names: []
 
   attribute :name,                   kind_of: String, name_attribute: true
 
-  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^eni-[a-f0-9]{8}$/ ? name : nil
   }
 

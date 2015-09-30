@@ -28,7 +28,13 @@ require 'base64'
 
 # loads the entire aws-sdk
 AWS.eager_autoload!
-AWS_V2_SERVICES = {"EC2" => "ec2", "S3" => "s3", "ElasticLoadBalancing" => "elb", "IAM" => "iam"}
+AWS_V2_SERVICES = {
+  "EC2" => "ec2",
+  "Route53" => "route53",
+  "S3" => "s3",
+  "ElasticLoadBalancing" => "elb",
+  "IAM" => "iam",
+}
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess
@@ -697,11 +703,60 @@ EOD
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
       end
+      if bootstrap_options[:iam_instance_profile] && bootstrap_options[:iam_instance_profile].is_a?(String)
+        bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
+      end
       if bootstrap_options[:user_data]
         bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
 
+      # V1 -> V2 backwards compatability support
+      unless bootstrap_options.fetch(:monitoring_enabled, nil).nil?
+        bootstrap_options[:monitoring] = {enabled: bootstrap_options.delete(:monitoring_enabled)}
+      end
+      placement = {}
+      if bootstrap_options[:availability_zone]
+        placement[:availability_zone] = bootstrap_options.delete(:availability_zone)
+      end
+      if bootstrap_options[:placement_group]
+        placement[:group_name] = bootstrap_options.delete(:placement_group)
+      end
+      unless bootstrap_options.fetch(:dedicated_tenancy, nil).nil?
+        placement[:tenancy] = bootstrap_options.delete(:dedicated_tenancy) ? "dedicated" : "default"
+      end
+      unless placement.empty?
+        bootstrap_options[:placement] = placement
+      end
+      if bootstrap_options[:subnet]
+        bootstrap_options[:subnet_id] = bootstrap_options.delete(:subnet)
+      end
+
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
+
+      # In the migration from V1 to V2 we still support associate_public_ip_address at the top level
+      # we do this after the lookup because we have to copy any present subnets, etc. into the
+      # network interfaces block
+      unless bootstrap_options.fetch(:associate_public_ip_address, nil).nil?
+        if bootstrap_options[:network_interfaces]
+          raise "If you specify network_interfaces you must specify associate_public_ip_address in that list"
+        end
+        network_interface = {
+          :device_index => 0,
+          :associate_public_ip_address => bootstrap_options.delete(:associate_public_ip_address),
+          :delete_on_termination => true
+        }
+        if bootstrap_options[:subnet_id]
+          network_interface[:subnet_id] = bootstrap_options.delete(:subnet_id)
+        end
+        if bootstrap_options[:private_ip_address]
+          network_interface[:private_ip_address] = bootstrap_options.delete(:private_ip_address)
+        end
+        if bootstrap_options[:security_group_ids]
+          network_interface[:groups] = bootstrap_options.delete(:security_group_ids)
+        end
+        bootstrap_options[:network_interfaces] = [network_interface]
+      end
+
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
       bootstrap_options
     end

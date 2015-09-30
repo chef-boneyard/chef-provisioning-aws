@@ -49,7 +49,7 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   attribute :inbound_rules,  kind_of: [ Array, Hash ]
   attribute :outbound_rules, kind_of: [ Array, Hash ]
 
-  attribute :security_group_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :security_group_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^sg-[a-f0-9]{8}$/ ? name : nil
   }
 

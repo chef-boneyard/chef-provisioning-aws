@@ -23,7 +23,7 @@ module AWSSupport
   require 'aws'
   require 'aws_support/deep_matcher/matchable_object'
   require 'aws_support/deep_matcher/matchable_array'
-  DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(EC2|ELB|IAM|S3|RDS|CloudSearch)($|::)/ }
+  DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(EC2|ELB|IAM|S3|RDS|CloudSearch|Route53)($|::)/ }
   DeepMatcher::MatchableArray.matchable_classes  << AWS::Core::Data::List
 
   def purge_all
@@ -96,11 +96,6 @@ module AWSSupport
       aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
       when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
     else
-#       warn <<EOM
-# --------------------------------------------------------------------------------------------------------------------------
-# AWS_TEST_DRIVER not set ... cannot run AWS test.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS.
-# --------------------------------------------------------------------------------------------------------------------------
-# EOM
       skip "AWS_TEST_DRIVER not set ... cannot run AWS tests.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS." do
         context description, *tags, &context_block
       end

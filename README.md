@@ -6,9 +6,15 @@ This README is a work in progress.  Please add to it!
 
 ## Credentials
 
-AWS credentials should be specified in your `~/.aws/credentials` file as documented [here](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files).  We support the use of profiles as well.  If you do not specify a profile then we use the `default` profile.
+There are 3 ways you can provide your AWS Credentials.  We will look for credentials in the order from below and use the first one found.  This precedence order is taken from http://docs.aws.amazon.com/sdkforruby/api/index.html#Configuration:
 
-You can specify a profile as the middle section of the semi-colon seperated driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.
+1. Through the environment variables `ENV["AWS_ACCESS_KEY_ID"]`, `ENV["AWS_SECRET_ACCESS_KEY"]` and optionally `ENV["AWS_SESSION_TOKEN"]`
+2. The shared credentials ini file.  The default location is `~/.aws/credentials` but you can overwrite this by specifying `ENV["AWS_CONFIG_FILE"]`.  You can specify 
+multiple profiles in this file and select one with the `ENV["AWS_DEFAULT_PROFILE"]`
+environment variable or via the driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.  If you do not specify a profile then the `default` one is used.  Read
+[this](http://blogs.aws.amazon.com/security/post/Tx3D6U6WSFGOK2H/A-New-and-Standardized-Way-to-Manage-Credentials-in-the-AWS-SDKs) for more information about profiles.
+3. From an instance profile when running on EC2.  This accesses the local
+metadata service to discover the local instance's IAM instance profile.
 
 ## Configurable Options
 
@@ -171,7 +177,6 @@ The available parameters for `load_balancer_options` can be viewed in the [aws d
 NOTES:
 
 1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
-2. Instead of specifying `tags` in the `load_balancer_options`, you should specify `aws_tags`.  See the note on [tagging base resources](https://github.com/chef/chef-provisioning-aws#base-resources).
 
 # RDS Instance Options
 

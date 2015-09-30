@@ -26,7 +26,7 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
   # ```
   #
   attribute :public_ip, kind_of: String, aws_id_attribute: true, coerce: proc { |v| IPAddr.new(v); v },
-    lazy_default: proc {
+    default: lazy {
       begin
         IPAddr.new(name)
         name

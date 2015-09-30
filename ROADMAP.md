@@ -35,6 +35,7 @@ This is a rough tally of upcoming feature work for `chef-provisioning-aws`. We'v
   - [ ] Delegation Sets?
 
 - [ ] Route53 Records
+- [ ] IAM Roles
 
 ### Resources not started yet
 - [ ] EBS Snapshots
@@ -44,6 +45,5 @@ This is a rough tally of upcoming feature work for `chef-provisioning-aws`. We'v
 - [ ] IAM Users
 - [ ] IAM Groups
 - [ ] IAM Policies
-- [ ] IAM Roles
 - [ ] CloudFront
 - [ ] CloudWatch

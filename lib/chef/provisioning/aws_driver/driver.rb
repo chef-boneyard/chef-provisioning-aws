@@ -1,3 +1,4 @@
+require 'byebug'
 require 'chef/mixin/shell_out'
 require 'chef/mixin/deep_merge'
 require 'chef/provisioning/driver'
@@ -583,7 +584,7 @@ EOD
         end
         wait_until_ready_machine(action_handler, machine_spec, instance)
       end
-
+      byebug
       wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
     end
@@ -713,7 +714,7 @@ EOD
         raise "Instance for node #{machine_spec.name} has not been created!"
       end
 
-      if machine_spec.reference['is_windows']
+      if machine_spec.reference['is_windows']<
         Chef::Provisioning::Machine::WindowsMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       else
         Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
@@ -893,45 +894,101 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
-      winrm_transport_options = machine_options[:winrm_transport]
+      username = machine_spec.reference[:winrm_username] || 'Administrator',
+      # default to http for now, should upgrade to https when knife support self-signed
+      transport_type = machine_options[:winrm_transport] || 'http'
+      type = case transport_type
+             when 'http' :plaintext
+             when 'https' :ssl
+             end
+      if machine_spec.reference[:winrm_port]
+        port = machine_spec.reference[:winrm_port]
+      else #default port
+        port = case transport_type
+                 when 'http'
+                   '5985'
+                 when 'https'
+                   '5986'
+                 end
+      end
+      endpoint = "#{transport_type}://#{remote_host}:#{port}/wsman"
 
-      pem_bytes = get_private_key(instance.key_name)
-      encrypted_admin_password = wait_for_admin_password(machine_spec)
+      if machine_options[:password]
+        password = machine_options[:password]
+      else # pull from ec2 and store in reference
+        if machine_spec.reference[:winrm_encrypted_password]
+          decoded = Base64.decode64(machine_spec.reference[:winrm_encrypted_password])
+        else
+          encrypted_admin_password = wait_for_admin_password(machine_spec)
+          machine.machine_spec.reference[:winrm_encrypted_password]=encrypted_admin_password
+          # ^^^ should be saved
+          decoded = Base64.decode64(encrypted_admin_password)
+        end
+        # decrypt so we can utilize
+        private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
+        password = private_key.private_decrypt decoded
+      end
 
-      decoded = Base64.decode64(encrypted_admin_password)
-      private_key = OpenSSL::PKey::RSA.new(pem_bytes)
-      decrypted_password = private_key.private_decrypt decoded
+      disable_sspi =  machine_options[:winrm_disable_sspi] || false, # default to Negotiate
+      basic_auth_only = machine_options[:winrm_basic_auth_only] || false, # disallow Basic auth by default
+      no_ssl_peer_verification = machine_options[:winrm_no_ssl_peer_verification] || false #disallow MITM potential by default
 
-      shared_winrm_options = {
-        :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => machine_options[:password] || decrypted_password
+      wirm_options = {
+        user: username,
+        pass: password,
+        disable_sspi: disable_sspi,
+        basic_auth_only: basic_auth_only,
+        no_ssl_peer_verification: no_ssl_peer_verification,
       }
 
-      if(winrm_transport_options['https'] || winrm_transport_options[:https]  )
-        port = machine_spec.reference['winrm_port'] || '5986'
-        endpoint = "https://#{remote_host}:#{port}/wsman"
-        type = :ssl
-        winrm_options = {
-          :disable_sspi => winrm_transport_options['https'][:disable_sspi] || false, # default to Negotiate
-          :basic_auth_only => winrm_transport_options['https'][:basic_auth_only] || false, # disallow Basic auth by default
-          :no_ssl_peer_verification => winrm_transport_options['https'][:no_ssl_peer_verification] || false #disallow MITM potential by default
-        }
+      if no_ssl_peer_verification or type != :ssl
+        # we won't verify certs
+      elsif machine_spec.reference[:winrm_ssl_cert]
+        # we have stored the cert
+      else
+        # we need to retrieve the cert and verify it by connecting just to
+        # retrieve the ssl certificate and compare it to what we see in the
+        # console logs
+        console_lines = Base64.decode64(instance.console_output.data.output).lines
+        noverify_peer_context = OpenSSL::SSL::SSLContext.new
+        noverify_peer_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        tcp_connection = TCPSocket.new(i.private_ip_address, '5986')
+        shady_ssl_connection = OpenSSL::SSL::SSLSocket.new(tcp_connection, noverify_peer_context)
+        shady_ssl_connection.connect
+        shady_ssl_connection.peer_cert_chain
+        winrm_cert = shady_ssl_connection.peer_cert_chain.first
+
+        rdp_thumbprint = console_lines.grep(
+          /RDPCERTIFICATE-THUMBPRINT/)[-1].split(': ').last.chomp
+        rdp_subject = console_lines.grep(
+          /RDPCERTIFICATE-SUBJECTNAME/)[-1].split(': ').last.chomp
+        winrm_subject = winrm_cert.subject.to_s.split('=').last.upcase
+        winrm_thumbprint=OpenSSL::Digest::SHA1.new(winrm_cert.to_der).to_s.upcase
+
+        if rdp_subject != winrm_subject or rdp_thumbprint != winrm_thumbprint
+          Chef::Log.fatal "Winrm ssl port certificate differs from rdp console logs"
+        end
+        machine_spec.reference[:winrm_ssl_subject]=winrm_subject
+        machine_spec.reference[:winrm_ssl_thumbprint]=winrm_thumbprint
+        machine_spec.reference[:winrm_ssl_cert]=winrm_cert.to_pem
       end
 
-      if(winrm_transport_options['http'] || winrm_transport_options[:http]  )
-        port = machine_spec.reference['winrm_port'] || '5985'
-        port = tcp_endpoint[:public_port] || '5986'
-        endpoint = "http://#{remote_host}:#{port}/wsman"
-        type = :plaintext
-        winrm_options = {
-          :disable_sspi => winrm_transport_options['http']['disable_sspi'] || false, # default to Negotiate
-          :basic_auth_only => winrm_transport_options['http']['basic_auth_only'] || false # disallow Basic auth by default
-        }
+      # If we have a cert, use it for verification
+      if machine_spec.reference[:winrm_ssl_cert]
+        FileUtils.mkdir_p(Chef::Config.trusted_certs_dir)
+        filename = File.join(Chef::Config.trusted_certs_dir, "#{machine_spec.name}.crt")
+        if File.exists?(filename)
+          Chef::Log.warn("Existing cert for #{winrm_subject} in #{filename}")
+        else
+          Chef::Log.warn("Adding certificate for #{winrm_subject} in #{filename}")
+          File.open(filename, File::CREAT|File::TRUNC|File::RDWR, 0644) do |f|
+            f.print(winrm_cert.to_pem)
+          end
+        end
+        winrm_options[:ca_trust_path] = filename
       end
-
-      merged_winrm_options = winrm_options.merge(shared_winrm_options)
-      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, merged_winrm_options, {})
-
+      Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+      byebug
     end
 
     def wait_for_admin_password(machine_spec)

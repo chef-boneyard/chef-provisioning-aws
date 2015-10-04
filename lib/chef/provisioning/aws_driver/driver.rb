@@ -716,7 +716,7 @@ EOD
         raise "Instance for node #{machine_spec.name} has not been created!"
       end
 
-      if machine_spec.reference['is_windows']<
+      if machine_spec.reference['is_windows']
         Chef::Provisioning::Machine::WindowsMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
       else
         Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport_for(machine_spec, machine_options, instance), convergence_strategy_for(machine_spec, machine_options))
@@ -924,7 +924,7 @@ EOD
           decoded = Base64.decode64(machine_spec.reference[:winrm_encrypted_password])
         else
           encrypted_admin_password = wait_for_admin_password(machine_spec)
-          machine_spec.reference[:winrm_encrypted_password]=encrypted_admin_password
+          machine_spec.reference[:winrm_encrypted_password]||=encrypted_admin_password
           # ^^^ should be saved
           decoded = Base64.decode64(encrypted_admin_password)
         end
@@ -946,9 +946,12 @@ EOD
       }
 
       if no_ssl_peer_verification or type != :ssl
-        # we won't verify certs
-      elsif machine_spec.reference[:winrm_ssl_cert]
+        # =>  we won't verify certs
+        pass
+      elsif machine_spec.reference[:winrm_ssl_thumbprint]
+        #      elsif machine_spec.reference[:winrm_ssl_cert]
         # we have stored the cert
+        pass
       else
         # we need to retrieve the cert and verify it by connecting just to
         # retrieve the ssl certificate and compare it to what we see in the
@@ -972,27 +975,38 @@ EOD
         if rdp_subject != winrm_subject or rdp_thumbprint != winrm_thumbprint
           Chef::Log.fatal "Winrm ssl port certificate differs from rdp console logs"
         end
-        machine_spec.reference[:winrm_ssl_subject]=winrm_subject
-        machine_spec.reference[:winrm_ssl_thumbprint]=winrm_thumbprint
-        machine_spec.reference[:winrm_ssl_cert]=winrm_cert.to_pem
+        # if machine_spec.reference[:winrm_ssl_subject] != winrm_subject
+        #   machine_spec.reference[:winrm_ssl_subject] = winrm_subject
+        # end
+        if machine_spec.reference[:winrm_ssl_thumbprint] != winrm_thumbprint
+          machine_spec.reference[:winrm_ssl_thumbprint] = winrm_thumbprint
+        end
+        # if machine_spec.reference[:winrm_ssl_cert] != winrm_cert.to_pem
+        #   machine_spec.reference[:winrm_ssl_cert] = winrm_cert.to_pem
+        # end
       end
 
       # If we have a cert, use it for verification
-      if machine_spec.reference[:winrm_ssl_cert]
-        FileUtils.mkdir_p(Chef::Config.trusted_certs_dir)
-        filename = File.join(Chef::Config.trusted_certs_dir, "#{machine_spec.name}.crt")
-        if File.exists?(filename)
-          Chef::Log.warn("Existing cert for #{winrm_subject} in #{filename}")
-        else
-          Chef::Log.warn("Adding certificate for #{winrm_subject} in #{filename}")
-          File.open(filename, File::CREAT|File::TRUNC|File::RDWR, 0644) do |f|
-            f.print(machine_spec.reference[:winrm_ssl_cert])
-          end
-        end
-        winrm_options[:ca_trust_path] = filename
+      # if machine_spec.reference[:winrm_ssl_cert]
+      #   FileUtils.mkdir_p(Chef::Config.trusted_certs_dir)
+      #   filename = File.join(Chef::Config.trusted_certs_dir, "#{machine_spec.name}.crt")
+      #   if File.exists?(filename)
+      #     Chef::Log.warn("Existing cert for #{winrm_subject} in #{filename}")
+      #   else
+      #     Chef::Log.warn("Adding certificate for #{winrm_subject} in #{filename}")
+      #     File.open(filename, File::CREAT|File::TRUNC|File::RDWR, 0644) do |f|
+      #       f.print(machine_spec.reference[:winrm_ssl_cert])
+      #     end
+      #   end
+      #   winrm_options[:ca_trust_path] = filename
+      # end
+
+      if machine_spec.reference[:winrm_ssl_thumbprint]
+        winrm_options[:ssl_peer_fingerprint] = machine_spec.reference[:winrm_ssl_thumbprint]
       end
+
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
-      binding.pry
+      #binding.pry
       # in order for ssl to work, we need to tell ssl that it's ok that ssl_subject doesn't
       # match the ip
       #[19] pry(#<Chef::Provisioning::AWSDriver::Driver>)> endpoint.split('/')[2].split(':').first

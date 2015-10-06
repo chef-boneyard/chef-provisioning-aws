@@ -1,3 +1,20 @@
+#
+# Copyright:: Copyright (c) 2015 Chef Software Inc.
+# License:: Apache License, Version 2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/resource/aws_route53_record_set'
 require 'securerandom'
@@ -24,6 +41,12 @@ class Chef::Resource::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSR
   # the resource name and the AWS ID have to be related here, since they're tightly coupled elsewhere.
   attribute :aws_route53_zone_id, kind_of: String, aws_id_attribute: true,
                                   default: lazy { name =~ /^\/hostedzone\// ? name : nil }
+
+  DEFAULTABLE_ATTRS = [:ttl, :type]
+
+  attribute :defaults, kind_of: Hash,
+            callbacks: { "'defaults' keys may be any of #{DEFAULTABLE_ATTRS}" => lambda { |dh|
+                                             (dh.keys - DEFAULTABLE_ATTRS).size == 0 } }
 
   def record_sets(&block)
     if block_given?
@@ -75,9 +98,10 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
     config
   end
 
-  def populate_zone_ids(record_set_resources, hosted_zone_id)
+  # this happens at a slightly different time in the lifecycle from #get_record_sets_from_resource.
+  def populate_zone_info(record_set_resources, hosted_zone)
     record_set_resources.each do |rs|
-      rs.aws_route53_zone_id(hosted_zone_id)
+      rs.aws_route53_zone_id(hosted_zone.id)
     end
   end
 
@@ -100,7 +124,7 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
       new_resource.aws_route53_zone_id(zone.id)
 
       if record_set_resources
-        populate_zone_ids(record_set_resources, zone.id)
+        populate_zone_info(record_set_resources, zone)
 
         change_list = record_set_resources.map { |rs| rs.to_aws_change_struct(CREATE) }
 
@@ -125,7 +149,7 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
     end
 
     if record_set_resources
-      populate_zone_ids(record_set_resources, hosted_zone.id)
+      populate_zone_info(record_set_resources, hosted_zone)
 
       aws_record_sets = hosted_zone.resource_record_sets
 
@@ -215,6 +239,19 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
     return nil unless record_set_resources
 
     record_set_resources.each do |rs|
+      rs.aws_route53_hosted_zone(new_resource)
+      rs.aws_route53_zone_name(new_resource.name)
+
+      if new_resource.defaults
+        new_resource.class::DEFAULTABLE_ATTRS.each do |att|
+          # check if the RecordSet has its own value, without triggering validation. in Chef >= 12.5, there is
+          # #property_is_set?.
+          if rs.instance_variable_get("@#{att}").nil? && !new_resource.defaults[att].nil?
+            rs.send(att, new_resource.defaults[att])
+          end
+        end
+      end
+
       rs.validate!
     end
 

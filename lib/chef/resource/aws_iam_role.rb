@@ -25,7 +25,26 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   #
   # The policy that grants an entity permission to assume the role.
   #
-  attribute :assume_role_policy_document, kind_of: String, required: true
+  attribute :assume_role_policy_document, kind_of: String
+
+  #
+  # Inline policies which _only_ apply to this role, unlike managed_policies
+  # which can be shared between users, groups and roles.  Maps to the
+  # [RolePolicy](http://docs.aws.amazon.com/sdkforruby/api/Aws/IAM/RolePolicy.html)
+  # SDK object.
+  #
+  # Hash keys are the inline policy name and the value is the policy document.
+  #
+  attribute :inline_policies, kind_of: Hash, callbacks: {
+    "inline_policies must be a hash maping policy names to policy documents" => proc do |policies|
+      policies.all? {|policy_name, policy| (policy_name.is_a?(String) || policy_name.is_a?(Symbol)) && policy.is_a?(String)}
+    end
+  }
+
+  #
+  # TODO: add when we get a policy resource
+  #
+  # attribute :managed_policies, kind_of: [Array, String, ::Aws::Iam::Policy, AwsIamPolicy], coerce: proc { |value| [value].flatten }
 
   def aws_object
     driver.iam_resource.role(name).load

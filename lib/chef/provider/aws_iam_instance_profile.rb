@@ -9,11 +9,14 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
     update_attached_role(iam_instance_profile)
   end
 
+
   protected
 
   def detach_role(iam_instance_profile)
     iam_instance_profile.roles.each do |r|
-      iam_instance_profile.remove_role(role_name: r.name)
+      converge_by "detaching role #{r.name} from instance profile #{new_resource.name}" do
+        iam_instance_profile.remove_role(role_name: r.name)
+      end
     end
   end
 
@@ -22,9 +25,9 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
     role = options[:iam_role]
 
     if new_resource.role && !iam_instance_profile.roles.map(&:name).include?(role)
+      detach_role(iam_instance_profile)
       converge_by "associating role #{role} with instance profile #{new_resource.name}" do
         # Despite having collection methods for roles, instance profile can only have single role associated
-        detach_role(iam_instance_profile)
         iam_instance_profile.add_role({
           role_name: role
         })
@@ -33,10 +36,8 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
   end
 
   def create_aws_object
-    iam = new_resource.driver.iam_resource
-
     converge_by "create IAM instance profile #{new_resource.name}" do
-      iam.create_instance_profile({
+      new_resource.driver.iam_resource.create_instance_profile({
         path: new_resource.path || "/",
         instance_profile_name: new_resource.name
       })
@@ -44,12 +45,14 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
   end
 
   def update_aws_object(iam_instance_profile)
-    update_attached_role(iam_instance_profile)
+    # Nothing to update on our object because the role relationship is managed
+    # through the action
+    iam_instance_profile
   end
 
   def destroy_aws_object(iam_instance_profile)
+    detach_role(iam_instance_profile)
     converge_by "delete #{iam_instance_profile.name}" do
-      detach_role(iam_instance_profile)
       iam_instance_profile.delete
     end
   end

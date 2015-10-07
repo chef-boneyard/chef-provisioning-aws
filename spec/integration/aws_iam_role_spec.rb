@@ -1,12 +1,7 @@
 require 'spec_helper'
 require 'securerandom'
 
-def mk_role_name
-  name_postfix = SecureRandom.hex(8)
-  "chef_provisioning_test_iam_role_#{name_postfix}"
-end
-
-def ec2_role_policy
+def ec2_principal
 <<EOF
 {
   "Version": "2012-10-17",
@@ -15,6 +10,24 @@ def ec2_role_policy
       "Action": "sts:AssumeRole",
       "Principal": {
         "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+end
+
+def rds_principal
+<<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "rds.amazonaws.com"
       },
       "Effect": "Allow",
       "Sid": ""
@@ -65,152 +78,96 @@ describe Chef::Resource::AwsIamRole do
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
 
-      context "Basic IAM role creation" do
-        role_name = mk_role_name
+      let(:role_name) {
+        name_postfix = SecureRandom.hex(8)
+        "cp_test_iam_role_#{name_postfix}"
+      }
 
-        it "aws_iam_role '#{role_name}' creates an IAM role" do
+      it "creates an aws_iam_role with minimum attributes" do
+        expect_recipe {
+          aws_iam_role role_name do
+            assume_role_policy_document ec2_principal
+          end
+        }.to create_an_aws_iam_role(role_name) { |aws_object|
+          expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(ec2_principal))
+        }.and be_idempotent
+      end
 
+      it "creates an aws_iam_role with maximum attributes" do
+        expect_recipe {
+          aws_iam_role role_name do
+            path "/"
+            assume_role_policy_document ec2_principal
+            inline_policies a: iam_role_policy
+          end
+        }.to create_an_aws_iam_role(role_name,
+          path: "/",
+          policies: [{name: "a"}]
+        ) { |aws_object|
+          expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(ec2_principal))
+          expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(iam_role_policy))
+        }.and be_idempotent
+      end
+
+      context "with an existing aws_iam_role" do
+        # Doing this in a before(:each) block for 2 reasons:
+        # 1) the context-level methods only destroy the item after the context is finished,
+        #    and I want the tests to assert on a new item each example
+        # 2) the let(:role_name) cannot be used at the context level, only at
+        #    the example/before/after level
+        before(:each) do
+          converge {
+            aws_iam_role role_name do
+              path "/"
+              assume_role_policy_document ec2_principal
+              inline_policies a: iam_role_policy
+            end
+          }
+        end
+
+        after(:each) do
+          converge {
+            aws_iam_role role_name do
+              action :destroy
+            end
+          }
+        end
+
+
+        it "updates all available fields" do
           expect_recipe {
             aws_iam_role role_name do
-              assume_role_policy_document ec2_role_policy
+              assume_role_policy_document rds_principal
+              inline_policies b: rds_role_policy
             end
-          }.to create_an_aws_iam_role(role_name).and be_idempotent
+          }.to create_an_aws_iam_role(role_name,
+            path: "/",
+            policies: [{name: "b"}]
+          ) { |aws_object|
+            expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(rds_principal))
+            expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(rds_role_policy))
+          }.and be_idempotent
         end
 
-      end
-
-      context "create role with instance profile" do
-        role_name = mk_role_name
-
-        aws_iam_role role_name do
-          assume_role_policy_document ec2_role_policy
-        end
-
-        it "aws_iam_instance_profile '#{role_name}' creates an instance profile with role" do
+        it "clears inline_policies with an empty hash" do
           expect_recipe {
-
-            aws_iam_instance_profile role_name do
-              role role_name
+            aws_iam_role role_name do
+              inline_policies Hash.new
             end
-
-          }.to create_an_aws_iam_instance_profile(role_name).and be_idempotent
-
-          role = driver.iam_resource.role(role_name)
-
-          expect(role.instance_profiles.count).to eq 1
-          expect(role.instance_profiles.first.name).to eq(role_name)
-        end
-      end
-
-      context "delete role with instance profile" do
-        role_name = mk_role_name
-
-        aws_iam_role role_name do
-          assume_role_policy_document ec2_role_policy
+          }.to create_an_aws_iam_role(role_name,
+            path: "/",
+            policies: []
+          ).and be_idempotent
         end
 
-        aws_iam_instance_profile role_name do
-          role role_name
-        end
-
-        it "deletes the role '#{role_name}'" do
+        it "deletes the aws_iam_role" do
           r = recipe {
             aws_iam_role role_name do
               action :destroy
             end
           }
-          expect(r).to destroy_an_aws_iam_role(role_name).and be_idempotent
-        end
-
-        it "deletes the instance profile '#{role_name}'" do
-          r = recipe {
-            aws_iam_instance_profile role_name do
-              action :destroy
-            end
-          }
-          expect(r).to destroy_an_aws_iam_instance_profile(role_name).and be_idempotent
-        end
-      end
-
-      context "delete role with role policy" do
-        role_name = mk_role_name
-
-        aws_iam_role role_name do
-          assume_role_policy_document ec2_role_policy
-        end
-
-        it "deletes the role policy 'rds_full_access'" do
-          recipe {
-            aws_iam_role_policy "rds_full_access" do
-              role role_name
-              policy_document rds_role_policy
-            end
-
-            aws_iam_role_policy "rds_full_access" do
-              role role_name
-              action :destroy
-            end
-          }
-          role = driver.iam_resource.role(role_name)
-          policy = role.policies.first
-
-          expect(role.policies.count).to eq 0
-        end
-
-      end
-
-      context "create role with role policy" do
-        role_name = mk_role_name
-
-        it "aws_iam_role_policy 'rds_full_access' creates a role policy for role" do
-          expect_recipe {
-
-            aws_iam_role role_name do
-              assume_role_policy_document ec2_role_policy
-            end
-
-            aws_iam_role_policy "rds_full_access" do
-              role role_name
-              policy_document rds_role_policy
-            end
-
-          }.to create_an_aws_iam_role(role_name).and be_idempotent
-
-          role = driver.iam_resource.role(role_name)
-
-          policy = role.policies.first
-
-          expect(role.policies.count).to eq 1
-          expect(policy.name).to eq("rds_full_access")
-        end
-      end
-
-      context "create role with role policy and update role policy" do
-        role_name = mk_role_name
-
-        it "aws_iam_role_policy 'rds_full_access' updates a role policy for role" do
-
-          expect_recipe {
-            aws_iam_role role_name do
-              assume_role_policy_document ec2_role_policy
-            end
-
-            aws_iam_role_policy "my_role_policy" do
-              role role_name
-              policy_document rds_role_policy
-            end
-
-            aws_iam_role_policy "my_role_policy" do
-              role role_name
-              policy_document iam_role_policy
-            end
-          }.to create_an_aws_iam_role(role_name)
-
-          role = driver.iam_resource.role(role_name)
-
-          policy = role.policies.first
-
-          expect(URI.decode(policy.policy_document)).to eq(iam_role_policy)
+          expect(r).to destroy_an_aws_iam_role(role_name)
+          expect { driver.iam_client.list_role_policies(role_name: role_name).policy_names }.to raise_error(::Aws::IAM::Errors::NoSuchEntity)
         end
       end
 

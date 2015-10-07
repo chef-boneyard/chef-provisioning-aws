@@ -91,7 +91,7 @@ module AWSDriver
     #
     # Keys that represent non-AWS-objects (such as `timeout`) are left alone.
     #
-    def self.lookup_options(options, **handler_options)
+    def self.lookup_options(options = Hash.new, **handler_options)
       options = options.dup
       options.each do |name, value|
         if name.to_s.end_with?('s')

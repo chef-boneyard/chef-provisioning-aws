@@ -25,6 +25,42 @@ describe Chef::Resource::MachineImage do
           name: 'test_machine_image'
         ).and be_idempotent
       end
+
+      describe 'action :destroy', :super_slow do
+        with_converge {
+          machine_image 'test_machine_image' do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair',
+              instance_type: 'm3.medium'
+            }
+          end
+        }
+
+        it "destroys the image" do
+          r = recipe {
+            machine_image "test_machine_image" do
+              action :destroy
+            end
+          }
+          expect(r).to destroy_an_aws_image('test_machine_image'
+          ).and be_idempotent
+        end
+
+        it "destroys the image if instance is gone long time ago" do
+          image = driver.ec2_resource.images({filters: [ { name: "name", values: ["test_machine_image"] }]}).first
+          image.create_tags(tags: [{key: "from-instance", value: "i-12345678"}])
+
+          r = recipe {
+            machine_image "test_machine_image" do
+              action :destroy
+            end
+          }
+          expect(r).to destroy_an_aws_image('test_machine_image'
+          ).and be_idempotent
+        end
+      end
+
     end
 
     with_aws "Without a VPC" do

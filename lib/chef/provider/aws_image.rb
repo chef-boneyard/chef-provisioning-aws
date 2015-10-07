@@ -29,7 +29,7 @@ class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
       # destroyed - we just need to make sure that has completed successfully
       instance = new_resource.driver.ec2.instances[instance_id]
       converge_by "waiting until instance #{instance.id} is :terminated" do
-        wait_for_status(instance, :terminated, [AWS::EC2::Errors::InvalidInstanceID::NotFound])
+        wait_for_status(instance, :terminated, [AWS::EC2::Errors::InvalidInstanceID::NotFound, AWS::Core::Resource::NotFound])
       end
     end
   end

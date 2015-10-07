@@ -10,11 +10,13 @@ module AWSSupport
 
       require 'chef/provisioning'
 
-      def initialize(example, resource_class, name, expected_updates)
+      # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_obect
+      def initialize(example, resource_class, name, expected_updates, custom_matcher)
         @example = example
         @resource_class = resource_class
         @name = name
         @expected_updates = expected_updates
+        @custom_matcher = custom_matcher
 
         # Grab the "before" value
         resource = resource_class.new(name, nil)
@@ -27,10 +29,12 @@ module AWSSupport
       attr_reader :resource_class
       attr_reader :name
       attr_reader :expected_updates
+      attr_reader :custom_matcher
+      attr_reader :had_initial_value
+
       def resource_name
         @resource_class.resource_name
       end
-      attr_reader :had_initial_value
 
       def match_failure_messages(recipe)
         differences = []
@@ -55,6 +59,8 @@ module AWSSupport
         resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         aws_object = resource.aws_object
+
+        example.instance_exec aws_object, &custom_matcher if custom_matcher
 
         # Check to see if properties have the expected values
         differences += match_values_failure_messages(expected_updates, aws_object, "#{resource_name}[#{name}]")

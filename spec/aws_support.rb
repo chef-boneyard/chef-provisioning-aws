@@ -200,11 +200,11 @@ module AWSSupport
     Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
       resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
       resource_name = resource_class.resource_name
-      define_method("update_an_#{resource_name}") do |name, expected_updates={}|
-        AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates)
+      define_method("update_an_#{resource_name}") do |name, expected_updates={}, &block|
+        AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates, block)
       end
-      define_method("create_an_#{resource_name}") do |name, expected_values={}|
-        AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values)
+      define_method("create_an_#{resource_name}") do |name, expected_values={}, &block|
+        AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
       define_method("have_#{resource_name}_tags") do |name, expected_tags={}|
         AWSSupport::Matchers::HaveAWSObjectTags.new(self, resource_class, name, expected_tags)
@@ -212,8 +212,8 @@ module AWSSupport
       define_method("destroy_an_#{resource_name}") do |name, expected_values={}|
         AWSSupport::Matchers::DestroyAnAWSObject.new(self, resource_class, name)
       end
-      define_method("match_an_#{resource_name}") do |name, expected_values={}|
-        AWSSupport::Matchers::MatchAnAWSObject.new(self, resource_class, name, expected_values)
+      define_method("match_an_#{resource_name}") do |name, expected_values={}, &block|
+        AWSSupport::Matchers::MatchAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
     end
 

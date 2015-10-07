@@ -26,7 +26,7 @@ describe Chef::Resource::MachineImage do
         ).and be_idempotent
       end
 
-      describe 'action :destroy' do
+      describe 'action :destroy', :super_slow do
         with_converge {
           machine_image 'test_machine_image' do
             machine_options bootstrap_options: {
@@ -37,7 +37,7 @@ describe Chef::Resource::MachineImage do
           end
         }
 
-        it "deletes the image" do
+        it "destroys the image" do
           r = recipe {
             machine_image "test_machine_image" do
               action :destroy
@@ -47,9 +47,9 @@ describe Chef::Resource::MachineImage do
           ).and be_idempotent
         end
 
-        it "deletes the image if instance is gone long time ago" do
+        it "destroys the image if instance is gone long time ago" do
           image = driver.ec2_resource.images({filters: [ { name: "name", values: ["test_machine_image"] }]}).first
-          image.create_tags(tags: [{key: "from-instance", value: "i-4e5b71e8"}])
+          image.create_tags(tags: [{key: "from-instance", value: "i-12345678"}])
 
           r = recipe {
             machine_image "test_machine_image" do

@@ -20,7 +20,6 @@ describe Chef::Provisioning::AWSDriver::Driver do
       })
     end
     expect(Chef::Provisioning::AWSDriver::Credentials2).to receive(:new).and_return(credentials2)
-    expect(::Aws).to receive(:config).and_return({})
   end
 
   describe "#determine_remote_host" do

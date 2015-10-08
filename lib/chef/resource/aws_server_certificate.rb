@@ -6,7 +6,6 @@ class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSR
   attribute :name, kind_of: String, name_attribute: true
 
   attribute :certificate_body, kind_of: String
-  attribute :certificate_chain, kind_of: String
   attribute :private_key, kind_of: String
 
   def aws_object

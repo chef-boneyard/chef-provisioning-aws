@@ -18,6 +18,8 @@ metadata service to discover the local instance's IAM instance profile.
 
 ## Configurable Options
 
+### aws_retry_limit
+
 When using `machine_batch` with a large number of machines it is possible to overwhelm the AWS SDK until it starts returning `AWS::EC2::Errors::RequestLimitExceeded`.  You can configure the AWS SDK to retry these errors automatically by specifying
 
 ```ruby
@@ -25,6 +27,17 @@ chef_provisioning({:aws_retry_limit => 10})
 ```
 
 in your client.rb for the provisioning workstation.  The default `:aws_retry_limit` is 5.
+
+### image_max_wait_time and machine_max_wait_time
+
+By default, the time we will wait for a `machine` to become ready or for the transport to become ready is 120 seconds (each).
+For a `machine_image` we wait 300 seconds for the AMI to be created.  These timeouts can be configured with
+
+```ruby
+chef_provisioning({:image_max_wait_time => 600, :machine_max_wait_time => 240})
+```
+
+in your client.rb for the provisioning workstation.
 
 # Resources
 

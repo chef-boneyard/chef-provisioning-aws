@@ -24,7 +24,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       Chef::Log.debug("VPC: #{options[:vpc]}")
 
       sg = new_resource.driver.ec2.security_groups.create(new_resource.name, options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidSecurityGroupsID::NotFound) do
+      retry_with_backoff(AWS::EC2::Errors::InvalidSecurityGroupsID::NotFound, AWS::EC2::Errors::InvalidGroup::NotFound) do
         sg.tags['Name'] = new_resource.name
       end
       sg

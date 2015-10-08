@@ -137,7 +137,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       Cheffish.inline_resource(self, action) do
         aws_internet_gateway ig do
           if ig.tags['OwnedByVPC'] == vpc.id
-            action :destroy
+            action :purge
           else
             action :detach
           end

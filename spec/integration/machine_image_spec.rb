@@ -7,6 +7,8 @@ describe Chef::Resource::MachineImage do
     with_aws "with a VPC and a public subnet" do
       before :all do
         chef_config[:log_level] = :warn
+        Chef::Config.chef_provisioning[:machine_max_wait_time] = 240
+        Chef::Config.chef_provisioning[:image_max_wait_time] = 600
       end
 
       purge_all
@@ -27,6 +29,7 @@ describe Chef::Resource::MachineImage do
       end
 
       describe 'action :destroy', :super_slow do
+        # with_converge does a before(:each)
         with_converge {
           machine_image 'test_machine_image' do
             machine_options bootstrap_options: {
@@ -61,30 +64,6 @@ describe Chef::Resource::MachineImage do
         end
       end
 
-    end
-
-    with_aws "Without a VPC" do
-      before :all do
-        chef_config[:log_level] = :warn
-      end
-
-      aws_key_pair 'test_key_pair' do
-        allow_overwrite true
-      end
-
-      it "machine_image with no options can create an image in the VPC", :super_slow do
-        expect_recipe {
-          machine_image 'test_machine_image' do
-            machine_options bootstrap_options: {
-              key_name: 'test_key_pair',
-              instance_type: 'm3.medium'
-            }
-          end
-        }.to create_an_aws_image('test_machine_image',
-          name: 'test_machine_image'
-        ).and be_idempotent
-      end
-
       it "creates aws_image tags", :super_slow do
         expect_recipe {
           machine_image 'test_machine_image' do
@@ -94,8 +73,8 @@ describe Chef::Resource::MachineImage do
             }
             aws_tags key1: "value"
           end
-        }.to create_an_aws_image('test_machine_image')
-        .and have_aws_image_tags('test_machine_image',
+        }.to create_an_aws_image('test_machine_image'
+        ).and have_aws_image_tags('test_machine_image',
           {
             'key1' => 'value'
           }

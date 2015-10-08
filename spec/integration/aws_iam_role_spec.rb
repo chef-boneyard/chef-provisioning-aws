@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'securerandom'
 
 def ec2_principal
-<<EOF
+<<-EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -20,7 +20,7 @@ EOF
 end
 
 def rds_principal
-<<EOF
+<<-EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -38,7 +38,7 @@ EOF
 end
 
 def rds_role_policy
-<<EOF
+<<-EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -58,7 +58,7 @@ EOF
 end
 
 def iam_role_policy
-<<EOF
+<<-EOF
 {
   "Version": "2012-10-17",
   "Statement": [

@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.4.2] (2015-10-08)
+- Add Certificate chain attribute to the aws_server_certificate resource.
+
 ## [1.4.1](https://github.com/chef/chef-provisioning-aws/tree/1.4.1) (2015-09-22)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.0...1.4.1)
 

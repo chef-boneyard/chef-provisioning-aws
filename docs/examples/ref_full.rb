@@ -220,3 +220,42 @@ aws_cloudsearch_domain "ref-cs-domain" do
   index_fields [{:index_field_name => "foo",
                  :index_field_type => "text"}]
 end
+
+ec2_principal = <<-EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+
+iam_role_policy = <<-EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:*",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+aws_iam_role "ref_iam_role" do
+  path "/"
+  assume_role_policy_document ec2_principal
+  inline_policies iam_role_policy: iam_role_policy
+end
+
+aws_iam_instance_profile "ref_iam_instance_role" do
+  path "/"
+  role "ref_iam_role"
+end

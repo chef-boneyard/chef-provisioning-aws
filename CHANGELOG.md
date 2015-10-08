@@ -1,7 +1,37 @@
 # Change Log
 
-## [1.4.1](https://github.com/chef/chef-provisioning-aws/tree/1.4.1) (2015-09-22)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.0...1.4.1)
+## [1.5.0](https://github.com/chef/chef-provisioning-aws/tree/1.5.0) (2015-10-08)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.1...1.5.0)
+
+**Implemented enhancements:**
+
+- Route53 Zone [\#226](https://github.com/chef/chef-provisioning-aws/issues/226)
+- IAM Support: Roles, Role Policies and Instance Profiles [\#358](https://github.com/chef/chef-provisioning-aws/pull/358) ([tyler-ball](https://github.com/tyler-ball))
+- AwsRoute53HostedZone resource [\#342](https://github.com/chef/chef-provisioning-aws/pull/342) ([randomcamel](https://github.com/randomcamel))
+
+**Fixed bugs:**
+
+- Error updating Route Table to use a machine as gateway [\#353](https://github.com/chef/chef-provisioning-aws/issues/353)
+- Type Error, Can't Dupe NilClass when creating a load balancer [\#351](https://github.com/chef/chef-provisioning-aws/issues/351)
+- machine\_image recreation fails randomly [\#311](https://github.com/chef/chef-provisioning-aws/issues/311)
+- Cannot reference machines by ID in a load\_balancer [\#247](https://github.com/chef/chef-provisioning-aws/issues/247)
+- Access DNS\_NAME more simply on Load Balancers [\#242](https://github.com/chef/chef-provisioning-aws/issues/242)
+- `aws\_internet\_gateway` has no provider [\#143](https://github.com/chef/chef-provisioning-aws/issues/143)
+- Enable ELB attributes to be retrieved from knife or a recipe [\#27](https://github.com/chef/chef-provisioning-aws/issues/27)
+- IAM Support: Roles, Role Policies and Instance Profiles [\#358](https://github.com/chef/chef-provisioning-aws/pull/358) ([tyler-ball](https://github.com/tyler-ball))
+- Fix deleting of AMIs, fixes \#311 [\#357](https://github.com/chef/chef-provisioning-aws/pull/357) ([Fodoj](https://github.com/Fodoj))
+- Polishing touches for Route 53 [\#352](https://github.com/chef/chef-provisioning-aws/pull/352) ([randomcamel](https://github.com/randomcamel))
+- Updating ELB specs to match common chef-provisioning acceptance criteria [\#346](https://github.com/chef/chef-provisioning-aws/pull/346) ([tyler-ball](https://github.com/tyler-ball))
+- some specs for elastic ips [\#344](https://github.com/chef/chef-provisioning-aws/pull/344) ([redterror](https://github.com/redterror))
+- add some more routing specs and fix a SDK v1-\>v2 update for the VpConnectionPerring object [\#340](https://github.com/chef/chef-provisioning-aws/pull/340) ([redterror](https://github.com/redterror))
+- Updating to support chef master [\#332](https://github.com/chef/chef-provisioning-aws/pull/332) ([tyler-ball](https://github.com/tyler-ball))
+
+**Closed issues:**
+
+- Add CONTRIBUTING.md to chef-provisioning-aws [\#229](https://github.com/chef/chef-provisioning-aws/issues/229)
+
+## [v1.4.1](https://github.com/chef/chef-provisioning-aws/tree/v1.4.1) (2015-09-22)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.0...v1.4.1)
 
 **Fixed bugs:**
 

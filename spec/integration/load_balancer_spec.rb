@@ -334,9 +334,7 @@ describe Chef::Resource::LoadBalancer do
 
       context 'with an existing load_balancer' do
         load_balancer 'test-load-balancer' do
-          load_balancer_options({
-            subnets: ["test_public_subnet"]
-          })
+          load_balancer_options subnets: ["test_public_subnet"]
         end
 
         it 'successfully deletes the load_balancer with the :destroy action' do
@@ -353,7 +351,7 @@ describe Chef::Resource::LoadBalancer do
         expect_recipe {
           load_balancer 'test-load-balancer' do
             aws_tags key1: "value"
-            load_balancer_options :availability_zones => ['us-east-1d']
+            load_balancer_options subnets: ["test_public_subnet"]
           end
         }.to create_an_aws_load_balancer('test-load-balancer')
         .and have_aws_load_balancer_tags('test-load-balancer',
@@ -366,7 +364,7 @@ describe Chef::Resource::LoadBalancer do
       context "with existing tags" do
         load_balancer 'test-load-balancer' do
           aws_tags key1: "value"
-          load_balancer_options :availability_zones => ['us-east-1d']
+          load_balancer_options subnets: ["test_public_subnet"]
         end
 
         it "updates aws_load_balancer tags" do

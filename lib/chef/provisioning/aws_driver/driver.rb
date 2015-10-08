@@ -90,7 +90,7 @@ module AWSDriver
     include Chef::Mixin::ShellOut
     include Chef::Mixin::DeepMerge
 
-    attr_reader :aws_config
+    attr_reader :aws_config, :aws_config_2
 
     # URL scheme:
     # aws:profilename:region
@@ -121,7 +121,7 @@ module AWSDriver
       # Right now we are supporting both V1 and V2, so we create 2 config sets
       credentials2 = Credentials2.new(:profile_name => profile_name)
       Chef::Config.chef_provisioning ||= {}
-      ::Aws.config.update(
+      @aws_config_2 = {
         credentials: credentials2.get_credentials,
         region: region || ENV["AWS_DEFAULT_REGION"] || credentials[:region],
         # TODO when we get rid of V1 replace the credentials class with something that knows how
@@ -129,7 +129,7 @@ module AWSDriver
         :http_proxy => credentials[:proxy_uri] || nil,
         logger: Chef::Log.logger,
         retry_limit: Chef::Config.chef_provisioning[:aws_retry_limit] || 5
-      )
+      }
 
       driver = self
       Chef::Resource::Machine.send(:define_method, :aws_object) do
@@ -626,11 +626,11 @@ EOD
       class_eval <<-META
 
       def #{short_name}_client
-        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new(**aws_config_2)
       end
 
       def #{short_name}_resource
-        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(#{short_name}_client)
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
       end
 
       META
@@ -654,10 +654,6 @@ EOD
 
     def s3
       @s3 ||= AWS::S3.new(config: aws_config)
-    end
-
-    def rds
-      @rds ||= AWS::RDS.new(config: aws_config)
     end
 
     def sns
@@ -732,9 +728,6 @@ EOD
         Chef::Log.debug('No key specified, generating a default one...')
         bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
       end
-      if bootstrap_options[:iam_instance_profile] && bootstrap_options[:iam_instance_profile].is_a?(String)
-        bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
-      end
       if bootstrap_options[:user_data]
         bootstrap_options[:user_data] = Base64.encode64(bootstrap_options[:user_data])
       end
@@ -761,6 +754,12 @@ EOD
       end
 
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
+
+      # We do this after the lookup_options because we need the aws_iam_instance_profile resource to
+      # only be passed a String during resource lookup, not `{name: ...}`
+      if bootstrap_options[:iam_instance_profile] && bootstrap_options[:iam_instance_profile].is_a?(String)
+        bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
+      end
 
       # In the migration from V1 to V2 we still support associate_public_ip_address at the top level
       # we do this after the lookup because we have to copy any present subnets, etc. into the
@@ -1042,7 +1041,7 @@ EOD
       image ||= image_for(image_spec)
       time_elapsed = 0
       sleep_time = 10
-      max_wait_time = 300
+      max_wait_time = Chef::Config.chef_provisioning[:image_max_wait_time] || 300
       if !yield(image)
         action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
         while time_elapsed < max_wait_time && !yield(image)
@@ -1065,8 +1064,7 @@ EOD
 
     def wait_until_machine(action_handler, machine_spec, output_msg, instance=nil, &block)
       instance ||= instance_for(machine_spec)
-      # TODO make these configurable from Chef::Config
-      max_attempts = 12
+      max_attempts = ((Chef::Config.chef_provisioning[:machine_max_wait_time] || 120) / 10).floor
       delay = 10
       log_progress = Proc.new do |attempts, response|
         action_handler.report_progress "been waiting #{delay*attempts}/#{delay*max_attempts} -- sleeping #{delay} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
@@ -1089,7 +1087,7 @@ EOD
       instance = instance_for(machine_spec)
       time_elapsed = 0
       sleep_time = 10
-      max_wait_time = 120
+      max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
       transport = transport_for(machine_spec, machine_options, instance)
       unless transport.available?
         if action_handler.should_perform_actions
@@ -1213,12 +1211,24 @@ EOD
     end
 
     def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
-      instance = ec2_resource.create_instances(bootstrap_options.to_hash)[0]
+      instance = nil
+      # IAM says the instance profile is ready, but EC2 doesn't think it is
+      # Not using retry_with_backoff here because we need to match on a string
+      Retryable.retryable(
+        :tries => 10,
+        :sleep => lambda { |n| [2**n, 16].min },
+        :on => ::Aws::EC2::Errors::InvalidParameterValue,
+        :matching => /Invalid IAM Instance Profile name/
+      ) do |retries, exception|
+        Chef::Log.debug("Instance creation InvalidParameterValue exception is #{exception.inspect}")
+        instance = ec2_resource.create_instances(bootstrap_options.to_hash)[0]
+      end
+
       # Make sure the instance is ready to be tagged
       instance.wait_until_exists
 
       # Sometimes tagging fails even though the instance 'exists'
-      Retryable.retryable(:tries => 12, :sleep => 5, :on => [::Aws::EC2::Errors::InvalidInstanceIDNotFound]) do
+      Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::EC2::Errors::InvalidInstanceIDNotFound) do
         instance.create_tags({tags: [{key: "Name", value: machine_spec.name}]})
       end
       if machine_options.has_key?(:source_dest_check)

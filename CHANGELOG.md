@@ -1,7 +1,14 @@
 # Change Log
 
-## [1.5.0](https://github.com/chef/chef-provisioning-aws/tree/1.5.0) (2015-10-08)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.1...1.5.0)
+## [1.5.1](https://github.com/chef/chef-provisioning-aws/tree/1.5.1) (2015-10-12)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.0...1.5.1)
+
+**Fixed bugs:**
+
+- Fixing iam\_instance\_profile so it can be passed either a name or an arn [\#363](https://github.com/chef/chef-provisioning-aws/pull/363) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v1.5.0](https://github.com/chef/chef-provisioning-aws/tree/v1.5.0) (2015-10-08)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.1...v1.5.0)
 
 **Implemented enhancements:**
 
@@ -11,6 +18,7 @@
 
 **Fixed bugs:**
 
+- lib/chef/provisioning/aws\_driver/driver.rb has duplicate rds definition [\#360](https://github.com/chef/chef-provisioning-aws/issues/360)
 - Error updating Route Table to use a machine as gateway [\#353](https://github.com/chef/chef-provisioning-aws/issues/353)
 - Type Error, Can't Dupe NilClass when creating a load balancer [\#351](https://github.com/chef/chef-provisioning-aws/issues/351)
 - machine\_image recreation fails randomly [\#311](https://github.com/chef/chef-provisioning-aws/issues/311)

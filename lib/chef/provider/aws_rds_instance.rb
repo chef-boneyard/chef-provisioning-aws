@@ -26,7 +26,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
 
   def create_aws_object
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
-      new_resource.driver.rds.client.create_db_instance(options_hash)
+      new_resource.driver.rds_resource.create_db_instance(options_hash)
     end
   end
 
@@ -36,14 +36,12 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
     end
     # Wait up to 10 minutes for the db instance to shutdown
     converge_by "waited until RDS instance #{new_resource.name} was deleted" do
-      wait_for(
-        aws_object: instance,
-        query_method: :exists?,
-        expected_responses: [false],
-        acceptable_errors: [AWS::RDS::Errors::DBInstanceNotFound],
-        tries: 60,
-        sleep: 10
-      )
+      tries, sleep = 60, 10
+      Retryable.retryable(:tries => tries, :sleep => sleep, :not => [Aws::RDS::Errors::DBInstanceNotFound]) do |retries, exception|
+        instance.load
+        action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{instance.id} state to change to deleted (is: #{instance.db_instance_status})..."
+        raise StandardError if ['available', 'deleting'].include?(instance.db_instance_status)
+      end rescue Aws::RDS::Errors::DBInstanceNotFound # Swallow exception
     end
   end
 

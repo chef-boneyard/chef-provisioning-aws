@@ -34,6 +34,7 @@ AWS_V2_SERVICES = {
   "S3" => "s3",
   "ElasticLoadBalancing" => "elb",
   "IAM" => "iam",
+  "RDS" => "rds",
 }
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 

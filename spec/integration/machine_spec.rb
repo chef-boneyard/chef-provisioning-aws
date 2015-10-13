@@ -251,6 +251,21 @@ describe Chef::Resource::Machine do
             iam_instance_profile: {arn: /machine_test_instance_profile/}
           ).and be_idempotent
         end
+
+        it "looks up the iam_instance_profile from the arn", :super_slow do
+          expect_recipe {
+            machine 'test_machine' do
+              machine_options bootstrap_options: {
+                subnet_id: 'test_public_subnet',
+                key_name: 'test_key_pair',
+                iam_instance_profile: {arn: machine_test_instance_profile.aws_object.arn}
+              }
+              action :allocate
+            end
+          }.to create_an_aws_instance('test_machine',
+            iam_instance_profile: {arn: /machine_test_instance_profile/}
+          ).and be_idempotent
+        end
       end
 
       it "machine with from_image option is created from correct image", :super_slow do

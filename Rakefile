@@ -39,7 +39,7 @@ end
 
 desc "travis specific task - runs CI integration tests (regular and super_slow in parallel) and sets up travis specific ENV variables"
 task :travis, [:sub_task] do |t, args|
-  pattern = "load_balancer_spec.rb,machine_image_spec.rb" # This is a comma seperated list
+  pattern = "load_balancer_spec.rb,machine_image_spec.rb,aws_iam_instance_profile_spec.rb" # This is a comma seperated list
   pattern = pattern.split(",").map {|p| "spec/integration/**/*#{p}"}.join(",")
   Rake::Task[args[:sub_task]].invoke(pattern)
 end

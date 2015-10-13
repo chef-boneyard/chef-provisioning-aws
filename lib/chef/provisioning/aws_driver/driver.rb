@@ -752,14 +752,11 @@ EOD
       if bootstrap_options[:subnet]
         bootstrap_options[:subnet_id] = bootstrap_options.delete(:subnet)
       end
-
-      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
-
-      # We do this after the lookup_options because we need the aws_iam_instance_profile resource to
-      # only be passed a String during resource lookup, not `{name: ...}`
       if bootstrap_options[:iam_instance_profile] && bootstrap_options[:iam_instance_profile].is_a?(String)
         bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
       end
+
+      bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
 
       # In the migration from V1 to V2 we still support associate_public_ip_address at the top level
       # we do this after the lookup because we have to copy any present subnets, etc. into the

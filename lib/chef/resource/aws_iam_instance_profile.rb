@@ -11,7 +11,9 @@ require 'chef/provisioning/aws_driver/aws_resource'
 # - http://docs.aws.amazon.com/sdkforruby/api/Aws/IAM/InstanceProfile.html
 #
 class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type ::Aws::IAM::InstanceProfile
+  # We don't want any lookup_options to try and build a resource from a :iam_instance_profile string,
+  # its either a name or an ARN
+  aws_sdk_type ::Aws::IAM::InstanceProfile, :option_names => []
 
   #
   # The name of the instance profile to create.

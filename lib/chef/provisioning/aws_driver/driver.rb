@@ -1,3 +1,6 @@
+#require 'byebug'
+require 'pry'
+require 'pry-byebug'
 require 'chef/mixin/shell_out'
 require 'chef/mixin/deep_merge'
 require 'chef/provisioning/driver'
@@ -583,7 +586,7 @@ EOD
         end
         wait_until_ready_machine(action_handler, machine_spec, instance)
       end
-
+1      # byebug
       wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
     end
@@ -889,25 +892,147 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
+      username = machine_spec.reference[:winrm_username] || 'Administrator'
+      # default to http for now, should upgrade to https when knife support self-signed
+      transport_type = machine_options[:winrm_transport] || 'http'
+      type = case transport_type
+             when 'http'
+               :plaintext
+             when 'https'
+               :ssl
+             end
+      if machine_spec.reference[:winrm_port]
+        port = machine_spec.reference[:winrm_port]
+      else #default port
+        port = case transport_type
+                 when 'http'
+                   '5985'
+                 when 'https'
+                   '5986'
+                 end
+      end
+      endpoint = "#{transport_type}://#{remote_host}:#{port}/wsman"
 
-      port = machine_spec.reference['winrm_port'] || 5985
-      endpoint = "http://#{remote_host}:#{port}/wsman"
-      type = :plaintext
-      pem_bytes = get_private_key(instance.key_name)
-      encrypted_admin_password = wait_for_admin_password(machine_spec)
+      if machine_options[:password]
+        password = machine_options[:password]
+      else # pull from ec2 and store in reference
+        if machine_spec.reference[:winrm_encrypted_password]
+          decoded = Base64.decode64(machine_spec.reference[:winrm_encrypted_password])
+        else
+          encrypted_admin_password = wait_for_admin_password(machine_spec)
+          machine_spec.reference[:winrm_encrypted_password]||=encrypted_admin_password
+          # ^^^ should be saved
+          decoded = Base64.decode64(encrypted_admin_password)
+        end
+        # decrypt so we can utilize
+        private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
+        password = private_key.private_decrypt decoded
+      end
 
-      decoded = Base64.decode64(encrypted_admin_password)
-      private_key = OpenSSL::PKey::RSA.new(pem_bytes)
-      decrypted_password = private_key.private_decrypt decoded
+      disable_sspi =  machine_options[:winrm_disable_sspi] || false # default to Negotiate
+      basic_auth_only = machine_options[:winrm_basic_auth_only] || false # disallow Basic auth by default
+      no_ssl_peer_verification = machine_options[:winrm_no_ssl_peer_verification] || false #disallow MITM potential by default
 
       winrm_options = {
-        :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => decrypted_password,
-        :disable_sspi => true,
-        :basic_auth_only => true
+        user: username,
+        pass: password,
+        disable_sspi: disable_sspi,
+        basic_auth_only: basic_auth_only,
+        no_ssl_peer_verification: no_ssl_peer_verification,
       }
 
+      if no_ssl_peer_verification or type != :ssl
+        # =>  we won't verify certs
+        pass
+      elsif machine_spec.reference[:winrm_ssl_thumbprint]
+        #      elsif machine_spec.reference[:winrm_ssl_cert]
+        # we have stored the cert
+        pass
+      else
+        # we need to retrieve the cert and verify it by connecting just to
+        # retrieve the ssl certificate and compare it to what we see in the
+        # console logs
+        console_lines = Base64.decode64(instance.console_output.data.output).lines
+        noverify_peer_context = OpenSSL::SSL::SSLContext.new
+        noverify_peer_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        tcp_connection = TCPSocket.new(instance.private_ip_address, '5986')
+        shady_ssl_connection = OpenSSL::SSL::SSLSocket.new(tcp_connection, noverify_peer_context)
+        shady_ssl_connection.connect
+        shady_ssl_connection.peer_cert_chain
+        winrm_cert = shady_ssl_connection.peer_cert_chain.first
+
+        rdp_thumbprint = console_lines.grep(
+          /RDPCERTIFICATE-THUMBPRINT/)[-1].split(': ').last.chomp
+        rdp_subject = console_lines.grep(
+          /RDPCERTIFICATE-SUBJECTNAME/)[-1].split(': ').last.chomp
+        winrm_subject = winrm_cert.subject.to_s.split('=').last.upcase
+        winrm_thumbprint=OpenSSL::Digest::SHA1.new(winrm_cert.to_der).to_s.upcase
+
+        if rdp_subject != winrm_subject or rdp_thumbprint != winrm_thumbprint
+          Chef::Log.fatal "Winrm ssl port certificate differs from rdp console logs"
+        end
+        # if machine_spec.reference[:winrm_ssl_subject] != winrm_subject
+        #   machine_spec.reference[:winrm_ssl_subject] = winrm_subject
+        # end
+        if machine_spec.reference[:winrm_ssl_thumbprint] != winrm_thumbprint
+          machine_spec.reference[:winrm_ssl_thumbprint] = winrm_thumbprint
+        end
+        # if machine_spec.reference[:winrm_ssl_cert] != winrm_cert.to_pem
+        #   machine_spec.reference[:winrm_ssl_cert] = winrm_cert.to_pem
+        # end
+      end
+
+      # If we have a cert, use it for verification
+      # if machine_spec.reference[:winrm_ssl_cert]
+      #   FileUtils.mkdir_p(Chef::Config.trusted_certs_dir)
+      #   filename = File.join(Chef::Config.trusted_certs_dir, "#{machine_spec.name}.crt")
+      #   if File.exists?(filename)
+      #     Chef::Log.warn("Existing cert for #{winrm_subject} in #{filename}")
+      #   else
+      #     Chef::Log.warn("Adding certificate for #{winrm_subject} in #{filename}")
+      #     File.open(filename, File::CREAT|File::TRUNC|File::RDWR, 0644) do |f|
+      #       f.print(machine_spec.reference[:winrm_ssl_cert])
+      #     end
+      #   end
+      #   winrm_options[:ca_trust_path] = filename
+      # end
+
+      if machine_spec.reference[:winrm_ssl_thumbprint]
+        winrm_options[:ssl_peer_fingerprint] = machine_spec.reference[:winrm_ssl_thumbprint]
+      end
+
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+      #binding.pry
+      # in order for ssl to work, we need to tell ssl that it's ok that ssl_subject doesn't
+      # match the ip
+      #[19] pry(#<Chef::Provisioning::AWSDriver::Driver>)> endpoint.split('/')[2].split(':').first
+      #  => "10.113.70.104"
+      #  [20] pry(#<Chef::Provisioning::AWSDriver::Driver>)> machine_spec.reference[:winrm_ssl_subject]
+      #    => "IP-0A714668"
+      #
+      # [1] pry(#<Chef::Provisioning::AWSDriver::Driver>)> Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {}).execute('hostname')
+      # OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=error: certificate verify failed
+      # from /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:307:in `connect'
+      # [2] pry(#<Chef::Provisioning::AWSDriver::Driver>)> wtf!
+      # Exception: OpenSSL::SSL::SSLError: SSL_connect returned=1 errno=0 state=error: certificate verify failed
+      # --
+      # 0: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:307:in `connect'
+      # 1: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:307:in `ssl_connect'
+      # 2: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:755:in `block in connect'
+      # 3: /home/hh/.rvm/rubies/ruby-2.2.0/lib/ruby/2.2.0/timeout.rb:89:in `block in timeout'
+      # 4: /home/hh/.rvm/rubies/ruby-2.2.0/lib/ruby/2.2.0/timeout.rb:99:in `call'
+      # 5: /home/hh/.rvm/rubies/ruby-2.2.0/lib/ruby/2.2.0/timeout.rb:99:in `timeout'
+      # 6: /home/hh/.rvm/rubies/ruby-2.2.0/lib/ruby/2.2.0/timeout.rb:125:in `timeout'
+      # 7: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:746:in `connect'
+      # 8: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:612:in `query'
+      # 9: /home/hh/.rvm/gems/ruby-2.2.0/gems/httpclient-2.6.0.1/lib/httpclient/session.rb:164:in `query'
+      # [3] pry(#<Chef::Provisioning::AWSDriver::Driver>)> winrm_options
+      # => {:user=>"Administrator",
+      #  :pass=>"(xntd8f=-HNnuJ3",
+      #   :disable_sspi=>false,
+      #    :basic_auth_only=>false,
+      #     :no_ssl_peer_verification=>false,
+      #      :ca_trust_path=>"/home/hh/stratalux/lifelock/misc/provisioning/.chef/trusted_certs/base-2012-hardened-6.crt"}
     end
 
     def wait_for_admin_password(machine_spec)

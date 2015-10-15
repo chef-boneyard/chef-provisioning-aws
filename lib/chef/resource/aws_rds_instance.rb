@@ -28,20 +28,11 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   attribute :additional_options, kind_of: Hash, default: {}
 
   def aws_object
-    driver = self.driver
-    result = driver.rds_resource.db_instance(name)
-     begin
-      # try accessing it to find out if it exists
-      result.db_instance_status if result
-      result
-    rescue ::Aws::RDS::Errors::DBInstanceNotFound
-      result = nil
-    end
-    if result and result.db_instance_status != 'deleting'
-      result
-    else
-      nil
-    end
+    result = self.driver.rds_resource.db_instance(name)
+    return nil unless result && result.db_instance_status != 'deleting'
+    result
+  rescue ::Aws::RDS::Errors::DBInstanceNotFound
+    nil
   end
 
   def endpoint
@@ -49,15 +40,9 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   end
 
   def db_instance_status
-    result = nil
-    if aws_object
-      begin
-        result = aws_object.db_instance_status
-      rescue ::Aws::RDS::Errors::DBInstanceNotFound
-        result = nil
-      end
-    end
-    result
+    aws_object.db_instance_status if aws_object
+  rescue ::Aws::RDS::Errors::DBInstanceNotFound
+    nil
   end
 
   def rds_tagging_type

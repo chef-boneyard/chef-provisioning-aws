@@ -575,7 +575,7 @@ EOD
       end
 
       if instance.state.name != "running"
-        wait_until_machine(action_handler, machine_spec, "finish stopping", instance) { instance.state.name != "stopping" }
+        wait_until_machine(action_handler, machine_spec, "finish stopping", instance) { |instance| instance.state.name != "stopping" }
         if instance.state.name == "stopped"
           action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
             instance.start
@@ -601,13 +601,13 @@ EOD
     def stop_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
       if instance && instance.exists?
-        wait_until_machine(action_handler, machine_spec, "finish coming up so we can stop it", "up", instance) { instance.status != :pending }
-        if instance.status == :running
+        wait_until_machine(action_handler, machine_spec, "finish coming up so we can stop it", instance) { |instance| instance.state.name != "pending" }
+        if instance.state.name == "running"
           action_handler.perform_action "Stop #{machine_spec.name} (#{instance.id}) in #{aws_config.region} ..." do
             instance.stop
           end
         end
-        wait_until_machine(action_handler, machine_spec, "stop", "stopped", instance) { [ :stopped, :terminated ].include?(instance.status) }
+        wait_until_machine(action_handler, machine_spec, "stop", instance) { |instance| %w[stopped terminated].include?(instance.state.name) }
       end
     end
 

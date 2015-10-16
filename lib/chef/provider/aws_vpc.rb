@@ -65,31 +65,46 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(vpc)
+    current_driver = self.new_resource.driver
+    current_chef_server = self.new_resource.chef_server
     if purging
       vpc.subnets.each do |s|
         Cheffish.inline_resource(self, action) do
           aws_subnet s do
             action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
       # If any of the below resources start needing complicated delete logic (dependent resources needing to
       # be deleted) move that logic into `delete_aws_resource` and add the purging logic to the resource
-      vpc.network_acls.each       { |o| o.delete unless o.default? }
+      vpc.network_acls.each do |na|
+        next if na.default?
+        Cheffish.inline_resource(self, action) do
+          aws_network_acl na do
+            action :purge
+            driver current_driver
+            chef_server current_chef_server
+          end
+        end
+      end
       vpc.network_interfaces.each do |ni|
         Cheffish.inline_resource(self, action) do
           aws_network_interface ni do
             action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
-
       vpc.security_groups.each do |sg|
-        unless sg.name == 'default'
-          Cheffish.inline_resource(self, action) do
-            aws_security_group sg do
-              action :purge
-            end
+        next if sg.name == 'default'
+        Cheffish.inline_resource(self, action) do
+          aws_security_group sg do
+            action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
@@ -97,11 +112,12 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       #SDK V2
       vpc_new_sdk = new_resource.driver.ec2_resource.vpc(vpc.id)
       vpc_new_sdk.route_tables.each do |rt|
-        unless rt.associations.any? { |association| association.main }
-          Cheffish.inline_resource(self, action) do
-            aws_route_table rt do
-              action :purge
-            end
+        next if rt.associations.any? { |association| association.main }
+        Cheffish.inline_resource(self, action) do
+          aws_route_table rt do
+            action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
@@ -126,6 +142,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         Cheffish.inline_resource(self, action) do
           aws_vpc_peering_connection pc_resource do
             action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
@@ -141,6 +159,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           else
             action :detach
           end
+          driver current_driver
+          chef_server current_chef_server
         end
       end
     end
@@ -179,6 +199,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_internet_gateway(vpc)
     current_ig = vpc.internet_gateway
+    current_driver = self.new_resource.driver
+    current_chef_server = self.new_resource.chef_server
     case new_resource.internet_gateway
       when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
         new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
@@ -186,6 +208,12 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           Cheffish.inline_resource(self, action) do
             aws_internet_gateway new_ig do
               vpc vpc.id
+              # We have to set the driver & chef server on all resources because
+              # `with_chef_driver(...) do` gets evaluated at compile-time and these
+              # resources aren't constructed until converge-time.  So the driver has
+              # been reset at this point
+              driver current_driver
+              chef_server current_chef_server
             end
           end
         elsif current_ig != new_ig
@@ -196,9 +224,13 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
               else
                 action :detach
               end
+              driver current_driver
+              chef_server current_chef_server
             end
             aws_internet_gateway new_ig do
               vpc vpc.id
+              driver current_driver
+              chef_server current_chef_server
             end
           end
         end
@@ -208,6 +240,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
             aws_internet_gateway "igw-managed-by-#{vpc.id}" do
               vpc vpc.id
               aws_tags 'OwnedByVPC' => vpc.id
+              driver current_driver
+              chef_server current_chef_server
             end
           end
         end
@@ -220,6 +254,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
               else
                 action :detach
               end
+              driver current_driver
+              chef_server current_chef_server
             end
           end
         end
@@ -250,10 +286,14 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     # creating the VPC
     main_route_table ||= vpc.route_tables.main_route_table
     main_routes = new_resource.main_routes
+    current_driver = self.new_resource.driver
+    current_chef_server = self.new_resource.chef_server
     Cheffish.inline_resource(self, action) do
       aws_route_table main_route_table.id do
         vpc vpc
         routes main_routes
+        driver current_driver
+        chef_server current_chef_server
       end
     end
     main_route_table

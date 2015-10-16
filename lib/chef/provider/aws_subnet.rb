@@ -61,10 +61,14 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if purging
       # TODO possibly convert to http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Client.html#terminate_instances-instance_method
       p = Chef::ChefFS::Parallelizer.new(5)
+      current_driver = self.new_resource.driver
+      current_chef_server = self.new_resource.chef_server
       p.parallel_do(subnet.instances.to_a) do |instance|
         Cheffish.inline_resource(self, action) do
           aws_instance instance.id do
             action :purge
+            driver current_driver
+            chef_server current_chef_server
           end
         end
       end
@@ -76,6 +80,8 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
           Cheffish.inline_resource(self, action) do
             aws_network_interface network do
               action :purge
+              driver current_driver
+              chef_server current_chef_server
             end
           end
         end

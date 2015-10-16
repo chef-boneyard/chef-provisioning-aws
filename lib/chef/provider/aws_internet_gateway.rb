@@ -52,10 +52,14 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
   def attach_vpc(vpc, desired_gateway)
     if vpc.internet_gateway && vpc.internet_gateway != desired_gateway
+      current_driver = self.new_resource.driver
+      current_chef_server = self.new_resource.chef_server
       Cheffish.inline_resource(self, action) do
         aws_vpc vpc.id do
           cidr_block vpc.cidr_block
           internet_gateway false
+          driver current_driver
+          chef_server current_chef_server
         end
       end
     end

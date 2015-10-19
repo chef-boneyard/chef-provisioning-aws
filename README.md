@@ -127,10 +127,12 @@ are left that AWS can charge for.
 
 # Machine Options
 
-TODO - Finish documenting these
-
 You can pass machine options that will be used by `machine`, `machine_batch` and `machine_image` to
-configure the machine.  These are all the available options:
+configure the machine.
+
+These options are an extension of the [base options](https://github.com/chef/chef-provisioning#machine-options).  Please see that for a list of the `machine_options` shared between drivers.
+
+The full syntax available in the `bootstrap_options` hash is the hash expected by the AWS  [`create_instances`](http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Resource.html#create_instances-instance_method) method.  The options seen below in the example are the default options.
 
 ```ruby
 with_machine_options({
@@ -150,7 +152,7 @@ with_machine_options({
 })
 ```
 
-This options hash can be supplied to either `with_machine_options` or directly into the `machine_options`
+This options hash can be supplied to either `with_machine_options` at the recipe level or directly into the `machine_options`
 attribute.
 
 # Load Balancer Options

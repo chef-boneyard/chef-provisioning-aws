@@ -146,6 +146,7 @@ with_machine_options({
   },
   use_private_ip_for_ssh: false, # DEPRECATED, use `transport_address_location`
   transport_address_location: :public_ip, # `:public_ip` (default), `:private_ip` or `:dns`.  Defines how SSH or WinRM should find an address to communicate with the instance.
+  is_windows: true, # false by default
 })
 ```
 

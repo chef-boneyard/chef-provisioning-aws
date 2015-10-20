@@ -7,7 +7,8 @@ describe Chef::Resource::MachineImage do
     with_aws "with a VPC and a public subnet" do
       before :all do
         chef_config[:log_level] = :warn
-        Chef::Config.chef_provisioning[:machine_max_wait_time] = 240
+        chef_config[:include_output_after_example] = true
+        Chef::Config.chef_provisioning[:machine_max_wait_time] = 300
         Chef::Config.chef_provisioning[:image_max_wait_time] = 600
       end
 
@@ -21,6 +22,9 @@ describe Chef::Resource::MachineImage do
               subnet_id: 'test_public_subnet',
               key_name: 'test_key_pair',
               instance_type: 'm3.medium'
+            },
+            ssh_options: {
+              timeout: 60
             }
           end
         }.to create_an_aws_image('test_machine_image',
@@ -36,6 +40,9 @@ describe Chef::Resource::MachineImage do
               subnet_id: 'test_public_subnet',
               key_name: 'test_key_pair',
               instance_type: 'm3.medium'
+            },
+            ssh_options: {
+              timeout: 60
             }
           end
         }
@@ -70,6 +77,9 @@ describe Chef::Resource::MachineImage do
             machine_options bootstrap_options: {
               key_name: 'test_key_pair',
               instance_type: 'm3.medium'
+            },
+            ssh_options: {
+              timeout: 60
             }
             aws_tags key1: "value"
           end
@@ -86,6 +96,9 @@ describe Chef::Resource::MachineImage do
           machine_options bootstrap_options: {
             key_name: 'test_key_pair',
             instance_type: 'm3.medium'
+          },
+          ssh_options: {
+            timeout: 60
           }
           aws_tags key1: "value"
         end

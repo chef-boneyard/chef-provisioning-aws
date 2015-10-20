@@ -39,7 +39,13 @@ end
 
 desc "travis specific task - runs CI integration tests (regular and super_slow in parallel) and sets up travis specific ENV variables"
 task :travis, [:sub_task] do |t, args|
-  pattern = "load_balancer_spec.rb,machine_image_spec.rb,aws_iam_instance_profile_spec.rb" # This is a comma seperated list
+  pattern = "load_balancer_spec.rb,aws_iam_instance_profile_spec.rb" # This is a comma seperated list
   pattern = pattern.split(",").map {|p| "spec/integration/**/*#{p}"}.join(",")
   Rake::Task[args[:sub_task]].invoke(pattern)
+end
+
+desc "travis task for machine_image tests - these take so long to run that we only run the first test"
+RSpec::Core::RakeTask.new(:machine_image) do |spec|
+  spec.pattern = 'spec/integration/machine_image_spec.rb'
+  spec.rspec_opts = "-b -t super_slow -e 'machine_image can create an image in the VPC'"
 end

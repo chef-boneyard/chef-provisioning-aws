@@ -171,7 +171,9 @@ module AWSSupport
       context.module_eval do
         after :example do
           # Close up delayed streams so they don't print out their garbage later in the run
-          delayed_streams.each { |s| s.close }
+          unless chef_config[:include_output_after_example]
+            delayed_streams.each { |s| s.close }
+          end
 
           # Destroy any objects we know got created during the test
           created_during_test.reverse_each do |resource_name, name|

@@ -302,9 +302,11 @@ describe Chef::Resource::LoadBalancer do
               })
               machines ['test_load_balancer_machine1', test_load_balancer_machine2.aws_object.id]
             end
-          }.to create_an_aws_load_balancer('test-load-balancer',
-            :instances => [{id: test_load_balancer_machine1.aws_object.id}, {id: test_load_balancer_machine2.aws_object.id}]
-          ).and be_idempotent
+          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
+            instances = aws_object.instances
+            ids = instances.map {|i| i.id}
+            expect(ids.to_set).to eq([test_load_balancer_machine1.aws_object.id, test_load_balancer_machine2.aws_object.id].to_set)
+          }.and be_idempotent
         end
 
         context "with an existing load_balancer with machine1 attached" do

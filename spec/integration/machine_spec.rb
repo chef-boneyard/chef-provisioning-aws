@@ -331,8 +331,7 @@ describe Chef::Resource::Machine do
           machine 'test_machine' do
             action :stop
           end
-        }.not_to create_an_aws_instance('test_machine'
-        ).and be_idempotent
+        }.not_to create_an_aws_instance('test_machine')
       end
     end
 

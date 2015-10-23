@@ -1,25 +1,26 @@
 require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::eu-west-1'
-  aws_vpc "provisioning-vpc" do
-    cidr_block "10.0.0.0/24"
-    internet_gateway true
-    main_routes '0.0.0.0/0' => :internet_gateway
-  end
 
-  aws_subnet "provisioning-vpc-subnet-a" do
-    vpc "provisioning-vpc"
-    cidr_block "10.0.0.0/26"
-    availability_zone "eu-west-1a"
-    map_public_ip_on_launch true
-  end
+aws_vpc "provisioning-vpc" do
+  cidr_block "10.0.0.0/24"
+  internet_gateway true
+  main_routes '0.0.0.0/0' => :internet_gateway
+end
 
-  aws_subnet "provisioning-vpc-subnet-b" do
-    vpc "provisioning-vpc"
-    cidr_block "10.0.0.128/26"
-    availability_zone "eu-west-1a"
-    map_public_ip_on_launch true
-  end
+aws_subnet "provisioning-vpc-subnet-a" do
+  vpc "provisioning-vpc"
+  cidr_block "10.0.0.0/26"
+  availability_zone "eu-west-1a"
+  map_public_ip_on_launch true
+end
+
+aws_subnet "provisioning-vpc-subnet-b" do
+  vpc "provisioning-vpc"
+  cidr_block "10.0.0.128/26"
+  availability_zone "eu-west-1a"
+  map_public_ip_on_launch true
+end
 
 machine_batch do
   machines %w(mario-a mario-b)

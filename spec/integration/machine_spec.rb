@@ -188,10 +188,14 @@ describe Chef::Resource::Machine do
 
       context "with a placement group" do
         before(:context) {
-          driver.ec2_client.create_placement_group({
-            group_name: "agroup",
-            strategy: "cluster"
-          })
+          begin
+            driver.ec2_client.create_placement_group({
+              group_name: "agroup",
+              strategy: "cluster"
+            })
+          rescue Aws::EC2::Errors::InvalidPlacementGroupDuplicate
+            # We don't need to create it because it already exists
+          end
         }
 
         # Must do after the context so we have waited for the instance to terminate

@@ -581,9 +581,22 @@ EOD
             instance.start
           end
         end
-        wait_until_ready_machine(action_handler, machine_spec, instance)
+        wait_until_instance_running(action_handler, machine_spec, instance)
       end
 
+      # Windows machines potentially do a bunch of extra stuff - setting hostname,
+      # sending out encrypted password, restarting instance, etc.
+      if machine_spec.reference['is_windows']
+        wait_until_machine(action_handler, machine_spec, "receive 'Windows is ready' message from the AWS console", instance) { |instance|
+          output = instance.console_output.output
+          if output.nil? || output.empty?
+            false
+          else
+            output = Base64.decode64(output)
+            output =~ /Message: Windows is Ready to use/
+          end
+        }
+      end
       wait_for_transport(action_handler, machine_spec, machine_options)
       machine_for(machine_spec, machine_options, instance)
     end
@@ -907,44 +920,27 @@ EOD
       endpoint = "http://#{remote_host}:#{port}/wsman"
       type = :plaintext
       pem_bytes = get_private_key(instance.key_name)
-      encrypted_admin_password = wait_for_admin_password(machine_spec)
 
-      decoded = Base64.decode64(encrypted_admin_password)
-      private_key = OpenSSL::PKey::RSA.new(pem_bytes)
-      decrypted_password = private_key.private_decrypt decoded
+      # TODO plaintext password = bad
+      password = machine_spec.reference['winrm_password']
+      if password.nil? || password.empty?
+        encrypted_admin_password = instance.password_data.password_data
+        if encrypted_admin_password.nil? || encrypted_admin_password.empty?
+          raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+        end
+        decoded = Base64.decode64(encrypted_admin_password)
+        private_key = OpenSSL::PKey::RSA.new(pem_bytes)
+        password = private_key.private_decrypt decoded
+      end
 
       winrm_options = {
         :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => decrypted_password,
+        :pass => password,
         :disable_sspi => true,
         :basic_auth_only => true
       }
 
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
-    end
-
-    def wait_for_admin_password(machine_spec)
-      time_elapsed = 0
-      sleep_time = 10
-      max_wait_time = 900 # 15 minutes
-      encrypted_admin_password = nil
-      instance_id = machine_spec.reference['instance_id']
-
-      Chef::Log.info "waiting for #{machine_spec.name}'s admin password to be available..."
-      while time_elapsed < max_wait_time && encrypted_admin_password.nil?
-        response = ec2.client.get_password_data({ :instance_id => instance_id })
-        encrypted_admin_password = response['password_data'.to_sym]
-
-        if encrypted_admin_password.nil?
-          Chef::Log.info "#{time_elapsed}/#{max_wait_time}s elapsed -- sleeping #{sleep_time} for #{machine_spec.name}'s admin password."
-          sleep(sleep_time)
-          time_elapsed += sleep_time
-        end
-      end
-
-      Chef::Log.info "#{machine_spec.name}'s admin password is available!"
-
-      encrypted_admin_password
     end
 
     def create_ssh_transport(machine_spec, machine_options, instance)
@@ -1066,7 +1062,7 @@ EOD
       end
     end
 
-    def wait_until_ready_machine(action_handler, machine_spec, instance=nil)
+    def wait_until_instance_running(action_handler, machine_spec, instance=nil)
       wait_until_machine(action_handler, machine_spec, "be ready", instance) { |instance|
         instance.state.name == "running"
       }
@@ -1265,7 +1261,7 @@ EOD
         end
         machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
       end
-      %w(is_windows ssh_username sudo transport_address_location ssh_gateway).each do |key|
+      %w(is_windows winrm_username winrm_port winrm_password ssh_username sudo transport_address_location ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
       end
       instance

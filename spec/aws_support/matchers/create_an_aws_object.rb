@@ -8,7 +8,7 @@ module AWSSupport
       include RSpec::Matchers::Composable
       include AWSSupport::DeepMatcher
 
-      # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_obect
+      # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_object
       def initialize(example, resource_class, name, expected_values, custom_matcher)
         @example = example
         @resource_class = resource_class

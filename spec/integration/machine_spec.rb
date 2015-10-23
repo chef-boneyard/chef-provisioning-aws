@@ -293,6 +293,46 @@ describe Chef::Resource::Machine do
         ).and be_idempotent
       end
 
+      context "with an existing machine", :super_slow do
+        machine 'test_machine' do
+          machine_options bootstrap_options: {
+            subnet_id: 'test_public_subnet',
+            key_name: 'test_key_pair'
+          }
+          action :allocate
+        end
+
+        it "stops the machine with the :stop action" do
+          expect_recipe {
+            machine 'test_machine' do
+              action :stop
+            end
+          }.to update_an_aws_instance('test_machine',
+            state: {:name => "stopped"}
+          ).and be_idempotent
+        end
+
+        it "starts a machine that has been stopped" do
+          expect_recipe {
+            machine 'test_machine' do
+              action :stop
+            end
+            machine 'test_machine' do
+              action :ready
+            end
+          }.to update_an_aws_instance('test_machine',
+            state: {:name => "running"}
+          )
+        end
+      end
+
+      it "doesn't create a machine if the initial action is :stop", :super_slow do
+        expect_recipe {
+          machine 'test_machine' do
+            action :stop
+          end
+        }.not_to create_an_aws_instance('test_machine')
+      end
     end
 
     with_aws "Without a VPC" do

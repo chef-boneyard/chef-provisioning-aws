@@ -43,7 +43,7 @@ module AWSSupport
         if ! actual_setlike.respond_to?(:to_set)
           result << "expected #{identifier || "setlike"} to be castable to a Set, but it isn't!"
         else
-          if ! actual_setlike.to_set == expected_set
+          unless actual_setlike.to_set == expected_set
 
             result << "expected #{identifier || "setlike"} to #{description_of(expected_value)}"
           end

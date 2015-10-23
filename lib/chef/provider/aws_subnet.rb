@@ -69,9 +69,14 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         end
       end
       p.parallel_do(subnet.network_interfaces.to_a) do |network|
-        Cheffish.inline_resource(self, action) do
-          aws_network_interface network do
-            action :purge
+        # It is common during subnet purging for the instance to be terminated but
+        # temporarily hanging around - this causes a `The network interface at device index 0 cannot be detached`
+        # error to be raised when trying to detach
+        retry_with_backoff(AWS::EC2::Errors::OperationNotPermitted) do
+          Cheffish.inline_resource(self, action) do
+            aws_network_interface network do
+              action :purge
+            end
           end
         end
       end

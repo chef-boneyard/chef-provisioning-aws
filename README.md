@@ -2,7 +2,7 @@
 
 This README is a work in progress.  Please add to it!
 
-# Prerequesites
+# Prerequisites
 
 ## Credentials
 

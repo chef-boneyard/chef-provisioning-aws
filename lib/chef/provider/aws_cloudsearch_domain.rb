@@ -10,6 +10,11 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     end
 
     update_aws_object(domain)
+
+    # TODO: since we don't support updating index fields yet,
+    # it will not be handled by update_aws_object, so we need to
+    # create the index fields here.
+    create_index_fields
   end
 
   def destroy_aws_object(domain)
@@ -119,6 +124,12 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
 
   def create_index_field(field)
     cs_client.define_index_field(domain_name: new_resource.name, index_field: field)
+  end
+
+  def create_index_fields
+    new_resource.index_fields.each do |field|
+      create_index_field(field)
+    end
   end
 
   #

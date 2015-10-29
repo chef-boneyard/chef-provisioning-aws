@@ -1,7 +1,34 @@
 # Change Log
 
-## [1.5.1](https://github.com/chef/chef-provisioning-aws/tree/1.5.1) (2015-10-12)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.0...1.5.1)
+## [1.6.0](https://github.com/chef/chef-provisioning-aws/tree/1.6.0) (2015-10-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.1...1.6.0)
+
+**Fixed bugs:**
+
+- The action "stop" on a Machine resource does not appear to work with AWS EC2 instances [\#370](https://github.com/chef/chef-provisioning-aws/issues/370)
+- with\_driver "aws::us-west-2" block breaking VPC launch in loop [\#369](https://github.com/chef/chef-provisioning-aws/issues/369)
+- ready\_machine should wait for "Windows is Ready to use" message [\#355](https://github.com/chef/chef-provisioning-aws/issues/355)
+- Full documentation of the available :bootstrap\_options for a machine [\#230](https://github.com/chef/chef-provisioning-aws/issues/230)
+- Certain security group rules definitions don't match correctly \(not idempotent\) [\#154](https://github.com/chef/chef-provisioning-aws/issues/154)
+- Adding full test coverage for security groups, documenting all the ways rules can be defined, fixes \#154 [\#382](https://github.com/chef/chef-provisioning-aws/pull/382) ([tyler-ball](https://github.com/tyler-ball))
+- Changing Windows waiting logic to continue parsing EC2 log until ready message appears, fixes \#355 [\#376](https://github.com/chef/chef-provisioning-aws/pull/376) ([tyler-ball](https://github.com/tyler-ball))
+- Working on getting CI tests passing [\#375](https://github.com/chef/chef-provisioning-aws/pull/375) ([tyler-ball](https://github.com/tyler-ball))
+- Passing drivers to the inline\_resource [\#373](https://github.com/chef/chef-provisioning-aws/pull/373) ([tyler-ball](https://github.com/tyler-ball))
+- Add stop\_machine for action :stop, fixes \#162 [\#163](https://github.com/chef/chef-provisioning-aws/pull/163) ([jkeiser](https://github.com/jkeiser))
+
+**Closed issues:**
+
+- Support convergence\_options: bootstrap\_no\_proxy [\#377](https://github.com/chef/chef-provisioning-aws/issues/377)
+- instance\_ids found for machines deleted using EC2 GUI [\#364](https://github.com/chef/chef-provisioning-aws/issues/364)
+- Would be nice to have :stop action on machines [\#162](https://github.com/chef/chef-provisioning-aws/issues/162)
+
+**Merged pull requests:**
+
+- Fix index field creation during cloudsearch create. [\#372](https://github.com/chef/chef-provisioning-aws/pull/372) ([tylercloke](https://github.com/tylercloke))
+- Add gemspec files to allow bundler to run from the gem [\#362](https://github.com/chef/chef-provisioning-aws/pull/362) ([ksubrama](https://github.com/ksubrama))
+
+## [v1.5.1](https://github.com/chef/chef-provisioning-aws/tree/v1.5.1) (2015-10-13)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.0...v1.5.1)
 
 **Fixed bugs:**
 
@@ -20,7 +47,6 @@
 
 - lib/chef/provisioning/aws\_driver/driver.rb has duplicate rds definition [\#360](https://github.com/chef/chef-provisioning-aws/issues/360)
 - Error updating Route Table to use a machine as gateway [\#353](https://github.com/chef/chef-provisioning-aws/issues/353)
-- Type Error, Can't Dupe NilClass when creating a load balancer [\#351](https://github.com/chef/chef-provisioning-aws/issues/351)
 - machine\_image recreation fails randomly [\#311](https://github.com/chef/chef-provisioning-aws/issues/311)
 - Cannot reference machines by ID in a load\_balancer [\#247](https://github.com/chef/chef-provisioning-aws/issues/247)
 - Access DNS\_NAME more simply on Load Balancers [\#242](https://github.com/chef/chef-provisioning-aws/issues/242)

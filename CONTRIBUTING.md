@@ -23,7 +23,4 @@ acceptance criteria:
 <a name="release">
 ## Release Process
 
-1. Sync up with `master` from Github.
-1. Run `rake all_slow` to run all unit and integration specs.
-1. Check the most recent Travis CI run against `master`.
-1. If and only if the specs pass, run `rake release` to release the gem.
+See https://github.com/chef/chef-provisioning/blob/master/CONTRIBUTING.md#release-process

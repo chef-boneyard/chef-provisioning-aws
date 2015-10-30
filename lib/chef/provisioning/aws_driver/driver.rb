@@ -33,6 +33,7 @@ AWS_V2_SERVICES = {
   "Route53" => "route53",
   "S3" => "s3",
   "ElasticLoadBalancing" => "elb",
+  "ElasticsearchService" => "elasticsearch",
   "IAM" => "iam",
 }
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)

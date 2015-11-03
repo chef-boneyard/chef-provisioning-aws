@@ -4,7 +4,7 @@ require 'chef/provisioning/aws_driver/aws_taggable'
 class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type Aws::RDS::DBInstance, id: :db_instance_identifier
+  aws_sdk_type ::Aws::RDS::DBInstance, id: :db_instance_identifier
 
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
 

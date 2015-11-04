@@ -5,7 +5,7 @@ require 'aws-sdk-v1'
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_key_pair
-  
+
   action :create do
     create_key(:create)
   end
@@ -171,7 +171,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
     if current_key_pair
       @current_fingerprint = current_key_pair.fingerprint
     else
-      current_resource.action :destroy
+      current_resource.action [:destroy]
     end
 
     if new_private_key_path && ::File.exist?(new_private_key_path)

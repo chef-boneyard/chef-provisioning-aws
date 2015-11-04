@@ -162,11 +162,12 @@ module AWSDriver
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options = (lb_options || {}).to_h
       lb_options = AWSResource.lookup_options(lb_options, managed_entry_store: lb_spec.managed_entry_store, driver: self)
-      # We delete the attributes and a health check here because they are not valid in the create call
+      # We delete the attributes, tags, health check, and sticky sessions here because they are not valid in the create call
       # and must be applied afterward
       lb_attributes = lb_options.delete(:attributes)
       lb_aws_tags = lb_options.delete(:aws_tags)
       health_check  = lb_options.delete(:health_check)
+      sticky_sessions = lb_options.delete(:sticky_sessions)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -388,6 +389,46 @@ module AWSDriver
               load_balancer_name: actual_elb.name,
               health_check: desired.to_hash
             )
+          end
+        end
+      end
+
+      # Update the load balancer sticky sessions
+      if sticky_sessions
+        policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
+        current = policies[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }
+
+        if current.nil?
+          current_cookie_hash = {}
+        else
+          current_cookie_hash = current[:policy_attribute_descriptions].detect { |pad| pad[:attribute_name] == 'CookieName' }
+        end
+
+        policy_name = "#{actual_elb.name}-sticky-session-policy"
+
+        if current_cookie_hash[:attribute_value] != sticky_sessions[:cookie_name]
+          perform_action.call("  updating sticky sessions to #{sticky_sessions[:cookie_name].inspect}") do
+            count = 0
+
+            begin
+              elb.client.create_app_cookie_stickiness_policy(
+                load_balancer_name: actual_elb.name,
+                policy_name: policy_name,
+                cookie_name: sticky_sessions[:cookie_name]
+              )
+            rescue AWS::ELB::Errors::DuplicatePolicyName
+              elb.client.delete_load_balancer_policy(
+                load_balancer_name: actual_elb.name,
+                policy_name: policy_name
+              )
+
+              if count < 1
+                count += 1
+                retry
+              else
+                raise
+              end
+            end
           end
         end
       end

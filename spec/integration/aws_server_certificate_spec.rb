@@ -80,6 +80,18 @@ CHAIN
                                               :certificate_chain => certificate_chain_string.strip
                                              ).and be_idempotent
       end
+
+      it "creates a cert without a certificate_chain" do
+        expect_recipe {
+          aws_server_certificate "test-cert" do
+            certificate_body cert_string
+            private_key private_key_string
+          end
+        }.to create_an_aws_server_certificate("test-cert",
+                                              :certificate_body => cert_string.strip,
+                                              :certificate_chain => nil
+                                             ).and be_idempotent
+      end
     end
   end
 end

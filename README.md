@@ -187,9 +187,45 @@ load_balancer "my_elb" do
 
 The available parameters for `load_balancer_options` can be viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method).
 
+If you wish to enable sticky sessions, pass a `sticky_sessions` key to the
+`load_balancer_options` and specify a cookie name. In the above example, it
+would look like this:
+
+```ruby
+machine 'test1'
+m2 = machine 'test2'
+load_balancer "my_elb" do
+  machines ['test1', m2]
+  load_balancer_options({
+    subnets: subnets,
+    security_groups: [load_balancer_sg],
+    listeners: [
+      {
+          instance_port: 8080,
+          protocol: 'HTTP',
+          instance_protocol: 'HTTP',
+          port: 80
+      },
+      {
+          instance_port: 8080,
+          protocol: 'HTTPS',
+          instance_protocol: 'HTTP',
+          port: 443,
+          ssl_certificate_id: "arn:aws:iam::360965486607:server-certificate/cloudfront/foreflight-2015-07-09"
+      }
+    ],
+    sticky_sessions: {
+      cookie_name: 'my-app-cookie'
+    }
+  })
+```
+
 NOTES:
 
 1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
+
+2. The `sticky_sessions` option currently only supports Application-Controlled
+   Session Stickiness.
 
 # RDS Instance Options
 

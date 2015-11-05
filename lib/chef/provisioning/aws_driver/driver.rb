@@ -395,16 +395,9 @@ module AWSDriver
 
       # Update the load balancer sticky sessions
       if sticky_sessions
-        policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
-        current = policies[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }
-
-        if current.nil?
-          current_cookie_hash = {}
-        else
-          current_cookie_hash = current[:policy_attribute_descriptions].detect { |pad| pad[:attribute_name] == 'CookieName' }
-        end
-
         policy_name = "#{actual_elb.name}-sticky-session-policy"
+        policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
+        current_cookie_hash = cookie_from_policies(policies)
 
         if current_cookie_hash[:attribute_value] != sticky_sessions[:cookie_name]
           perform_action.call("  updating sticky sessions to #{sticky_sessions[:cookie_name].inspect}") do
@@ -417,12 +410,12 @@ module AWSDriver
                 cookie_name: sticky_sessions[:cookie_name]
               )
             rescue AWS::ELB::Errors::DuplicatePolicyName
-              elb.client.delete_load_balancer_policy(
-                load_balancer_name: actual_elb.name,
-                policy_name: policy_name
-              )
-
               if count < 1
+                elb.client.delete_load_balancer_policy(
+                  load_balancer_name: actual_elb.name,
+                  policy_name: policy_name
+                )
+
                 count += 1
                 retry
               else
@@ -494,6 +487,25 @@ module AWSDriver
         spec[:ssl_certificate_id]
       else
         nil
+      end
+    end
+
+    #
+    # Extract relevant cookie information from the raw policy we get back from
+    # AWS
+    #
+    # @param policies [AWS::Core::Response] The policy information that AWS
+    # returns
+    #
+    # @return [Hash] the cookie information we want
+    #
+    def cookie_from_policies(policies)
+      current = policies[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }
+
+      if current.nil?
+        {}
+      else
+        current[:policy_attribute_descriptions].detect { |pad| pad[:attribute_name] == 'CookieName' }
       end
     end
 

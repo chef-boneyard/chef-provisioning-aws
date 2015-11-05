@@ -221,6 +221,13 @@ aws_cloudsearch_domain "ref-cs-domain" do
                  :index_field_type => "text"}]
 end
 
+aws_elasticsearch_domain "ref-es-domain" do
+  instance_type "m3.medium.elasticsearch"
+  ebs_enabled true
+  volume_size 10
+  automated_snapshot_start_hour 2
+end
+
 ec2_principal = <<-EOF
 {
   "Version": "2012-10-17",

@@ -2,6 +2,10 @@ require 'chef/provisioning/aws_driver'
 
 with_driver 'aws::us-west-1'
 
+aws_elasticsearch_domain "ref-es-domain" do
+  action :destroy
+end
+
 aws_cloudsearch_domain "ref-cs-domain" do
   action :destroy
 end

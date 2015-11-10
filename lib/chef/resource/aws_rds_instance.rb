@@ -35,10 +35,6 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
     nil
   end
 
-  def endpoint
-    aws_object and aws_object.endpoint
-  end
-
   def db_instance_status
     aws_object.db_instance_status if aws_object
   rescue ::Aws::RDS::Errors::DBInstanceNotFound

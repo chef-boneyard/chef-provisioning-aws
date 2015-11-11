@@ -144,6 +144,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { network_interface: route_target }
     when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
+    when /^vgw-[A-Fa-f0-9]{8}$/
+      route_target = { virtual_private_gateway: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
     when Chef::Resource::Machine
@@ -169,6 +171,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         updated_route_target[:gateway_id] = Chef::Resource::AwsInternetGateway.get_aws_object_id(value, resource: new_resource)
       when :vpc_peering_connection
         updated_route_target[:vpc_peering_connection_id] = Chef::Resource::AwsVpcPeeringConnection.get_aws_object_id(value, resource: new_resource)
+      when :virtual_private_gateway
+        updated_route_target[:gateway_id] = value
       end
     end
     updated_route_target

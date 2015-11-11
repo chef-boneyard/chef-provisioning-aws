@@ -87,7 +87,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         current_route = current_routes.delete(destination_cidr_block)
         current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
         if current_target != target
-          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_route.target}" do
+          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_target}" do
             current_route.replace(options)
           end
         end

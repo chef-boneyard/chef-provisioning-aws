@@ -599,7 +599,7 @@ EOD
           end
         }
       end
-      wait_for_transport(action_handler, machine_spec, machine_options)
+      wait_for_transport(action_handler, machine_spec, machine_options, instance)
       machine_for(machine_spec, machine_options, instance)
     end
 
@@ -1043,70 +1043,77 @@ EOD
 
     def wait_until_ready_image(action_handler, image_spec, image=nil)
       wait_until_image(action_handler, image_spec, image) { image.state == :available }
+      action_handler.report_progress "Image #{image_spec.name} is now ready"
     end
 
     def wait_until_image(action_handler, image_spec, image=nil, &block)
       image ||= image_for(image_spec)
-      time_elapsed = 0
       sleep_time = 10
-      max_wait_time = Chef::Config.chef_provisioning[:image_max_wait_time] || 300
-      if !yield(image)
-        action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
-        while time_elapsed < max_wait_time && !yield(image)
-          action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
-          sleep(sleep_time)
-          time_elapsed += sleep_time
+      unless yield(image)
+        if action_handler.should_perform_actions
+          action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
+          max_wait_time = Chef::Config.chef_provisioning[:image_max_wait_time] || 300
+          Retryable.retryable(
+            :tries => (max_wait_time/sleep_time).to_i,
+            :sleep => sleep_time,
+            :matching => /did not become ready within/
+          ) do |retries, exception|
+            action_handler.report_progress "been waiting #{retries*sleep_time}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to become ready ..."
+            unless yield(image)
+              raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
+            end
+          end
         end
-        unless yield(image)
-          raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
-        end
-        action_handler.report_progress "Image #{image_spec.name} is now ready"
       end
     end
 
     def wait_until_instance_running(action_handler, machine_spec, instance=nil)
-      wait_until_machine(action_handler, machine_spec, "be ready", instance) { |instance|
+      wait_until_machine(action_handler, machine_spec, "become ready", instance) { |instance|
         instance.state.name == "running"
       }
     end
 
     def wait_until_machine(action_handler, machine_spec, output_msg, instance=nil, &block)
       instance ||= instance_for(machine_spec)
-      max_attempts = ((Chef::Config.chef_provisioning[:machine_max_wait_time] || 120) / 10).floor
-      delay = 10
-      log_progress = Proc.new do |attempts, response|
-        action_handler.report_progress "been waiting #{delay*attempts}/#{delay*max_attempts} -- sleeping #{delay} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
-      end
-      if action_handler.should_perform_actions
-        no_wait = yield(instance)
-        unless no_wait
+      sleep_time = 10
+      unless yield(instance)
+        if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
-          instance.wait_until(:max_attempts => max_attempts, :delay => delay, before_wait: log_progress) do |instance|
-            yield(instance)
+          max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
+          Retryable.retryable(
+            :tries => (max_wait_time/sleep_time).to_i,
+            :sleep => sleep_time,
+            :matching => /did not #{output_msg} within/
+          ) do |retries, exception|
+            action_handler.report_progress "been waiting #{sleep_time*retries}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
+            # We have to manually reload the instance each loop, otherwise data is stale
+            instance.reload
+            unless yield(instance)
+              raise "Instance #{machine_spec.name} (#{instance.id} on #{driver_url}) did not #{output_msg} within #{max_wait_time} seconds"
+            end
           end
         end
       end
-      # We need an instance.reload here because the `wait_until` does not reload the instance it is called on,
-      # only the instance that is passed to the block
-      instance.reload
     end
 
-    def wait_for_transport(action_handler, machine_spec, machine_options)
-      instance = instance_for(machine_spec)
-      time_elapsed = 0
+    def wait_for_transport(action_handler, machine_spec, machine_options, instance=nil)
+      instance ||= instance_for(machine_spec)
       sleep_time = 10
-      max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
       transport = transport_for(machine_spec, machine_options, instance)
       unless transport.available?
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
-          while time_elapsed < max_wait_time && !transport.available?
-            action_handler.report_progress "been waiting #{time_elapsed}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable ..."
-            sleep(sleep_time)
-            time_elapsed += sleep_time
+          max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
+          Retryable.retryable(
+            :tries => (max_wait_time/sleep_time).to_i,
+            :sleep => sleep_time,
+            :matching => /did not become connectable within/
+          ) do |retries, exception|
+            action_handler.report_progress "been waiting #{sleep_time*retries}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to become connectable ..."
+            unless transport.available?
+              raise "Instance #{machine_spec.name} (#{instance.id} on #{driver_url}) did not become connectable within #{max_wait_time} seconds"
+            end
           end
-
-          action_handler.report_progress "#{machine_spec.name} is now connectable"
         end
       end
     end

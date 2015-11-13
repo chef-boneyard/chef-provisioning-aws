@@ -36,12 +36,16 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
     end
     # Wait up to 10 minutes for the db instance to shutdown
     converge_by "waited until RDS instance #{new_resource.name} was deleted" do
-      tries, sleep = 60, 10
-      Retryable.retryable(:tries => tries, :sleep => sleep, :not => [::Aws::RDS::Errors::DBInstanceNotFound]) do |retries, exception|
-        instance.load
-        action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{instance.id} state to change to deleted (is: #{instance.db_instance_status})..."
-        raise StandardError if ['available', 'deleting'].include?(instance.db_instance_status)
-      end rescue ::Aws::RDS::Errors::DBInstanceNotFound # Swallow exception
+      wait_for(
+        aws_object: instance,
+        # http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Status.html
+        # It cannot _actually_ return a deleted status, we're just looking for the error
+        query_method: :db_instance_status,
+        expected_responses: ['deleted'],
+        acceptable_errors: [::Aws::RDS::Errors::DBInstanceNotFound],
+        tries: 60,
+        sleep: 10
+      ) { |instance| instance.reload }
     end
   end
 

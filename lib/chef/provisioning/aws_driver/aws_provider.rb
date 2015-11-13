@@ -270,8 +270,9 @@ class AWSProvider < Chef::Provider::LWRPBase
 
     Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
       action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
-      Chef::Log.debug("Current exception in wait_for is #{exception.inspect}")
+      Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       begin
+        yield(aws_object) if block_given?
         current_response = aws_object.send(query_method)
         Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
         unless expected_responses.include?(current_response)

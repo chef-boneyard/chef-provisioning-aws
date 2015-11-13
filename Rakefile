@@ -41,7 +41,7 @@ desc "travis specific task - runs CI integration tests (regular and super_slow i
 task :travis, [:sub_task] do |t, args|
   sub_task = args[:sub_task]
   if sub_task == "super_slow"
-    pattern = "load_balancer_spec.rb,aws_route_table_spec.rb,machine_spec.rb" # This is a comma seperated list
+    pattern = "load_balancer_spec.rb,aws_route_table_spec.rb,machine_spec.rb,aws_eip_address_spec.rb" # This is a comma seperated list
     pattern = pattern.split(",").map {|p| "spec/integration/**/*#{p}"}.join(",")
   else
     pattern = 'spec/integration/**/*_spec.rb'

@@ -24,6 +24,11 @@ describe Chef::Resource::LoadBalancer do
         private_key private_key_string
       end
 
+      aws_server_certificate "load_balancer_cert_2" do
+        certificate_body cert_string
+        private_key private_key_string
+      end
+
       it "creates a load_balancer with the maximum attributes" do
         expect_recipe {
           load_balancer 'test-load-balancer' do
@@ -173,6 +178,13 @@ describe Chef::Resource::LoadBalancer do
                 :protocol => :http,
                 :instance_port => 80,
                 :instance_protocol => :http,
+            },
+            {
+                :port => 8443,
+                :protocol => :https,
+                :instance_port => 80,
+                :instance_protocol => :http,
+                :ssl_certificate_id => load_balancer_cert.aws_object.arn
             }],
             subnets: ["test_public_subnet"],
             security_groups: ["test_security_group"],
@@ -219,6 +231,13 @@ describe Chef::Resource::LoadBalancer do
                     :instance_port => 8080,
                     :instance_protocol => :http,
                     :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                },
+                {
+                    :port => 8443,
+                    :protocol => :https,
+                    :instance_port => 80,
+                    :instance_protocol => :http,
+                    :ssl_certificate_id => load_balancer_cert_2.aws_object.arn
                 }],
                 subnets: ["test_public_subnet2"],
                 security_groups: ["test_security_group2"],
@@ -262,6 +281,13 @@ describe Chef::Resource::LoadBalancer do
                 :instance_port => 8080,
                 :instance_protocol => :http,
                 :server_certificate => {arn: load_balancer_cert.aws_object.arn}
+            },
+            {
+                :port => 8443,
+                :protocol => :https,
+                :instance_port => 80,
+                :instance_protocol => :http,
+                :server_certificate => {arn: load_balancer_cert_2.aws_object.arn}
             }],
             subnets: [test_public_subnet2.aws_object],
             security_groups: [test_security_group2.aws_object],

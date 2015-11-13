@@ -399,6 +399,7 @@ module AWSDriver
         policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
         current_cookie_hash = cookie_from_policies(policies)
 
+        # first make sure the policy is in place
         if current_cookie_hash[:attribute_value] != sticky_sessions[:cookie_name]
           perform_action.call("  updating sticky sessions to #{sticky_sessions[:cookie_name].inspect}") do
             count = 0
@@ -421,6 +422,28 @@ module AWSDriver
               else
                 raise
               end
+            end
+          end
+        end
+
+        # then make sure it's attached to the appropriate listeners
+        elb_description = elb.client.describe_load_balancers(load_balancer_names: [actual_elb.name])
+        listeners = load_balancer_listeners(elb_description)
+
+        sticky_sessions[:ports].each do |ss_port|
+          listener = listeners.detect { |ld| ld[:listener][:load_balancer_port] == ss_port }
+
+          unless listener.nil?
+            policy_names = listener[:policy_names]
+
+            unless policy_names.include?(policy_name)
+              policy_names << policy_name
+
+              elb.client.set_load_balancer_policies_of_listener(
+                load_balancer_name: actual_elb.name,
+                load_balancer_port: ss_port,
+                policy_names: policy_names
+              )
             end
           end
         end
@@ -507,6 +530,19 @@ module AWSDriver
       else
         current[:policy_attribute_descriptions].detect { |pad| pad[:attribute_name] == 'CookieName' }
       end
+    end
+
+    #
+    # Extract the listener information from a load balancer description
+    #
+    # @param elb_description [AWS::Core::Response] The load balancer
+    # description that AWS returns
+    #
+    # @return [Hash] the listener information we want
+    #
+    def load_balancer_listeners(elb_description)
+      actual_description = elb_description[:load_balancer_descriptions].first
+      actual_description[:listener_descriptions]
     end
 
     def ready_load_balancer(action_handler, lb_spec, lb_options, machine_spec)

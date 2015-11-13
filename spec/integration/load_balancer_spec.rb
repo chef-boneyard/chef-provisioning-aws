@@ -53,7 +53,8 @@ describe Chef::Resource::LoadBalancer do
                 healthy_threshold: 2
               },
               sticky_sessions: {
-                cookie_name: 'test-cookie-name'
+                cookie_name: 'test-cookie-name',
+                ports: [80, 443]
               },
               scheme: "internal",
               attributes: {
@@ -140,6 +141,13 @@ describe Chef::Resource::LoadBalancer do
             policy_name: "test-load-balancer-sticky-session-policy"
           }
         )
+
+        listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+        expect(listener_descriptions.size).to eql(2)
+        http_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 80 }
+        https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
+        expect(http_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
+        expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
       end
 
       context 'with an existing load balancer' do
@@ -176,7 +184,8 @@ describe Chef::Resource::LoadBalancer do
               healthy_threshold: 2
             },
             sticky_sessions: {
-              cookie_name: 'test-cookie-name'
+              cookie_name: 'test-cookie-name',
+              ports: [80]
             },
             scheme: "internal",
             attributes: {
@@ -221,7 +230,8 @@ describe Chef::Resource::LoadBalancer do
                   healthy_threshold: 3
                 },
                 sticky_sessions: {
-                  cookie_name: 'test-cookie-name2'
+                  cookie_name: 'test-cookie-name2',
+                  ports: [443]
                 },
                 # scheme is immutable, we cannot update it
                 #scheme: "internet-facing",
@@ -296,6 +306,11 @@ describe Chef::Resource::LoadBalancer do
               policy_name: "test-load-balancer-sticky-session-policy"
             }
           )
+
+          listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+          expect(listener_descriptions.size).to eql(1)
+          https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
+          expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
         end
       end
 

@@ -188,8 +188,8 @@ load_balancer "my_elb" do
 The available parameters for `load_balancer_options` can be viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method).
 
 If you wish to enable sticky sessions, pass a `sticky_sessions` key to the
-`load_balancer_options` and specify a cookie name. In the above example, it
-would look like this:
+`load_balancer_options` and specify a cookie name and the ports that should be
+sticky. In the above example, it would look like this:
 
 ```ruby
 machine 'test1'
@@ -215,7 +215,8 @@ load_balancer "my_elb" do
       }
     ],
     sticky_sessions: {
-      cookie_name: 'my-app-cookie'
+      cookie_name: 'my-app-cookie',
+      ports: [80, 443]
     }
   })
 ```

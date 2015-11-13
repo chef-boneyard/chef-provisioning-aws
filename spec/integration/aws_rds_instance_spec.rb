@@ -53,9 +53,9 @@ describe Chef::Resource::AwsRdsInstance do
                                         db_instance_class: "db.t1.micro",
                                         master_username: "thechief",
                                        ).and be_idempotent
-        i = driver.rds.client.describe_db_instances(:db_instance_identifier => "test-rds-instance")[:db_instances].first
-        expect(i[:db_subnet_group][:db_subnet_group_name]).to eq("test-db-subnet-group")
-        expect(i[:publicly_accessible]).to eq(false)
+        r = driver.rds_resource.db_instance("test-rds-instance")
+        expect(r.db_subnet_group.db_subnet_group_name).to eq("test-db-subnet-group")
+        expect(r.publicly_accessible).to eq(false)
       end
 
       it "aws_rds_instance prefers explicit options" do

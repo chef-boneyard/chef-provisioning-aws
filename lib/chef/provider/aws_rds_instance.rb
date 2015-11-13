@@ -26,7 +26,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
 
   def create_aws_object
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
-      new_resource.driver.rds.client.create_db_instance(options_hash)
+      new_resource.driver.rds_resource.create_db_instance(options_hash)
     end
   end
 
@@ -38,12 +38,14 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
     converge_by "waited until RDS instance #{new_resource.name} was deleted" do
       wait_for(
         aws_object: instance,
-        query_method: :exists?,
-        expected_responses: [false],
-        acceptable_errors: [AWS::RDS::Errors::DBInstanceNotFound],
+        # http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Status.html
+        # It cannot _actually_ return a deleted status, we're just looking for the error
+        query_method: :db_instance_status,
+        expected_responses: ['deleted'],
+        acceptable_errors: [::Aws::RDS::Errors::DBInstanceNotFound],
         tries: 60,
         sleep: 10
-      )
+      ) { |instance| instance.reload }
     end
   end
 

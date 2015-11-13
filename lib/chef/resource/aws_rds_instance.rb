@@ -4,7 +4,7 @@ require 'chef/provisioning/aws_driver/aws_taggable'
 class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::RDS::DBInstance, id: :db_instance_identifier
+  aws_sdk_type ::Aws::RDS::DBInstance, id: :db_instance_identifier
 
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
 
@@ -28,12 +28,17 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   attribute :additional_options, kind_of: Hash, default: {}
 
   def aws_object
-    res = driver.rds.instances[name]
-    if res.exists? && ! ['deleted', 'deleting'].include?(res.status)
-      res
-    else
-      nil
-    end
+    result = self.driver.rds_resource.db_instance(name)
+    return nil unless result && result.db_instance_status != 'deleting'
+    result
+  rescue ::Aws::RDS::Errors::DBInstanceNotFound
+    nil
+  end
+
+  def db_instance_status
+    aws_object.db_instance_status if aws_object
+  rescue ::Aws::RDS::Errors::DBInstanceNotFound
+    nil
   end
 
   def rds_tagging_type

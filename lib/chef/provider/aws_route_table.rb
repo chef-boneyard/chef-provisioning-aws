@@ -87,7 +87,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         current_route = current_routes.delete(destination_cidr_block)
         current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
         if current_target != target
-          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_route.target}" do
+          action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_target}" do
             current_route.replace(options)
           end
         end
@@ -144,6 +144,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       route_target = { network_interface: route_target }
     when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
+    when /^vgw-[A-Fa-f0-9]{8}$/
+      route_target = { virtual_private_gateway: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }
     when Chef::Resource::Machine
@@ -169,6 +171,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         updated_route_target[:gateway_id] = Chef::Resource::AwsInternetGateway.get_aws_object_id(value, resource: new_resource)
       when :vpc_peering_connection
         updated_route_target[:vpc_peering_connection_id] = Chef::Resource::AwsVpcPeeringConnection.get_aws_object_id(value, resource: new_resource)
+      when :virtual_private_gateway
+        updated_route_target[:gateway_id] = value
       end
     end
     updated_route_target

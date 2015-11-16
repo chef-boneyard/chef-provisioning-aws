@@ -13,7 +13,7 @@ end
 # A more complex load balancer.
 # This creates 10 t2.micro instances, and then adds them to a load balancer.
 # We can also specify the subnets and the security groups, both of which can be
-# strings or arrays. 
+# strings or arrays.
 #   :scheme defaults to "internet-facing", we can override it to be "internal".
 #
 # Additionally, we will add an HTTPS listener, which requires a ServerCertificate.

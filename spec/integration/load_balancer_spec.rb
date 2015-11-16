@@ -52,6 +52,10 @@ describe Chef::Resource::LoadBalancer do
                 unhealthy_threshold: 2,
                 healthy_threshold: 2
               },
+              sticky_sessions: {
+                cookie_name: 'test-cookie-name',
+                ports: [80, 443]
+              },
               scheme: "internal",
               attributes: {
                 cross_zone_load_balancing: {
@@ -127,6 +131,23 @@ describe Chef::Resource::LoadBalancer do
             idle_timeout: 1,
           }
         })
+        stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: 'test-load-balancer')[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }.to_h
+        expect(stickiness_policy).to eq(
+          {
+            policy_attribute_descriptions: [
+              {attribute_value: "test-cookie-name", attribute_name: "CookieName"}
+          ],
+            policy_type_name: "AppCookieStickinessPolicyType",
+            policy_name: "test-load-balancer-sticky-session-policy"
+          }
+        )
+
+        listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+        expect(listener_descriptions.size).to eql(2)
+        http_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 80 }
+        https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
+        expect(http_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
+        expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
       end
 
       context 'with an existing load balancer' do
@@ -161,6 +182,10 @@ describe Chef::Resource::LoadBalancer do
               timeout: 5,
               unhealthy_threshold: 2,
               healthy_threshold: 2
+            },
+            sticky_sessions: {
+              cookie_name: 'test-cookie-name',
+              ports: [80]
             },
             scheme: "internal",
             attributes: {
@@ -204,6 +229,10 @@ describe Chef::Resource::LoadBalancer do
                   unhealthy_threshold: 3,
                   healthy_threshold: 3
                 },
+                sticky_sessions: {
+                  cookie_name: 'test-cookie-name2',
+                  ports: [443]
+                },
                 # scheme is immutable, we cannot update it
                 #scheme: "internet-facing",
                 attributes: {
@@ -245,6 +274,7 @@ describe Chef::Resource::LoadBalancer do
             },
             scheme: "internal"
           }).and be_idempotent
+
           expect(
             driver.elb_client.describe_load_balancer_attributes(load_balancer_name: "test-load-balancer").to_h
           ).to eq(load_balancer_attributes: {
@@ -265,6 +295,22 @@ describe Chef::Resource::LoadBalancer do
               idle_timeout: 10,
             }
           })
+
+          stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: 'test-load-balancer')[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }.to_h
+          expect(stickiness_policy).to eq(
+            {
+              policy_attribute_descriptions: [
+                {attribute_value: "test-cookie-name2", attribute_name: "CookieName"}
+            ],
+              policy_type_name: "AppCookieStickinessPolicyType",
+              policy_name: "test-load-balancer-sticky-session-policy"
+            }
+          )
+
+          listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+          expect(listener_descriptions.size).to eql(1)
+          https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
+          expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
         end
       end
 

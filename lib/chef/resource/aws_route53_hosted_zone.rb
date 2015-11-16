@@ -36,7 +36,7 @@ class Chef::Resource::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSR
   attribute :name, kind_of: String, callbacks: { "domain name cannot end with a dot" => lambda { |n| n !~ /\.$/ } }
 
   # The comment included in the CreateHostedZoneRequest element. String <= 256 characters.
-  attribute :comment, kind_of: String
+  attribute :comment, kind_of: String, default: ""
 
   # the resource name and the AWS ID have to be related here, since they're tightly coupled elsewhere.
   attribute :aws_route53_zone_id, kind_of: String, aws_id_attribute: true,

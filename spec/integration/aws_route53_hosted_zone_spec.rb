@@ -64,6 +64,17 @@ describe Chef::Resource::AwsRoute53HostedZone do
             }.to create_an_aws_route53_hosted_zone(zone_name,
                                                    config: { comment: expected_comment }).and be_idempotent
           end
+
+          it "updates the zone comment when none is given" do
+            expect_recipe {
+              aws_route53_hosted_zone zone_name do
+                comment "Initial comment."
+              end
+              aws_route53_hosted_zone zone_name do
+              end
+            }.to create_an_aws_route53_hosted_zone(zone_name,
+                                                   config: { comment: nil }).and be_idempotent
+          end
         end
 
         context "RecordSets" do

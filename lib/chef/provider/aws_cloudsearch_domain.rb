@@ -2,7 +2,7 @@ require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cloudsearch_domain
-  
+
   def create_aws_object
     domain = nil # define here to ensure it is available outside of the coverge_by scope
     converge_by "create CloudSearch domain #{new_resource.name}" do
@@ -127,8 +127,10 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def create_index_fields
-    new_resource.index_fields.each do |field|
-      create_index_field(field)
+    unless new_resource.index_fields.nil?
+      new_resource.index_fields.each do |field|
+        create_index_field(field)
+      end
     end
   end
 

@@ -10,11 +10,13 @@ env:
   - RAKE_TASK=spec
   # We run the tests in different environments so they don't try to overwrite each other (deleting, creating the same VPC)
   # If we need to we can get rid of this but its nice for speed
-  - RAKE_TASK="travis[integration]" AWS_TEST_DRIVER=aws::us-east-1
-  - RAKE_TASK="travis[super_slow]" AWS_TEST_DRIVER=aws::us-west-1
+  - RAKE_TASK="travis[integration]" AWS_TRAVIS_DRIVER=aws::us-east-1
+  - RAKE_TASK="travis[super_slow]" AWS_TRAVIS_DRIVER=aws::us-west-1
   # machine_image is a special snowflake - they take so long to run we need to give them their own builder
-  - RAKE_TASK="machine_image" AWS_TEST_DRIVER=aws::us-west-2
-before_script: mkdir -p /home/travis/.chef
+  - RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::us-west-2
+before_script:
+  - mkdir -p /home/travis/.chef
+  - . ./tools/travis_env.sh || true
 script:
 - bundle exec rake build
 - bundle exec rake $RAKE_TASK

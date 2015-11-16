@@ -100,13 +100,13 @@ describe Chef::Resource::AwsRouteTable do
             aws_route_table 'test_route_table' do
               vpc 'test_vpc'
               routes '0.0.0.0/0'   => :internet_gateway,
-                     '10.0.0.1/16' => 'test_machine'
+                     '11.0.0.0/8' => 'test_machine'
             end
 
           }.to create_an_aws_route_table('test_route_table',
             routes: Set[
                 { destination_cidr_block: '10.0.0.0/16', gateway_id: 'local', state: "active" },
-                { destination_cidr_block: '10.0.0.1/16', instance_id: test_machine.aws_object.id, state: "active" },
+                { destination_cidr_block: '11.0.0.0/8', instance_id: test_machine.aws_object.id, state: "active" },
                 { destination_cidr_block: '0.0.0.0/0', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
               ]
           ).and be_idempotent

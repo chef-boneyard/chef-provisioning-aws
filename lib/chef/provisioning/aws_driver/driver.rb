@@ -840,6 +840,13 @@ EOD
         bootstrap_options[:iam_instance_profile] = {name: bootstrap_options[:iam_instance_profile]}
       end
 
+      if machine_options[:is_windows]
+        Chef::Log.debug "Setting Default WinRM userdata for windows..."
+        bootstrap_options[:user_data] = Base64.encode64(user_data) if bootstrap_options[:user_data].nil?
+      else
+        Chef::Log.debug "Non-windows, not setting userdata"
+      end
+
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
 
       # In the migration from V1 to V2 we still support associate_public_ip_address at the top level

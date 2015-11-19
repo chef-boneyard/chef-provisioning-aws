@@ -579,6 +579,8 @@ module AWSDriver
         aws_image image_spec.name do
           action :destroy
           driver d
+          chef_server image_spec.managed_entry_store.chef_server
+          managed_entry_store image_spec.managed_entry_store
         end
       end
     end
@@ -688,6 +690,8 @@ EOD
         aws_instance machine_spec.name do
           action :destroy
           driver d
+          chef_server machine_spec.managed_entry_store.chef_server
+          managed_entry_store machine_spec.managed_entry_store
         end
       end
 
@@ -1190,6 +1194,8 @@ EOD
         Provisioning.inline_resource(action_handler) do
           aws_key_pair default_key_name do
             driver driver
+            chef_server machine_spec.managed_entry_store.chef_server
+            managed_entry_store machine_spec.managed_entry_store
             allow_overwrite true
           end
         end

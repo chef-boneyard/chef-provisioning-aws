@@ -16,7 +16,7 @@ env:
   - RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::us-west-2
 before_script:
   - mkdir -p /home/travis/.chef
-  - . ./tools/travis_env.sh || true
+  - . ./tools/travis_env.sh
 script:
 - bundle exec rake build
 - bundle exec rake $RAKE_TASK

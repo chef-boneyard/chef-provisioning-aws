@@ -95,7 +95,7 @@ module AWSSupport
       module_eval(&block)
     end
 
-    if ENV['AWS_TEST_DRIVER']
+    if ENV['AWS_TEST_DRIVER']  && !ENV['AWS_TEST_DRIVER'].empty?
       aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
       when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
     else

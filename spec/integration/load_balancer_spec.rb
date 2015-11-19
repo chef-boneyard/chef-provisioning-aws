@@ -87,7 +87,7 @@ describe Chef::Resource::LoadBalancer do
            })
           end
         }.to create_an_aws_load_balancer('test-load-balancer', {
-          listeners: [
+          listeners: Set[
             {
               :port => 80,
               :protocol => :http,

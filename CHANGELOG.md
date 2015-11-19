@@ -1,13 +1,41 @@
 # Change Log
 
-## [1.6.0](https://github.com/chef/chef-provisioning-aws/tree/1.6.0) (2015-10-28)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.1...1.6.0)
+## [1.7.0](https://github.com/chef/chef-provisioning-aws/tree/1.7.0) (2015-11-19)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.6.1...1.7.0)
+
+**Fixed bugs:**
+
+- Transport connectivity is not verified before reporting "is now connectable" [\#388](https://github.com/chef/chef-provisioning-aws/issues/388)
+- Bug when changing existing routes on aws\_route\_table converge [\#367](https://github.com/chef/chef-provisioning-aws/issues/367)
+- aws\_eip\_address create action breaks without public\_ip attribute [\#366](https://github.com/chef/chef-provisioning-aws/issues/366)
+- Applying chef\_server and managed\_entry\_store to all Provisioning.inline\_resources [\#403](https://github.com/chef/chef-provisioning-aws/pull/403) ([tyler-ball](https://github.com/tyler-ball))
+- Adding a Travis workound so AWS\_TEST\_DRIVER is only exported on Chef repo orgs [\#399](https://github.com/chef/chef-provisioning-aws/pull/399) ([tyler-ball](https://github.com/tyler-ball))
+- Updating all our retry logic to use a standard pattern, fixes \#388 [\#396](https://github.com/chef/chef-provisioning-aws/pull/396) ([tyler-ball](https://github.com/tyler-ball))
+- Updating EIPs to fix failing tests, fixes \#366 [\#395](https://github.com/chef/chef-provisioning-aws/pull/395) ([tyler-ball](https://github.com/tyler-ball))
+- Adding VGW support to Route Table [\#391](https://github.com/chef/chef-provisioning-aws/pull/391) ([joaogbcravo](https://github.com/joaogbcravo))
+- fix a bug where an existing zone with a comment would explode if no comment was given [\#389](https://github.com/chef/chef-provisioning-aws/pull/389) ([redterror](https://github.com/redterror))
+- Adding sticky sessions to the load balancer [\#386](https://github.com/chef/chef-provisioning-aws/pull/386) ([raskchanky](https://github.com/raskchanky))
+- Use Amazon API version 2 for RDS [\#365](https://github.com/chef/chef-provisioning-aws/pull/365) ([josb](https://github.com/josb))
+
+**Merged pull requests:**
+
+- fix aws\_rds\_subnet\_group example [\#401](https://github.com/chef/chef-provisioning-aws/pull/401) ([keen99](https://github.com/keen99))
+- Don't iterate through CloudSearch index\_fields if none were given [\#397](https://github.com/chef/chef-provisioning-aws/pull/397) ([stevendanna](https://github.com/stevendanna))
+- ElasticsearchService requires aws-sdk 2.1.26+ [\#387](https://github.com/chef/chef-provisioning-aws/pull/387) ([stevendanna](https://github.com/stevendanna))
+- Add aws\_elasticsearch\_domain resource [\#385](https://github.com/chef/chef-provisioning-aws/pull/385) ([stevendanna](https://github.com/stevendanna))
+
+## [v1.6.1](https://github.com/chef/chef-provisioning-aws/tree/v1.6.1) (2015-11-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.6.0...v1.6.1)
+
+## [v1.6.0](https://github.com/chef/chef-provisioning-aws/tree/v1.6.0) (2015-10-29)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.5.1...v1.6.0)
 
 **Fixed bugs:**
 
 - The action "stop" on a Machine resource does not appear to work with AWS EC2 instances [\#370](https://github.com/chef/chef-provisioning-aws/issues/370)
 - with\_driver "aws::us-west-2" block breaking VPC launch in loop [\#369](https://github.com/chef/chef-provisioning-aws/issues/369)
 - ready\_machine should wait for "Windows is Ready to use" message [\#355](https://github.com/chef/chef-provisioning-aws/issues/355)
+- Type Error, Can't Dupe NilClass when creating a load balancer [\#351](https://github.com/chef/chef-provisioning-aws/issues/351)
 - Full documentation of the available :bootstrap\_options for a machine [\#230](https://github.com/chef/chef-provisioning-aws/issues/230)
 - Certain security group rules definitions don't match correctly \(not idempotent\) [\#154](https://github.com/chef/chef-provisioning-aws/issues/154)
 - Adding full test coverage for security groups, documenting all the ways rules can be defined, fixes \#154 [\#382](https://github.com/chef/chef-provisioning-aws/pull/382) ([tyler-ball](https://github.com/tyler-ball))

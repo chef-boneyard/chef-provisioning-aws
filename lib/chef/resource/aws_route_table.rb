@@ -16,6 +16,8 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
   aws_sdk_type ::Aws::EC2::RouteTable
 
+  actions :route_add, :route_del, :create, :destroy, :purge, :nothing
+
   require 'chef/resource/aws_vpc'
 
   #
@@ -70,6 +72,19 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # - Chef machine resource
   #
   attribute :routes, kind_of: Hash
+
+  #
+  # The route to add/delete for this routing table
+  #
+  # This attribute must be specified for the actions :route_add and :route_del.
+  # The Hash can include several entries to remove/add at a time. The format of the
+  # Hash entries is the same format for the routes attribute.
+  #
+  # ```ruby
+  # route '0.0.0.0/0' => :internet_gateway
+  # ```
+  #
+  attribute :route, kind_of: Hash
 
   #
   # Regex to ignore one or more route targets.

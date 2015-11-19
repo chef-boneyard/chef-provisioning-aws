@@ -16,6 +16,19 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     update_virtual_private_gateways(route_table, new_resource.virtual_private_gateways)
   end
 
+  def action_route_add
+    if !new_resource.route.nil?
+      add_route(new_resource.aws_object.vpc, new_resource.aws_object, new_resource.route)
+    end
+
+  end
+
+  def action_route_del
+    if !new_resource.route.nil?
+      del_route(new_resource.aws_object.vpc ,new_resource.aws_object, new_resource.route)
+    end
+  end
+
   protected
 
   def create_aws_object
@@ -66,6 +79,42 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   attr_accessor :vpc
+
+  def add_route(vpc, route_table, route_to_add)
+    route_to_add.each do |destination_cidr_block, route_target|
+      options = get_route_target(vpc, route_target)
+      target = options.values.first
+      action_handler.perform_action "route add #{destination_cidr_block} to #{route_target} (#{target})" do
+        begin
+          route_table.create_route({ :destination_cidr_block => destination_cidr_block }.merge(options))
+        rescue Aws::EC2::Errors::RouteAlreadyExists
+          route_table.routes.each do |route_entry|
+            if route_entry.destination_cidr_block.eql?(destination_cidr_block)
+              route_entry.delete(destination_cidr_block)
+              break
+            end
+          end
+          route_table.create_route({ :destination_cidr_block => destination_cidr_block }.merge(options))
+        end
+      end
+    end
+  end
+
+  def del_route(vpc, route_table, route_to_del)
+    route_to_del.each do |destination_cidr_block, route_target|
+      options = get_route_target(vpc, route_target)
+      target = options.values.first
+
+      route_table.routes.each do |route_entry|
+        if route_entry.destination_cidr_block.eql?(destination_cidr_block)
+          action_handler.perform_action "route del #{destination_cidr_block} to #{route_target} (#{target})" do
+            route_entry.delete(destination_cidr_block)
+          end
+          break
+        end
+      end
+    end
+  end
 
   def update_routes(vpc, route_table, ignore_route_targets = [])
     # Collect current routes

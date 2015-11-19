@@ -84,6 +84,40 @@ describe Chef::Resource::AwsRouteTable do
             ]
           ).and be_idempotent
         end
+
+        it "adds a new routing table entry" do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              route '2.0.0.0/8' => :internet_gateway
+              action :route_add
+            end
+
+          }.to update_an_aws_route_table('test_route_table',
+            routes: [
+              { destination_cidr_block: '2.0.0.0/8', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+              { destination_cidr_block: '10.0.0.0/16', gateway_id: 'local', state: "active" },
+              { destination_cidr_block: '0.0.0.0/0', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+            ]
+          ).and be_idempotent
+        end
+
+        it "deletes an existing routing table entry" do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              route '1.0.0.0/8' => :internet_gateway
+              action :route_del
+            end
+
+          }.to update_an_aws_route_table('test_route_table',
+            routes: [
+              { destination_cidr_block: '2.0.0.0/8', gateway_id: test_vpc.aws_object.internet_gateway.id, state: "active" },
+              { destination_cidr_block: '10.0.0.0/16', gateway_id: 'local', state: "active" },          
+            ]
+          ).and be_idempotent
+        end
+
       end
 
       context "with machines", :super_slow do

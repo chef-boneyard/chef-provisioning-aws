@@ -22,6 +22,9 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   # We cannot pass the resource or an AWS object because there is no AWS model
   # and that causes lookup_options to fail
   attribute :db_subnet_group_name, kind_of: String
+  # We cannot pass the resource or an AWS object because there is no AWS model
+  # and that causes lookup_options to fail
+  attribute :db_parameter_group_name, kind_of: String
 
   # RDS has a ton of options, allow users to set any of them via a
   # custom Hash

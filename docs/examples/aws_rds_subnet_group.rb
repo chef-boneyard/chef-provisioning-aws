@@ -19,7 +19,7 @@ end
 # availability zones to function, that is why two subnets are defined
 # in this example.
 aws_rds_subnet_group "db-subnet-group" do
-  db_subnet_group_description "some_description"
+  description "some_description"
   subnets ['subnet', subnet2.aws_object.id]
 end
 

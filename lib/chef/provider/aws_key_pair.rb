@@ -1,4 +1,3 @@
-# coding: utf-8
 require 'chef/provider/lwrp_base'
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'aws-sdk-v1'
@@ -45,8 +44,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       end
 
 
-      # “The nice thing about standards is that you have so many to
-      # choose from.” - Andrew S. Tanenbaum
+      # "The nice thing about standards is that you have so many to
+      # choose from." - Andrew S. Tanenbaum
       #
       # The AWS EC2 API uses a PKCS#1 MD5 fingerprint for keys that you
       # import into EC2, but a PKCS#8 SHA1 fingerprint for keys that you

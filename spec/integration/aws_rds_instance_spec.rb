@@ -4,7 +4,7 @@ describe Chef::Resource::AwsRdsInstance do
   extend AWSSupport
 
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
-    with_aws "with a connection to AWS, a VPC, two subnets, and a db subnet group" do
+    with_aws "with a connection to AWS, a VPC, two subnets, a db subnet group, and a db parameter group" do
 
       azs = []
       driver.ec2.availability_zones.each do |az|
@@ -35,7 +35,13 @@ describe Chef::Resource::AwsRdsInstance do
         subnets ["test_subnet", test_subnet_2.aws_object.id]
       end
 
-      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group" do
+      aws_rds_parameter_group "test-db-parameter-group" do
+        db_parameter_group_family "postgres9.4"
+        description "testing provisioning"
+        parameters [{:parameter_name => "max_connections", :parameter_value => "250", :apply_method => "pending-reboot"}]
+      end
+
+      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group and aws_rds_parameter_group" do
         expect_recipe {
           aws_rds_instance "test-rds-instance" do
             engine "postgres"
@@ -46,6 +52,7 @@ describe Chef::Resource::AwsRdsInstance do
             multi_az false
             allocated_storage 5
             db_subnet_group_name "test-db-subnet-group"
+            db_parameter_group_name "test-db-parameter-group"
           end
         }.to create_an_aws_rds_instance('test-rds-instance',
                                         engine: 'postgres',
@@ -55,6 +62,7 @@ describe Chef::Resource::AwsRdsInstance do
                                        ).and be_idempotent
         r = driver.rds_resource.db_instance("test-rds-instance")
         expect(r.db_subnet_group.db_subnet_group_name).to eq("test-db-subnet-group")
+        expect(r.db_parameter_groups.first.db_parameter_group_name).to eq("test-db-parameter-group")
         expect(r.publicly_accessible).to eq(false)
       end
 

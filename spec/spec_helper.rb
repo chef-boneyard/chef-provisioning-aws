@@ -28,3 +28,5 @@ end
 Chef::Config[:log_level] = :warn
 
 require 'cheffish/rspec/matchers'
+# Uncomment me to investigate deprecation warnings
+# Chef::Config.treat_deprecation_warnings_as_errors(true)

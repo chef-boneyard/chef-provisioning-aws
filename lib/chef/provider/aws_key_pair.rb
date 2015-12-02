@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'chef/provider/lwrp_base'
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'aws-sdk-v1'
@@ -102,7 +103,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
     private_key_path = new_private_key_path
     Cheffish.inline_resource(self, action) do
       private_key private_key_path do
-        public_key_path resource.public_key_path
+        public_key_path resource.public_key_path if resource.public_key_path
         if resource.private_key_options
           resource.private_key_options.each_pair do |key,value|
             send(key, value)

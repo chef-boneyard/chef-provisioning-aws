@@ -72,7 +72,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     current_routes = {}
     route_table.routes.each do |route|
       # Ignore the automatic local route
-      route_target = route.gateway_id || route.instance_id || route.network_interface_id || route.vpc_peering_connection_id
+      route_target = route.gateway_id || route.nat_gateway_id || route.instance_id || route.network_interface_id || route.vpc_peering_connection_id
       next if route_target == 'local'
       next if ignore_route_targets.find { |target| route_target.match(/#{target}/) }
       current_routes[route.destination_cidr_block] = route
@@ -85,7 +85,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       # If we already have a route to that CIDR block, replace it.
       if current_routes[destination_cidr_block]
         current_route = current_routes.delete(destination_cidr_block)
-        current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
+        current_target = current_route.gateway_id || current_route.nat_gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
         if current_target != target
           action_handler.perform_action "reroute #{destination_cidr_block} to #{route_target} (#{target}) instead of #{current_target}" do
             current_route.replace(options)
@@ -100,7 +100,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
 
     # Delete anything that's left (that wasn't replaced)
     current_routes.values.each do |current_route|
-      current_target = current_route.gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
+      current_target = current_route.gateway_id || current_route.nat_gateway_id || current_route.instance_id || current_route.network_interface_id || current_route.vpc_peering_connection_id
       action_handler.perform_action "remove route sending #{current_route.destination_cidr_block} to #{current_target}" do
         current_route.delete
       end
@@ -140,6 +140,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       end
     when /^igw-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
       route_target = { internet_gateway: route_target }
+    when /^nat-[A-Fa-f0-9]{17}$/, Chef::Resource::AwsNatGateway, Aws::EC2::NatGateway
+      route_target = { nat_gateway: route_target }
     when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, AWS::EC2::NetworkInterface
       route_target = { network_interface: route_target }
     when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
@@ -169,6 +171,8 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         updated_route_target[:network_interface_id] = Chef::Resource::AwsNetworkInterface.get_aws_object_id(value, resource: new_resource)
       when :internet_gateway
         updated_route_target[:gateway_id] = Chef::Resource::AwsInternetGateway.get_aws_object_id(value, resource: new_resource)
+      when :nat_gateway
+        updated_route_target[:nat_gateway_id] = Chef::Resource::AwsNatGateway.get_aws_object_id(value, resource: new_resource)
       when :vpc_peering_connection
         updated_route_target[:vpc_peering_connection_id] = Chef::Resource::AwsVpcPeeringConnection.get_aws_object_id(value, resource: new_resource)
       when :virtual_private_gateway

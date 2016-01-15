@@ -193,6 +193,31 @@ describe Chef::Resource::AwsVpc do
           )
         end
       end
+
+      context "and When :purge action is called for a VPC, and it contains NAT gateways" do #, :super_slow do
+        aws_vpc 'test_vpc' do
+          cidr_block '10.0.0.0/24'
+          internet_gateway true
+        end
+
+        aws_subnet 'test_subnet' do
+          vpc 'test_vpc'
+        end
+
+        aws_nat_gateway 'test_nat_gateway' do
+          subnet 'test_subnet'
+        end
+
+        fit 'they should be deleted' do
+          r = recipe {
+            aws_vpc 'test_vpc' do
+              action :purge
+            end
+          }
+          expect(r).to match_an_aws_nat_gateway('test_nat_gateway',
+            state: 'deleted')
+        end
+      end
     end
   end
 end

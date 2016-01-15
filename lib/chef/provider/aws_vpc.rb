@@ -68,6 +68,26 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     current_driver = self.new_resource.driver
     current_chef_server = self.new_resource.chef_server
     if purging
+      #SDK V2
+      nat_gateways = new_resource.driver.ec2_client.describe_nat_gateways({
+          :filter => [
+              { name: 'vpc-id', values: [vpc.id] },
+              { name: 'state', values: ['available', 'pending'] }
+          ]
+      }).nat_gateways
+
+      nat_gateways.each do |nat_gw|
+        nat_gw_resource = new_resource.driver.ec2_resource.nat_gateway(nat_gw.nat_gateway_id)
+        Cheffish.inline_resource(self, action) do
+          aws_nat_gateway nat_gw_resource do
+            action :purge
+            driver current_driver
+            chef_server current_chef_server
+          end
+        end
+      end
+
+      #SDK V1
       vpc.subnets.each do |s|
         Cheffish.inline_resource(self, action) do
           aws_subnet s do

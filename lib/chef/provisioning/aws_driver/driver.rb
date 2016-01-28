@@ -1076,11 +1076,16 @@ EOD
         password = private_key.private_decrypt decoded
       end
 
+      disable_sspi =  machine_options[:winrm_disable_sspi] || false # default to Negotiate
+      basic_auth_only = machine_options[:winrm_basic_auth_only] || false # disallow Basic auth by default
+      no_ssl_peer_verification = machine_options[:winrm_no_ssl_peer_verification] || false #disallow MITM potential by default
+
       winrm_options = {
-        :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => password,
-        :disable_sspi => true,
-        :basic_auth_only => true
+        user: username,
+        pass: password,
+        disable_sspi: disable_sspi,
+        basic_auth_only: basic_auth_only,
+        no_ssl_peer_verification: no_ssl_peer_verification,
       }
 
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})

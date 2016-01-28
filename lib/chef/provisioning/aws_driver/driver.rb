@@ -1033,10 +1033,27 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
+      username = machine_options[:winrm_username] || 'Administrator'
+      # default to http for now, should upgrade to https when knife support self-signed
+      transport_type = machine_options[:winrm_transport] || 'http'
+      type = case transport_type
+             when 'http'
+               :plaintext
+             when 'https'
+               :ssl
+             end
+      if machine_spec.reference[:winrm_port]
+        port = machine_spec.reference[:winrm_port]
+      else #default port
+        port = case transport_type
+               when 'http'
+                 '5985'
+               when 'https'
+                 '5986'
+               end
+      end
+      endpoint = "#{transport_type}://#{remote_host}:#{port}/wsman"
 
-      port = machine_spec.reference['winrm_port'] || 5985
-      endpoint = "http://#{remote_host}:#{port}/wsman"
-      type = :plaintext
       pem_bytes = get_private_key(instance.key_name)
 
       # TODO plaintext password = bad

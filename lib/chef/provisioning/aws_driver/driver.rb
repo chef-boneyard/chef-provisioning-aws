@@ -1042,6 +1042,60 @@ EOD
         no_ssl_peer_verification: no_ssl_peer_verification,
       }
 
+      if no_ssl_peer_verification or type != :ssl
+        # =>  we won't verify certs at all
+        Chef::Log.warn "No SSL or no peer verification"
+      elsif machine_spec.reference['winrm_ssl_thumbprint']
+        # we have stored the cert
+        Chef::Log.warn "Using stored fingerprint"
+      else
+        # we need to retrieve the cert and verify it by connecting just to
+        # retrieve the ssl certificate and compare it to what we see in the
+        # console logs
+        instance.console_output.data.output
+        # again this seem to need to be run twice, to ensure
+        encoded_output = instance.console_output.data.output
+        console_lines = Base64.decode64(encoded_output).lines
+        fp_context = OpenSSL::SSL::SSLContext.new
+        tcp_connection = TCPSocket.new(instance.private_ip_address, port)
+        ssl_connection = OpenSSL::SSL::SSLSocket.new(tcp_connection, fp_context)
+
+        begin
+          ssl_connection.connect
+        rescue OpenSSL::SSL::SSLError => e
+          raise e unless e.message =~ /bad signature/
+        ensure
+          tcp_connection.close
+        end
+
+        winrm_cert = ssl_connection.peer_cert_chain.first
+
+        rdp_thumbprint = console_lines.grep(
+          /RDPCERTIFICATE-THUMBPRINT/)[-1].split(': ').last.chomp
+        rdp_subject = console_lines.grep(
+          /RDPCERTIFICATE-SUBJECTNAME/)[-1].split(': ').last.chomp
+        winrm_subject = winrm_cert.subject.to_s.split('=').last.upcase
+        winrm_thumbprint=OpenSSL::Digest::SHA1.new(winrm_cert.to_der).to_s.upcase
+
+        if rdp_subject != winrm_subject or rdp_thumbprint != winrm_thumbprint
+          Chef::Log.fatal "Winrm ssl port certificate differs from rdp console logs"
+        end
+        # now cache these for later use in the reference
+        if machine_spec.reference['winrm_ssl_subject'] != winrm_subject
+          machine_spec.reference['winrm_ssl_subject'] = winrm_subject
+        end
+        if machine_spec.reference['winrm_ssl_thumbprint'] != winrm_thumbprint
+          machine_spec.reference['winrm_ssl_thumbprint'] = winrm_thumbprint
+        end
+        if machine_spec.reference['winrm_ssl_cert'] != winrm_cert.to_pem
+          machine_spec.reference['winrm_ssl_cert'] = winrm_cert.to_pem
+        end
+      end
+
+      if machine_spec.reference['winrm_ssl_thumbprint']
+        winrm_options[:ssl_peer_fingerprint] = machine_spec.reference['winrm_ssl_thumbprint']
+      end
+
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
     end
 

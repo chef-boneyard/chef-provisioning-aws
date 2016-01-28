@@ -1056,15 +1056,23 @@ EOD
 
       pem_bytes = get_private_key(instance.key_name)
 
-      # TODO plaintext password = bad
-      password = machine_spec.reference['winrm_password']
-      if password.nil? || password.empty?
-        encrypted_admin_password = instance.password_data.password_data
-        if encrypted_admin_password.nil? || encrypted_admin_password.empty?
-          raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+      if machine_options[:winrm_password]
+        password = machine_options[:winrm_password]
+      else # pull from ec2 and store in reference
+        if machine_spec.reference['winrm_encrypted_password']
+          decoded = Base64.decode64(machine_spec.reference['winrm_encrypted_password'])
+        else
+          encrypted_admin_password = instance.password_data.password_data
+          if encrypted_admin_password.nil? || encrypted_admin_password.empty?
+            raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+          end
+
+          machine_spec.reference['winrm_encrypted_password']||=encrypted_admin_password
+          # ^^ saves encrypted password to the machine_spec
+          decoded = Base64.decode64(encrypted_admin_password)
         end
-        decoded = Base64.decode64(encrypted_admin_password)
-        private_key = OpenSSL::PKey::RSA.new(pem_bytes)
+        # decrypt so we can utilize
+        private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
         password = private_key.private_decrypt decoded
       end
 

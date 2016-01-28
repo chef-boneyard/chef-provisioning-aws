@@ -605,6 +605,44 @@ net start winrm
 EOD
     end
 
+    def https_user_data
+          <<EOD
+<powershell>
+winrm quickconfig -q
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
+winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+
+netsh advfirewall firewall add rule name="WinRM 5986" protocol=TCP dir=in localport=5986 action=allow
+
+$SourceStoreScope = 'LocalMachine'
+$SourceStorename = 'Remote Desktop'
+
+$SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+$SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+
+$cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+$_.subject -like '*'
+}
+
+$DestStoreScope = 'LocalMachine'
+$DestStoreName = 'My'
+
+$DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+$DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+$DestStore.Add($cert)
+
+$SourceStore.Close()
+$DestStore.Close()
+
+winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+
+net stop winrm
+sc config winrm start=auto
+net start winrm
+</powershell>
+EOD
+    end
+
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
@@ -848,10 +886,18 @@ EOD
       end
 
       if machine_options[:is_windows]
-        Chef::Log.debug "Setting Default WinRM userdata for windows..."
-        bootstrap_options[:user_data] = Base64.encode64(user_data) if bootstrap_options[:user_data].nil?
+        Chef::Log.debug "Setting Default windows userdata based on WinRM transport"
+        if bootstrap_options[:user_data].nil?
+          case machine_options[:winrm_transport]
+          when 'https'
+            data = https_user_data
+          else
+            data = user_data
+          end
+            bootstrap_options[:user_data] = Base64.encode64(data)
+        end
       else
-        Chef::Log.debug "Non-windows, not setting userdata"
+        Chef::Log.debug "Non-windows, not setting Default userdata"
       end
 
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)

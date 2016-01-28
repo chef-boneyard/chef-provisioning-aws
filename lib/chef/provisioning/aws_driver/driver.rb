@@ -605,6 +605,44 @@ net start winrm
 EOD
     end
 
+    def https_user_data
+          <<EOD
+<powershell>
+winrm quickconfig -q
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
+winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+
+netsh advfirewall firewall add rule name="WinRM 5986" protocol=TCP dir=in localport=5986 action=allow
+
+$SourceStoreScope = 'LocalMachine'
+$SourceStorename = 'Remote Desktop'
+
+$SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+$SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+
+$cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+$_.subject -like '*'
+}
+
+$DestStoreScope = 'LocalMachine'
+$DestStoreName = 'My'
+
+$DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+$DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+$DestStore.Add($cert)
+
+$SourceStore.Close()
+$DestStore.Close()
+
+winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+
+net stop winrm
+sc config winrm start=auto
+net start winrm
+</powershell>
+EOD
+    end
+
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
       instance = instance_for(machine_spec)
@@ -648,11 +686,14 @@ EOD
       # sending out encrypted password, restarting instance, etc.
       if machine_spec.reference['is_windows']
         wait_until_machine(action_handler, machine_spec, "receive 'Windows is ready' message from the AWS console", instance) { |instance|
-          output = instance.console_output.output
-          if output.nil? || output.empty?
+          instance.console_output.output
+          # seems to be a bug as we need to run this twice
+          # to consistently ensure the output is fully pulled
+          encoded_output = instance.console_output.output
+          if encoded_output.nil? || encoded_output.empty?
             false
           else
-            output = Base64.decode64(output)
+            output = Base64.decode64(encoded_output)
             output =~ /Message: Windows is Ready to use/
           end
         }
@@ -845,10 +886,18 @@ EOD
       end
 
       if machine_options[:is_windows]
-        Chef::Log.debug "Setting Default WinRM userdata for windows..."
-        bootstrap_options[:user_data] = Base64.encode64(user_data) if bootstrap_options[:user_data].nil?
+        Chef::Log.debug "Setting Default windows userdata based on WinRM transport"
+        if bootstrap_options[:user_data].nil?
+          case machine_options[:winrm_transport]
+          when 'https'
+            data = https_user_data
+          else
+            data = user_data
+          end
+            bootstrap_options[:user_data] = Base64.encode64(data)
+        end
       else
-        Chef::Log.debug "Non-windows, not setting userdata"
+        Chef::Log.debug "Non-windows, not setting Default userdata"
       end
 
       bootstrap_options = AWSResource.lookup_options(bootstrap_options, managed_entry_store: machine_spec.managed_entry_store, driver: self)
@@ -984,29 +1033,59 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
+      username = machine_options[:winrm_username] || 'Administrator'
+      # default to http for now, should upgrade to https when knife support self-signed
+      transport_type = machine_options[:winrm_transport] || 'http'
+      type = case transport_type
+             when 'http'
+               :plaintext
+             when 'https'
+               :ssl
+             end
+      if machine_spec.reference[:winrm_port]
+        port = machine_spec.reference[:winrm_port]
+      else #default port
+        port = case transport_type
+               when 'http'
+                 '5985'
+               when 'https'
+                 '5986'
+               end
+      end
+      endpoint = "#{transport_type}://#{remote_host}:#{port}/wsman"
 
-      port = machine_spec.reference['winrm_port'] || 5985
-      endpoint = "http://#{remote_host}:#{port}/wsman"
-      type = :plaintext
       pem_bytes = get_private_key(instance.key_name)
 
-      # TODO plaintext password = bad
-      password = machine_spec.reference['winrm_password']
-      if password.nil? || password.empty?
-        encrypted_admin_password = instance.password_data.password_data
-        if encrypted_admin_password.nil? || encrypted_admin_password.empty?
-          raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+      if machine_options[:winrm_password]
+        password = machine_options[:winrm_password]
+      else # pull from ec2 and store in reference
+        if machine_spec.reference['winrm_encrypted_password']
+          decoded = Base64.decode64(machine_spec.reference['winrm_encrypted_password'])
+        else
+          encrypted_admin_password = instance.password_data.password_data
+          if encrypted_admin_password.nil? || encrypted_admin_password.empty?
+            raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+          end
+
+          machine_spec.reference['winrm_encrypted_password']||=encrypted_admin_password
+          # ^^ saves encrypted password to the machine_spec
+          decoded = Base64.decode64(encrypted_admin_password)
         end
-        decoded = Base64.decode64(encrypted_admin_password)
-        private_key = OpenSSL::PKey::RSA.new(pem_bytes)
+        # decrypt so we can utilize
+        private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
         password = private_key.private_decrypt decoded
       end
 
+      disable_sspi =  machine_options[:winrm_disable_sspi] || false # default to Negotiate
+      basic_auth_only = machine_options[:winrm_basic_auth_only] || false # disallow Basic auth by default
+      no_ssl_peer_verification = machine_options[:winrm_no_ssl_peer_verification] || false #disallow MITM potential by default
+
       winrm_options = {
-        :user => machine_spec.reference['winrm_username'] || 'Administrator',
-        :pass => password,
-        :disable_sspi => true,
-        :basic_auth_only => true
+        user: username,
+        pass: password,
+        disable_sspi: disable_sspi,
+        basic_auth_only: basic_auth_only,
+        no_ssl_peer_verification: no_ssl_peer_verification,
       }
 
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})

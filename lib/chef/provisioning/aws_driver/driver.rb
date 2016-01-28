@@ -648,11 +648,14 @@ EOD
       # sending out encrypted password, restarting instance, etc.
       if machine_spec.reference['is_windows']
         wait_until_machine(action_handler, machine_spec, "receive 'Windows is ready' message from the AWS console", instance) { |instance|
-          output = instance.console_output.output
-          if output.nil? || output.empty?
+          instance.console_output.output
+          # seems to be a bug as we need to run this twice
+          # to consistently ensure the output is fully pulled
+          encoded_output = instance.console_output.output
+          if encoded_output.nil? || encoded_output.empty?
             false
           else
-            output = Base64.decode64(output)
+            output = Base64.decode64(encoded_output)
             output =~ /Message: Windows is Ready to use/
           end
         }

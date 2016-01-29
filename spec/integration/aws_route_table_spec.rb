@@ -153,7 +153,7 @@ describe Chef::Resource::AwsRouteTable do
           expect_recipe {
             aws_route_table 'test_route_table' do
               vpc 'test_vpc'
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_route_table_tags('test_route_table',
             {

@@ -119,7 +119,7 @@ describe Chef::Resource::MachineImage do
         it "removes all aws_image tags", :super_slow do
           expect_recipe {
             machine_image 'test_machine_image' do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_image_tags('test_machine_image',
             {}

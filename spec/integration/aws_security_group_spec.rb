@@ -92,7 +92,7 @@ describe Chef::Resource::AwsSecurityGroup do
         it "removes all aws_security_group tags except Name" do
           expect_recipe {
             aws_security_group 'test_sg' do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_security_group_tags('test_sg',
             {

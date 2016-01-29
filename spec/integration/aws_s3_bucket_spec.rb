@@ -53,7 +53,7 @@ describe Chef::Resource::AwsS3Bucket do
         it "removes all aws_s3_bucket tags" do
           expect_recipe {
             aws_s3_bucket bucket_name do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_s3_bucket_tags(bucket_name, {}
           ).and be_idempotent

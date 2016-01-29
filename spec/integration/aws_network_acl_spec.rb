@@ -143,7 +143,7 @@ describe Chef::Resource::AwsNetworkAcl do
           expect_recipe {
             aws_network_acl 'test_network_acl' do
               vpc 'test_vpc'
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_network_acl_tags('test_network_acl',
             {

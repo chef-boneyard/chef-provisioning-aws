@@ -152,7 +152,7 @@ describe Chef::Resource::AwsVpc do
         it "removes all aws_vpc tags except Name" do
           expect_recipe {
             aws_vpc 'test_vpc' do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_vpc_tags('test_vpc',
             {

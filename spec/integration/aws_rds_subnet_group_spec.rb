@@ -93,7 +93,7 @@ describe Chef::Resource::AwsRdsSubnetGroup do
             aws_rds_subnet_group "test-db-subnet-group" do
               description "some_description"
               subnets ["test_subnet", test_subnet_2.aws_object.id]
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_rds_subnet_group_tags("test-db-subnet-group", {}
           ).and be_idempotent

@@ -141,7 +141,7 @@ describe Chef::Resource::AwsRdsInstance do
         it "removes all aws_rds_instance tags" do
           expect_recipe {
             aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
-              aws_tags {}
+              aws_tags({})
               allocated_storage 5
               db_instance_class "db.t1.micro"
               engine "postgres"

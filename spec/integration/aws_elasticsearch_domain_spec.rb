@@ -99,7 +99,7 @@ describe Chef::Resource::AwsElasticsearchDomain do
         it "removes all aws_elasticsearch_domain tags" do
           expect_recipe {
             aws_elasticsearch_domain "test-#{time}-2" do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_elasticsearch_domain_tags("test-#{time}-2", {}).and be_idempotent
         end

@@ -269,7 +269,7 @@ All resources (incuding base resources like `machine`) that are taggable support
 
 Some AWS objects (may EC2) view the `Name` tag as unique - it shows up in a `Name` column in the AWS console.  By default we specify the `Name` tag as the resource name.  This can be overridden by specifying `aws_tags {Name: 'some other name'}`.
 
-You can remove all the tags _except_ the `Name` tag by specifying `aws_tags {}`.
+You can remove all the tags _except_ the `Name` tag by specifying `aws_tags({})`.
 
 Tag keys and values can be specified as symbols or strings but will be converted to strings before sending to AWS.
 
@@ -309,7 +309,7 @@ end
 
 The `aws_tagger` method is used by the tests to assert that the object tags are correct.  These methods can be encapsulated in an module for DRY purposes, as the EC2 strategy shows.
 
-Finally, you should add 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags {}`.  Copy the tests from an existing spec file and modify them to support your resource.  TODO make a module that copies these tests for us.  Right now it is complicated by the fact that some resources have required attributes that others don't.
+Finally, you should add 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags({})`.  Copy the tests from an existing spec file and modify them to support your resource.  TODO make a module that copies these tests for us.  Right now it is complicated by the fact that some resources have required attributes that others don't.
 
 # Looking up AWS objects
 

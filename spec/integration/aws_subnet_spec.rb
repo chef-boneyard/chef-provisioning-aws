@@ -87,7 +87,7 @@ describe Chef::Resource::AwsSubnet do
         it "removes all aws_subnet tags except Name" do
           expect_recipe {
             aws_subnet 'test_subnet' do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_subnet_tags('test_subnet',
             {

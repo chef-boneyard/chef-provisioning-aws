@@ -120,7 +120,7 @@ describe Chef::Resource::AwsEbsVolume do
         it "deletes the tags" do
           expect_recipe {
             aws_ebs_volume "test_volume_a" do
-              aws_tags {}
+              aws_tags({})
             end
           }.to have_aws_ebs_volume_tags('test_volume_a',
                                         {

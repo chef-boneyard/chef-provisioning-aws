@@ -71,7 +71,7 @@ describe "AwsNetworkInterface" do
             expect_recipe {
               aws_network_interface 'test_network_interface' do
                 subnet 'test_public_subnet'
-                aws_tags {}
+                aws_tags({})
               end
             }.to have_aws_network_interface_tags('test_network_interface',
               {

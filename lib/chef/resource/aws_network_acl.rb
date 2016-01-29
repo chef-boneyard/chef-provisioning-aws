@@ -30,16 +30,16 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   #
   # `cidr_block` will be a source if it is an inbound rule, or a destination if it is an outbound rule
   #
-  # If `inbound_rules` or `outbound_rules` is `nil`, respective current rules will not be changed.
+  # If `inbound_rules` or `outbound_rules` is unset, respective current rules will not be changed.
   # However, if either is set to `[]` all respective current rules will be removed.
   #
   attribute :inbound_rules,
             kind_of: [ Array, Hash ],
-            coerce: proc { |v| [v].flatten }
+            coerce: proc { |v| v && [v].flatten }
 
   attribute :outbound_rules,
             kind_of: [ Array, Hash ],
-            coerce: proc { |v| [v].flatten }
+            coerce: proc { |v| v && [v].flatten }
 
   attribute :network_acl_id,
             kind_of: String,

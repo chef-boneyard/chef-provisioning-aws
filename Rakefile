@@ -52,3 +52,12 @@ RSpec::Core::RakeTask.new(:machine_image) do |spec|
   spec.pattern = 'spec/integration/machine_image_spec.rb'
   spec.rspec_opts = "-b -t super_slow -e 'machine_image can create an image in the VPC'"
 end
+
+require 'github_changelog_generator/task'
+
+GitHubChangelogGenerator::RakeTask.new :changelog do |config|
+  # config.future_release = ChefZero::VERSION
+  config.enhancement_labels = "enhancement,Enhancement,New Feature".split(',')
+  config.bug_labels = "bug,Bug,Improvement,Upstream Bug".split(',')
+  config.exclude_labels = "duplicate,question,invalid,wontfix,no_changelog".split(',')
+end

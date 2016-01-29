@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'pry'
   s.add_development_dependency 'pry-byebug'
   s.add_development_dependency 'pry-stack_explorer'
+  s.add_development_dependency 'github_changelog_generator'
 
   s.bindir       = "bin"
   s.executables  = %w( )

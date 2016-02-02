@@ -11,6 +11,8 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 # - http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html
 #
 class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::DHCPOptions
 
   #
@@ -45,7 +47,7 @@ class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourc
   #
   attribute :netbios_node_type, kind_of: Integer
 
-  attribute :dhcp_options_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :dhcp_options_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^dopt-[a-f0-9]{8}$/ ? name : nil
   }
 

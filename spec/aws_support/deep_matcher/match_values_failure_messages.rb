@@ -2,6 +2,7 @@ module AWSSupport
   module DeepMatcher
     module MatchValuesFailureMessages
 
+      require 'set'
       require 'rspec/matchers'
       require 'rspec/matchers/composable'
       require 'aws_support/deep_matcher'
@@ -19,6 +20,8 @@ module AWSSupport
           else
             return []
           end
+        elsif Set === expected
+          return match_sets_failure_messages(expected, actual, identifier)
         elsif Hash === expected
           return match_hashes_failure_messages(expected, actual, identifier) if Hash === actual
           return match_hash_and_object_failure_messages(expected, actual, identifier) if MatchableObject === actual
@@ -33,6 +36,30 @@ module AWSSupport
         else
           [ "#{identifier ? "#{identifier}: " : ""}expected #{description_of(expected)}, but actual value was #{actual.inspect}" ]
         end
+      end
+
+      def match_sets_failure_messages(expected_set, actual_setlike, identifier)
+        result = []
+        if ! actual_setlike.respond_to?(:to_set)
+          result << "expected #{identifier || "setlike"} to be castable to a Set, but it isn't!"
+        else
+          actual_set = actual_setlike.to_set
+          expected_set.each do |expected|
+            unless actual_set.any? { |actual|
+              match_values_failure_messages(expected, actual, identifier).flatten.empty?
+            }
+              result << "- #{description_of(expected)}"
+            end
+          end
+          actual_set.each do |actual|
+            unless expected_set.any? { |expected|
+              match_values_failure_messages(expected, actual, identifier).flatten.empty?
+            }
+              result << "+ #{description_of(actual)}"
+            end
+          end
+        end
+        result
       end
 
       def match_hashes_failure_messages(expected_hash, actual_hash, identifier)
@@ -62,6 +89,9 @@ module AWSSupport
         different = false
 
         expected_list = expected_list.map { |v| ExpectedValue.new(v) }
+        unless actual_list.class <= Array
+          actual_list = actual_list.to_a
+        end
         Diff::LCS.sdiff(expected_list, actual_list) do |change|
           case change.action
           when '='

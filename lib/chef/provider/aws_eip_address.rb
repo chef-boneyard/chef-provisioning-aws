@@ -4,6 +4,7 @@ require 'chef/provisioning/machine_spec'
 require 'cheffish'
 
 class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_eip_address
 
   def action_create
     elastic_ip = super
@@ -16,10 +17,10 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    converge_by "create new EIP address in #{region}" do
+    converge_by "create Elastic IP address in #{region}" do
       associate_to_vpc = new_resource.associate_to_vpc
       if associate_to_vpc.nil?
-        if desired_instance.is_a?(AWS::EC2::Instance)
+        if desired_instance.is_a?(AWS::EC2::Instance) || desired_instance.is_a?(::Aws::EC2::Instance)
           associate_to_vpc = !!desired_instance.vpc_id
           Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? "is" : "is not"} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
         end
@@ -39,11 +40,11 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   def destroy_aws_object(elastic_ip)
     #if it's attached to something in a vpc, disassociate first
     if elastic_ip.instance_id != nil && elastic_ip.domain == 'vpc'
-      converge_by "dissociate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
+      converge_by "dissociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
         elastic_ip.disassociate
       end
     end
-    converge_by "delete Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
+    converge_by "delete Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
       elastic_ip.delete
     end
   end
@@ -65,9 +66,9 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     #
     # If we were told to associate the IP to a machine, do so
     #
-    if desired_instance.is_a?(AWS::EC2::Instance)
+    if desired_instance.is_a?(AWS::EC2::Instance) || desired_instance.is_a?(::Aws::EC2::Instance)
       if desired_instance.id != elastic_ip.instance_id
-        converge_by "associate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) with #{new_resource.machine} (#{desired_instance.id})" do
+        converge_by "associate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) with #{new_resource.machine} (#{desired_instance.id})" do
           elastic_ip.associate instance: desired_instance.id
         end
       end
@@ -77,7 +78,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     #
     else
       if elastic_ip.associated?
-        converge_by "disassociate Elastic IP Address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
+        converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
           aws_object.disassociate
         end
       end

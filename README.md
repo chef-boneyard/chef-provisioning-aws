@@ -2,21 +2,47 @@
 
 This README is a work in progress.  Please add to it!
 
-# Prerequesites
+# Prerequisites
 
 ## Credentials
 
-AWS credentials should be specified in your `~/.aws/credentials` file as documented [here](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files).  We support the use of profiles as well.  If you do not specify a profile then we use the `default` profile.
+There are 3 ways you can provide your AWS Credentials.  We will look for credentials in the order from below and use the first one found.  This precedence order is taken from http://docs.aws.amazon.com/sdkforruby/api/index.html#Configuration:
 
-You can specify a profile as the middle section of the semi-colon seperated driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.
+1. Through the environment variables `ENV["AWS_ACCESS_KEY_ID"]`, `ENV["AWS_SECRET_ACCESS_KEY"]` and optionally `ENV["AWS_SESSION_TOKEN"]`
+2. The shared credentials ini file.  The default location is `~/.aws/credentials` but you can overwrite this by specifying `ENV["AWS_CONFIG_FILE"]`.  You can specify
+multiple profiles in this file and select one with the `ENV["AWS_DEFAULT_PROFILE"]`
+environment variable or via the driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.  If you do not specify a profile then the `default` one is used.  Read
+[this](http://blogs.aws.amazon.com/security/post/Tx3D6U6WSFGOK2H/A-New-and-Standardized-Way-to-Manage-Credentials-in-the-AWS-SDKs) for more information about profiles.
+3. From an instance profile when running on EC2.  This accesses the local
+metadata service to discover the local instance's IAM instance profile.
+
+## Configurable Options
+
+### aws_retry_limit
+
+When using `machine_batch` with a large number of machines it is possible to overwhelm the AWS SDK until it starts returning `AWS::EC2::Errors::RequestLimitExceeded`.  You can configure the AWS SDK to retry these errors automatically by specifying
+
+```ruby
+chef_provisioning({:aws_retry_limit => 10})
+```
+
+in your client.rb for the provisioning workstation.  The default `:aws_retry_limit` is 5.
+
+### image_max_wait_time and machine_max_wait_time
+
+By default, the time we will wait for a `machine` to become ready or for the transport to become ready is 120 seconds (each).
+For a `machine_image` we wait 300 seconds for the AMI to be created.  These timeouts can be configured with
+
+```ruby
+chef_provisioning({:image_max_wait_time => 600, :machine_max_wait_time => 240})
+```
+
+in your client.rb for the provisioning workstation.
 
 # Resources
 
 TODO: List out weird/unique things about resources here.  We don't need to document every resource
 because users can look at the resource model.
-
-TODO: document `aws_object` and `get_aws_object` and how you can get the aws object for a base
-chef-provisioning resource like machine or load_balancer
 
 ## aws_key_pair
 
@@ -26,7 +52,7 @@ You can specify an existing key pair to upload by specifying the following:
 aws_key_pair 'my-aws-key' do
   private_key_path "~boiardi/.ssh/my-aws-key.pem"
   public_key_path "~boiardi/.ssh/my-aws-key.pub"
-  overwrite false # Set to true if you want to regenerate this each chef run
+  allow_overwrite false # Set to true if you want to regenerate this each chef run
 end
 ```
 
@@ -101,23 +127,135 @@ are left that AWS can charge for.
 
 # Machine Options
 
-TODO - Finish documenting these
-
 You can pass machine options that will be used by `machine`, `machine_batch` and `machine_image` to
-configure the machine.  These are all the available options:
+configure the machine.
+
+These options are an extension of the [base options](https://github.com/chef/chef-provisioning#machine-options).  Please see that for a list of the `machine_options` shared between drivers.
+
+The full syntax available in the `bootstrap_options` hash is the hash expected by the AWS  [`create_instances`](http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Resource.html#create_instances-instance_method) method.  The options seen below in the example are the default options.
 
 ```ruby
 with_machine_options({
+  # See https://github.com/chef/chef-provisioning#machine-options for options shared between drivers
   bootstrap_options: {
-    key_name: 'ref-key-pair',
-    ...
+    # http://docs.aws.amazon.com/sdkforruby/api/Aws/EC2/Resource.html#create_instances-instance_method
+    # lists the available options.  The below options are the default
+    image_id: "ami-5915e11d", # default for us-west-1
+    instance_type: "t2.micro",
+    key_name: "chef_default", # If not specified, this will be used and generated
+    key_path: "~/.chef/keys/chef_default", # only necessary if storing keys some other location
+    user_data: "...", # Only defaulted on Windows instances to start winrm
   },
-  ...
+  use_private_ip_for_ssh: false, # DEPRECATED, use `transport_address_location`
+  transport_address_location: :public_ip, # `:public_ip` (default), `:private_ip` or `:dns`.  Defines how SSH or WinRM should find an address to communicate with the instance.
+  is_windows: true, # false by default
 })
 ```
 
-This options hash can be supplied to either `with_machine_options` or directly into the `machine_options`
+This options hash can be supplied to either `with_machine_options` at the recipe level or directly into the `machine_options`
 attribute.
+
+# Load Balancer Options
+
+You can configure the ELB options by setting `with_load_balancer_options` or specifying them on each `load_balancer` resource.
+
+```ruby
+machine 'test1'
+m2 = machine 'test2'
+load_balancer "my_elb" do
+  machines ['test1', m2]
+  load_balancer_options({
+    subnets: subnets,
+    security_groups: [load_balancer_sg],
+    listeners: [
+      {
+          instance_port: 8080,
+          protocol: 'HTTP',
+          instance_protocol: 'HTTP',
+          port: 80
+      },
+      {
+          instance_port: 8080,
+          protocol: 'HTTPS',
+          instance_protocol: 'HTTP',
+          port: 443,
+          ssl_certificate_id: "arn:aws:iam::360965486607:server-certificate/cloudfront/foreflight-2015-07-09"
+      }
+    ]
+  })
+```
+
+The available parameters for `load_balancer_options` can be viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ELB/Client.html#create_load_balancer-instance_method).
+
+If you wish to enable sticky sessions, pass a `sticky_sessions` key to the
+`load_balancer_options` and specify a cookie name and the ports that should be
+sticky. In the above example, it would look like this:
+
+```ruby
+machine 'test1'
+m2 = machine 'test2'
+load_balancer "my_elb" do
+  machines ['test1', m2]
+  load_balancer_options({
+    subnets: subnets,
+    security_groups: [load_balancer_sg],
+    listeners: [
+      {
+          instance_port: 8080,
+          protocol: 'HTTP',
+          instance_protocol: 'HTTP',
+          port: 80
+      },
+      {
+          instance_port: 8080,
+          protocol: 'HTTPS',
+          instance_protocol: 'HTTP',
+          port: 443,
+          ssl_certificate_id: "arn:aws:iam::360965486607:server-certificate/cloudfront/foreflight-2015-07-09"
+      }
+    ],
+    sticky_sessions: {
+      cookie_name: 'my-app-cookie',
+      ports: [80, 443]
+    }
+  })
+```
+
+NOTES:
+
+1. You can specify either `ssl_certificate_id` or `server_certificate` in a listener but the value to both parameters should be the ARN of an existing IAM::ServerCertificate object.
+
+2. The `sticky_sessions` option currently only supports Application-Controlled
+   Session Stickiness.
+
+# RDS Instance Options
+
+### Additional Options
+
+RDS instances have many options. Some of them live as first class attributes. Any valid RDS option that is not a first class attribute can still be set via a hash in `additional_options`.
+*If you set an attribute and also specify it in `additional_options`, the resource will chose the attribute and not what is specified in `additional_options`.*
+
+To illustrate, note that the following example defines `multi_az` as both an attribute and in the `additional_options` hash:
+
+```
+aws_rds_instance "test-rds-instance2" do
+  engine "postgres"
+  publicly_accessible false
+  db_instance_class "db.t1.micro"
+  master_username "thechief"
+  master_user_password "securesecure"
+  multi_az false
+  additional_options(multi_az: true)
+end
+```
+
+The above would result in a new `aws_rds_instance` with `multi_az` being `false`.
+
+Additional values for `additional_options` can view viewed in the [aws docs](http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#create_db_instance-instance_method).
+
+### Specifying a DB Subnet Group for your RDS Instance
+
+See [this example](docs/examples/aws_rds_subnet_group.rb) for how to set up a DB Subnet Group and pass it to your RDS Instance.
 
 # Specifying a Chef Server
 
@@ -125,11 +263,17 @@ See [Pointing Boxes at Chef Servers](https://github.com/chef/chef-provisioning/b
 
 # Tagging Resources
 
-## Aws Resources
+## For Recipe authors
 
-All resources which extend Chef::Provisioning::AWSDriver::AWSResourceWithEntry support the ability
-to add tags, except AwsEipAddress.  AWS does not support tagging on AwsEipAddress.  To add a tag
-to any aws resource, us the `aws_tags` attribute and provide it a hash:
+All resources (incuding base resources like `machine`) that are taggable support an `aws_tags` attribute which accepts a single layer hash.  To set just the key of an AWS tag specify the value as nil.  EG, `aws_tags {my_tag_key: nil}`.  Some AWS objects cannot accept nil values and will automatically convert it to an empty string.
+
+Some AWS objects (may EC2) view the `Name` tag as unique - it shows up in a `Name` column in the AWS console.  By default we specify the `Name` tag as the resource name.  This can be overridden by specifying `aws_tags {Name: 'some other name'}`.
+
+You can remove all the tags _except_ the `Name` tag by specifying `aws_tags {}`.
+
+Tag keys and values can be specified as symbols or strings but will be converted to strings before sending to AWS.
+
+Examples:
 
 ```ruby
 aws_ebs_volume 'ref-volume' do
@@ -141,46 +285,41 @@ aws_vpc 'ref-vpc' do
 end
 ```
 
-The hash of tags can use symbols or strings for both keys and values.  The tags will be converged
-idempotently, meaning no write will occur if no tags are changing.
+## For Resource Authors
 
-We will not touch the `'Name'` tag UNLESS you specifically pass it.  If you do not pass it, we
-leave it alone.
+To enable tagging support you must make specific changes to the Resource and Attribute.  For the Resource it needs to include the `attribute aws_tags`.  This should be done by `include Chef::Provisioning::AWSDriver::AWSTaggable` on the Resource.
 
-## Base Resources
-
-Because base resources from chef-provisioning do not have the `aws_tag` attribute, they must be
-tagged in their options:
+The `AWSProvider` class will automatically try to call `converge_tags` when running the `action_create` method.  You should instantiate an instance of the `AWSTagger` and provide it a strategy depending on the client used to perform the tagging.  For example, an RDS Provider should define
 
 ```ruby
-machine 'ref-machine-1' do
-  machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
-end
-
-machine_batch "ref-batch" do
-  machine 'ref-machine-2' do
-    machine_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
-    converge false
-  end
-  machine 'ref-machine-3' do
-    machine_options :aws_tags => {:othercustomtags => 'byebye'}
-    converge false
+def aws_tagger
+  @aws_tagger ||= begin
+    rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
+      new_resource.driver.rds.client,
+      construct_arn(new_resource),
+      new_resource.aws_tags
+    )
+    Chef::Provisioning::AWSDriver::AWSTagger.new(rds_strategy, action_handler)
   end
 end
-
-load_balancer 'ref-elb' do
-  load_balancer_options :aws_tags => {:marco => 'polo', :happyhappy => 'joyjoy'}
+def converge_tags
+  aws_tagger.converge_tags
 end
 ```
 
-See `docs/examples/aws_tags.rb` for further examples.
+The `aws_tagger` method is used by the tests to assert that the object tags are correct.  These methods can be encapsulated in an module for DRY purposes, as the EC2 strategy shows.
+
+Finally, you should add 3 standard tests for taggable objects - 1) Tags can be created on a new object, 2) Tags can be updated on an existing object with tags and 3) Tags can be cleared by setting `aws_tags {}`.  Copy the tests from an existing spec file and modify them to support your resource.  TODO make a module that copies these tests for us.  Right now it is complicated by the fact that some resources have required attributes that others don't.
 
 # Looking up AWS objects
 
 ## \#aws\_object
 
-All chef-provisioning-aws resources have a `aws_object` method that will return the AWS object.  The AWS
-object won't exist until the resource converges, however.  An example of how to do this looks like:
+All chef-provisioning-aws resources have a `aws_object` method that will return the AWS object.  The base
+resources `machine`, `machine_image` and `load_balancer` are monkeypatched to also include the `aws_object`
+method and should respond to it like all other resources.
+
+The AWS object won't exist until the resource converges, however.  An example of how to do this looks like:
 
 ```ruby
 my_vpc = aws_vpc 'my_vpc' do
@@ -254,37 +393,6 @@ When specifying `bootstrap_options` and any attributes which reference another a
 perform [lookup_options](https://github.com/chef/chef-provisioning-aws/blob/master/lib/chef/provisioning/aws_driver/aws_resource.rb#L63-L91).
 This tries to turn elements with names like `vpc`, `security_group_ids`, `machines`, `launch_configurations`,
 `load_balancers`, etc. to the correct AWS object.
-
-## Looking up chef-provisioning resources
-
-The base chef-provisioning resources (machine, machine_batch, load_balancer, machine_image) don't
-have the `aws_object` method defined on them because they are not `AWSResource` classes.  To
-look them up use the class method `get_aws_object` defined on the chef-provisioning-aws specific
-resource:
-
-```ruby
-machine_image 'my_image' do
-  ...
-end
-
-ruby_block "look up machine_image object" do
-  block do
-    aws_object = Chef::Resource::AwsImage.get_aws_object(
-      'my_image',
-      run_context: run_context,
-      driver: run_context.chef_provisioning.current_driver,
-      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(run_context.cheffish.current_chef_server)
-    )
-  end
-end
-```
-
-To look up a machine, use the `AwsInstance` class, to look up a load balancer use the `AwsLoadBalancer`
-class, etc.  The first parameter you pass should be the same resource name as used in the base
-chef-provisioning resource.
-
-Again, the AWS object will not exist until the converge phase, so the aws_object will only be
-available using a `lazy` attribute modifier or in a `ruby_block`.
 
 # Running Integration Tests
 

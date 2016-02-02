@@ -26,7 +26,10 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 # - http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/VPC.html
 #
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type AWS::EC2::VPC
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+  aws_sdk_type AWS::EC2::VPC,
+               id: :id,
+               option_names: [:vpc, :vpc_id, :peer_vpc_id]
 
   require 'chef/resource/aws_dhcp_options'
   require 'chef/resource/aws_route_table'
@@ -125,7 +128,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   attribute :enable_dns_hostnames, equal_to: [ true, false ]
 
-  attribute :vpc_id, kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :vpc_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^vpc-[a-f0-9]{8}$/ ? name : nil
   }
 

@@ -3,6 +3,8 @@ require 'chef/provisioning/aws_driver/aws_resource'
 require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 require 'chef/provisioning/chef_managed_entry_store'
 require 'chef/provisioning/chef_provider_action_handler'
+# Enough providers will require this that we put it in here
+require 'chef/provisioning/aws_driver/tagging_strategy/ec2'
 require 'retryable'
 
 module Chef::Provisioning::AWSDriver
@@ -121,13 +123,17 @@ class AWSProvider < Chef::Provider::LWRPBase
       aws_object = create_aws_object
     end
 
-    converge_tags(aws_object)
-
     #
     # Associate the managed entry with the AWS object
     #
     if new_resource.is_a?(AWSResourceWithEntry)
       new_resource.save_managed_entry(aws_object, action_handler, existing_entry: entry)
+    end
+
+    # This has to be after the managed entry save so the `aws_object` lookup
+    # from the resource succeeds
+    if respond_to?(:converge_tags)
+      converge_tags
     end
 
     aws_object
@@ -223,94 +229,73 @@ class AWSProvider < Chef::Provider::LWRPBase
     raise NotImplementedError, :destroy_aws_object
   end
 
-  # Update AWS resource tags
-  #
-  # AWS resources which include the TaggedItem Module
-  # will have an 'aws_tags' attribute available.
-  # The 'aws_tags' Hash will apply all the tags within
-  # the hash, and remove existing tags not included within
-  # the hash.  The 'Name' tag will not removed.  The 'Name'
-  # tag can still be updated in the hash.
-  #
-  # @param aws_object Aws SDK Object to update tags
-  #
-  def converge_tags(aws_object)
-    return unless new_resource.respond_to?(:aws_tags)
-    desired_tags = new_resource.aws_tags
-    # If aws_tags were not provided we exit
-    if desired_tags.nil?
-      Chef::Log.debug "aws_tags not provided, nothing to converge"
-      return
-    end
-    current_tags = aws_object.tags.to_h
-    # AWS always returns tags as strings, and we don't want to overwrite a
-    # tag-as-string with the same tag-as-symbol
-    desired_tags = Hash[desired_tags.map {|k, v| [k.to_s, v.to_s] }]
-    tags_to_update = desired_tags.reject {|k,v| current_tags[k] == v}
-    tags_to_delete = current_tags.keys - desired_tags.keys
-    # We don't want to delete `Name`, just all other tags
-    tags_to_delete.delete('Name')
-
-    unless tags_to_update.empty?
-      converge_by "applying tags #{tags_to_update}" do
-        aws_object.tags.set(tags_to_update)
-      end
-    end
-    unless tags_to_delete.empty?
-      converge_by "deleting tags #{tags_to_delete.inspect}" do
-        aws_object.tags.delete(*tags_to_delete)
-      end
-    end
-  end
-
-  # Wait until aws_object obtains one of expected_status
-  #
-  # @param aws_object Aws SDK Object to check status on
-  # @param expected_status [Symbol,Array<Symbol>] Final status(s) to look for
-  # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
-  # @param tries [Integer] Number of times to check status
-  # @param sleep [Integer] Time to wait between checking status
-  #
   def wait_for_status(aws_object, expected_status, acceptable_errors = [], tries=60, sleep=5)
-    acceptable_errors = [acceptable_errors].flatten
-    expected_status = [expected_status].flatten
-    current_status = aws_object.status
-
-    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} status to change to #{expected_status.inspect}..."
-      begin
-        current_status = aws_object.status
-        unless expected_status.include?(current_status)
-          raise StatusTimeoutError.new(aws_object, current_status, expected_status)
-        end
-      rescue *acceptable_errors
-      end
-    end
+    wait_for(
+      aws_object: aws_object,
+      query_method: :status,
+      expected_responses: expected_status,
+      acceptable_errors: acceptable_errors,
+      tries: tries,
+      sleep: sleep
+    )
   end
 
-  # Wait until aws_object obtains one of expected_state
+  def wait_for_state(aws_object, expected_states, acceptable_errors = [], tries=60, sleep=5)
+    wait_for(
+      aws_object: aws_object,
+      query_method: :state,
+      expected_responses: expected_states,
+      acceptable_errors: acceptable_errors,
+      tries: tries,
+      sleep: sleep
+    )
+  end
+
+  # Wait until aws_object obtains one of expected_responses
   #
   # @param aws_object Aws SDK Object to check state on
-  # @param expected_state [Symbol,Array<Symbol>] Final state(s) to look for
+  # @param query_method Method to call on aws_object to get current state
+  # @param expected_responses [Symbol,Array<Symbol>] Final state(s) to look for
   # @param acceptable_errors [Exception,Array<Exception>] Acceptable errors that are caught and squelched
-  # @param tries [Integer] Number of times to check state
-  # @param sleep [Integer] Time to wait between checking states
+  # @param tries [Integer] Number of times to check state, defaults to 60
+  # @param sleep [Integer] Time to wait between checking states, defaults to 5
   #
-  def wait_for_state(aws_object, expected_states, acceptable_errors = [], tries=60, sleep=5)
-    acceptable_errors = [acceptable_errors].flatten
-    expected_states = [expected_states].flatten
-    current_state = aws_object.state
+  def wait_for(opts={})
+    aws_object = opts[:aws_object]
+    query_method = opts[:query_method]
+    expected_responses = [opts[:expected_responses]].flatten
+    acceptable_errors = [opts[:acceptable_errors] || []].flatten
+    tries = opts[:tries] || 60
+    sleep = opts[:sleep] || 5
 
-    Retryable.retryable(:tries => tries, :sleep => sleep, :on => StatusTimeoutError) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for #{aws_object.id} state to change to #{expected_states.inspect}..."
+    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
+      Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       begin
-        current_state = aws_object.state
-        unless expected_states.include?(current_state)
-          raise StatusTimeoutError.new(aws_object, current_state, expected_states)
+        yield(aws_object) if block_given?
+        current_response = aws_object.send(query_method)
+        Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
+        unless expected_responses.include?(current_response)
+          raise StatusTimeoutError.new(aws_object, current_response, expected_responses)
         end
       rescue *acceptable_errors
       end
     end
+  end
+
+  # Retry a block with an doubling backoff time (maximum wait of 10 seconds).
+  # @param retry_on [Exception] An exception to retry on, defaults to RuntimeError
+  #
+  def self.retry_with_backoff(*retry_on)
+    retry_on ||= [RuntimeError]
+    Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 16].min }, :on => retry_on) do |retries, exception|
+      Chef::Log.debug("Current exception in retry_with_backoff is #{exception.inspect}")
+      yield
+    end
+  end
+
+  def retry_with_backoff(*retry_on, &block)
+    self.class.retry_with_backoff(*retry_on, &block)
   end
 
 end

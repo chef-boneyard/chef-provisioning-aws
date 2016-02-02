@@ -3,6 +3,10 @@ require 'chef/resource/aws_vpc'
 require 'retryable'
 
 class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
+  provides :aws_network_acl
+
   def action_create
     network_acl = super
 
@@ -12,7 +16,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    converge_by "create new Network ACL #{new_resource.name} in #{region}" do
+    converge_by "create network ACL #{new_resource.name} in #{region}" do
       options = {}
       options[:vpc] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
@@ -20,7 +24,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
       Chef::Log.debug("VPC: #{options[:vpc]}")
 
       network_acl = new_resource.driver.ec2.network_acls.create(options)
-      Retryable.retryable(:tries => 15, :sleep => 1, :on => AWS::EC2::Errors::InvalidNetworkAclID::NotFound) do
+      retry_with_backoff(AWS::EC2::Errors::InvalidNetworkAclID::NotFound) do
         network_acl.tags['Name'] = new_resource.name
       end
       network_acl
@@ -87,7 +91,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
     end
 
     unless replace_rules.empty? && desired_rules.empty? && current_rules.empty?
-      action_handler.report_progress "update Network ACL #{new_resource.name} #{direction.to_s} rules"
+      action_handler.report_progress "update network ACL #{new_resource.name} #{direction.to_s} rules"
       replace_rules(network_acl, replace_rules)
       add_rules(network_acl, desired_rules)
       remove_rules(network_acl, current_rules)

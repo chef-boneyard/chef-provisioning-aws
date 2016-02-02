@@ -3,11 +3,13 @@ require 'chef/resource/aws_subnet'
 require 'chef/resource/aws_eip_address'
 
 class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type AWS::EC2::NetworkInterface
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
+  aws_sdk_type AWS::EC2::NetworkInterface, option_names: []
 
   attribute :name,                   kind_of: String, name_attribute: true
 
-  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, lazy_default: proc {
+  attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^eni-[a-f0-9]{8}$/ ? name : nil
   }
 
@@ -19,7 +21,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
 
   attribute :security_groups,        kind_of: Array #(Array<SecurityGroup>, Array<String>)
 
-  attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance ]
+  attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, ::Aws::EC2::Instance ]
 
   attribute :device_index,           kind_of: Integer
 

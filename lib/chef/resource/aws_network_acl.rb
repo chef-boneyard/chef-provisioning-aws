@@ -3,6 +3,8 @@ require 'chef/resource/aws_vpc'
 require 'chef/resource/aws_subnet'
 
 class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
+  include Chef::Provisioning::AWSDriver::AWSTaggable
+
   aws_sdk_type AWS::EC2::NetworkACL
 
   #
@@ -42,7 +44,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   attribute :network_acl_id,
             kind_of: String,
             aws_id_attribute: true,
-            lazy_default: proc {
+            default: lazy {
               name =~ /^acl-[a-f0-9]{8}$/ ? name : nil
             }
 

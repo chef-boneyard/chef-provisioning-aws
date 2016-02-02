@@ -14,7 +14,7 @@ end
 
 aws_key_pair 'ref-key-pair'
 
-m = machine 'test' do
+machine 'test' do
   machine_options bootstrap_options: { key_name: 'ref-key-pair' }
 end
 
@@ -22,5 +22,5 @@ end
 aws_route_table 'ref-public2' do
   vpc 'test-vpc'
   routes '0.0.0.0/0' => :internet_gateway,
-         '0.0.0.1/0' => m
+         '0.0.0.1/0' => "test"
 end

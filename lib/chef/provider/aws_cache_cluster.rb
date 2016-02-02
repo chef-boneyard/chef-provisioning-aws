@@ -1,11 +1,12 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_cache_cluster
 
   protected
 
   def create_aws_object
-    converge_by "create new Elasticache Cluster #{new_resource.name} in #{region}" do
+    converge_by "create ElastiCache cluster #{new_resource.name} in #{region}" do
       driver.create_cache_cluster(desired_options)
     end
   end
@@ -23,7 +24,7 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
   end
 
   def destroy_aws_object(cache_cluster)
-    converge_by "delete Elasticache Cluster #{new_resource.name} in #{region}" do
+    converge_by "delete ElastiCache cluster #{new_resource.name} in #{region}" do
       driver.delete_cache_cluster(
         cache_cluster_id: cache_cluster[:cache_cluster_id]
       )

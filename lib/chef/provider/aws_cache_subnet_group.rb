@@ -1,25 +1,26 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 
 class Chef::Provider::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
-
+  provides :aws_cache_subnet_group
+  
   protected
 
   def create_aws_object
-    converge_by "create new Elasticache Subnet Group #{new_resource.name} in #{region}" do
+    converge_by "create ElastiCache subnet group #{new_resource.name} in #{region}" do
       driver.create_cache_subnet_group(desired_options)
     end
   end
 
   def update_aws_object(cache_subnet_group)
     if update_required?(cache_subnet_group)
-      converge_by "update Elasticache Subnet Group #{new_resource.name} in #{region}" do
+      converge_by "update ElastiCache subnet group #{new_resource.name} in #{region}" do
         driver.modify_cache_subnet_group(desired_options)
       end
     end
   end
 
   def destroy_aws_object(cache_subnet_group)
-    converge_by "delete Elasticache Subnet Group #{new_resource.name} in #{region}" do
+    converge_by "delete ElastiCache subnet group #{new_resource.name} in #{region}" do
       driver.delete_cache_subnet_group(
         cache_subnet_group_name: cache_subnet_group[:cache_subnet_group_name]
       )

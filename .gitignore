@@ -28,3 +28,6 @@ docs/examples/nodes
 docs/examples/data_bags
 x.rb
 .idea/
+coverage
+.envrc
+.ruby-version

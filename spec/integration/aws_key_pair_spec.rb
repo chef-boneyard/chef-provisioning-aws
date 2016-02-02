@@ -12,7 +12,8 @@ describe Chef::Resource::AwsKeyPair do
       it "aws_key_pair 'test_key_pair' creates a key pair" do
         expect(recipe {
           aws_key_pair 'test_key_pair' do
-            private_key_options format: :der, type: :rsa
+            private_key_options format: :pem, type: :rsa, regenerate_if_different: true
+            allow_overwrite true
           end
         }).to create_an_aws_key_pair('test_key_pair').and be_idempotent
       end

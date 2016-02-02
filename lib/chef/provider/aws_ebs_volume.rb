@@ -4,6 +4,10 @@ require 'date'
 require 'retryable'
 
 class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
+
+  provides :aws_ebs_volume
+
   class VolumeNotFoundError < RuntimeError
     def initialize(new_resource)
       super("#{new_resource} does not exist!")
@@ -34,9 +38,12 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     volume = nil
-    converge_by "create new #{new_resource} in #{region}" do
+    converge_by "create #{new_resource} in #{region}" do
       volume = new_resource.driver.ec2.volumes.create(initial_options)
-      volume.tags['Name'] = new_resource.name
+      retry_with_backoff(AWS::EC2::Errors::InvalidVolumeID::NotFound) do
+        volume.tags['Name'] = new_resource.name
+      end
+      volume
     end
 
     converge_by "wait for new #{new_resource} in #{region} to become available" do
@@ -116,12 +123,12 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     #
     # If we were told to attach the volume to a machine, do so
     #
-    if expected_instance.is_a?(AWS::EC2::Instance)
+    if expected_instance.is_a?(AWS::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
       when :in_use
         # We don't want to attempt to reattach to the same instance and device
         attachment = current_attachment(volume)
-        if attachment.instance != expected_instance || attachment.device != new_resource.device
+        if attachment.instance.id != expected_instance.id || attachment.device != new_resource.device
           detach(volume)
           attach(volume)
         end

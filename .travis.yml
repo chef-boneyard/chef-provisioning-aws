@@ -1,6 +1,28 @@
+sudo: false
 language: ruby
 rvm:
-  - 2.0.0
-  - 2.1.1
-
-script: bundle exec rake spec
+- 2.1.6
+env:
+  global:
+  # encrypted with `travis encrypt "AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=..."`
+  - secure: D/GQrYonTbI4DfzKStcy72gsPvC41Y6ozVkEacmAlN6hXnZX19/cg6eNm24mtxrA0OV/bh0E8aFcRpyFL579UkpbzfEgHQZhRUtP6gOT9SS5QlyqUODXR8LwRKUvTLddtgCWRLj3G9rB3vmzMKy9O0yTYiVJT8EWGm1Itp/zPOM=
+  matrix:
+  - RAKE_TASK=spec
+  # We run the tests in different environments so they don't try to overwrite each other (deleting, creating the same VPC)
+  # If we need to we can get rid of this but its nice for speed
+  - RAKE_TASK="travis[integration]" AWS_TRAVIS_DRIVER=aws::us-east-1
+  - RAKE_TASK="travis[super_slow]" AWS_TRAVIS_DRIVER=aws::us-west-1
+  # machine_image is a special snowflake - they take so long to run we need to give them their own builder
+  - RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::us-west-2
+before_script:
+  - mkdir -p /home/travis/.chef
+  - . ./tools/travis_env.sh
+script:
+- bundle exec rake build
+- bundle exec rake $RAKE_TASK
+notifications:
+  email: false
+  slack:
+    secure: R5MWoIv3FOBb0bhawHIkIMh2b0HUzK7nkxSpovK+A3Xmkl5JDirV5bcDeYaSAWZNqUWvbfo7lw6I0o5xoU1eNjOrjiqV0HFfkZZ1tqbZYs/Zw9qSHpPYyB5xacQglFjqWn0VHobGg6J8QstnM4AEWrk2KapGtKdWMNtLK/2OR3Q=
+    on_failure: change
+    on_success: change

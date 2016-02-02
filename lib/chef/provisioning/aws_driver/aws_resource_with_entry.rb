@@ -4,12 +4,6 @@ require 'chef/provisioning/aws_driver/resources'
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
 
-  # This should be a hash of tags to apply to the AWS object
-  #
-  # @param aws_tags [Hash] Should be a hash of keys & values to add.  Keys and values
-  #        can be provided as symbols or strings, but will be stored in AWS as strings.
-  attribute :aws_tags, kind_of: Hash
-
   #
   # Dissociate the ID of this object from Chef.
   #
@@ -19,7 +13,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   #
   def delete_managed_entry(action_handler)
     if should_have_managed_entry?
-      managed_entry_store.delete(self.class.resource_name, name, action_handler)
+      managed_entry_store.delete(self.class.managed_entry_type, name, action_handler)
     end
   end
 
@@ -37,7 +31,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   def save_managed_entry(aws_object, action_handler, existing_entry: nil)
     if should_have_managed_entry?
       managed_entry = existing_entry ||
-                      managed_entry_store.new_entry(self.class.resource_name, name)
+                      managed_entry_store.new_entry(self.class.managed_entry_type, name)
       updated = update_managed_entry(aws_object, managed_entry)
       if updated || !existing_entry
         managed_entry.save(action_handler)

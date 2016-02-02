@@ -23,7 +23,7 @@ module AWSSupport
   require 'aws'
   require 'aws_support/deep_matcher/matchable_object'
   require 'aws_support/deep_matcher/matchable_array'
-  DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^AWS::(EC2|ELB)($|::)/ }
+  DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(EC2|ELB|IAM|S3|RDS|CloudSearch|Route53|ElasticsearchService)($|::)/ }
   DeepMatcher::MatchableArray.matchable_classes  << AWS::Core::Data::List
 
   def purge_all
@@ -44,7 +44,7 @@ module AWSSupport
 
   def setup_public_vpc
     aws_vpc 'test_vpc' do
-      cidr_block '10.0.0.0/24'
+      cidr_block '10.0.0.0/16'
       internet_gateway true
       enable_dns_hostnames true
       main_routes '0.0.0.0/0' => :internet_gateway
@@ -66,9 +66,18 @@ module AWSSupport
       end.converge
     end
 
+    aws_security_group 'test_security_group' do
+      vpc 'test_vpc'
+      inbound_rules '0.0.0.0/0' => [ 22, 80 ]
+      outbound_rules [ 22, 80 ] => '0.0.0.0/0'
+    end
+
+    azs = driver.ec2_client.describe_availability_zones.availability_zones.map {|r| r.zone_name}
     aws_subnet 'test_public_subnet' do
       vpc 'test_vpc'
+      cidr_block '10.0.0.0/24'
       map_public_ip_on_launch true
+      availability_zone azs.first
     end
   end
 
@@ -86,15 +95,10 @@ module AWSSupport
       module_eval(&block)
     end
 
-    if ENV['AWS_TEST_DRIVER']
+    if ENV['AWS_TEST_DRIVER']  && !ENV['AWS_TEST_DRIVER'].empty?
       aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
       when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
     else
-#       warn <<EOM
-# --------------------------------------------------------------------------------------------------------------------------
-# AWS_TEST_DRIVER not set ... cannot run AWS test.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS.
-# --------------------------------------------------------------------------------------------------------------------------
-# EOM
       skip "AWS_TEST_DRIVER not set ... cannot run AWS tests.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS." do
         context description, *tags, &context_block
       end
@@ -118,8 +122,11 @@ module AWSSupport
       # Destroys it after the last example in the context runs.  Objects created
       # in the order declared, and destroyed in reverse order.
       #
-      Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
-        resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
+      aws_resources = Chef::Provisioning::AWSDriver::Resources.constants
+      aws_resources.map! {|r| Chef::Provisioning::AWSDriver::Resources.const_get(r) }
+
+      aws_resources += [Chef::Resource::Machine, Chef::Resource::MachineImage, Chef::Resource::MachineBatch, Chef::Resource::LoadBalancer]
+      aws_resources.each do |resource_class|
         resource_name = resource_class.resource_name
         # def aws_vpc(name, &block)
         define_method(resource_name) do |name, &block|
@@ -164,15 +171,25 @@ module AWSSupport
       context.module_eval do
         after :example do
           # Close up delayed streams so they don't print out their garbage later in the run
-          delayed_streams.each { |s| s.close }
+          unless chef_config[:include_output_after_example]
+            delayed_streams.each { |s| s.close }
+          end
 
           # Destroy any objects we know got created during the test
           created_during_test.reverse_each do |resource_name, name|
-            (recipe do
-              public_send(resource_name, name) do
-                action :purge
-              end
-            end).converge
+            begin
+              (recipe do
+                public_send(resource_name, name) do
+                  action :purge
+                end
+              end).converge
+            rescue ::Chef::Exceptions::ValidationFailed
+              (recipe do
+                public_send(resource_name, name) do
+                  action :destroy
+                end
+              end).converge
+            end
           end
         end
       end
@@ -185,11 +202,11 @@ module AWSSupport
     Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
       resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
       resource_name = resource_class.resource_name
-      define_method("update_an_#{resource_name}") do |name, expected_updates={}|
-        AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates)
+      define_method("update_an_#{resource_name}") do |name, expected_updates={}, &block|
+        AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates, block)
       end
-      define_method("create_an_#{resource_name}") do |name, expected_values={}|
-        AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values)
+      define_method("create_an_#{resource_name}") do |name, expected_values={}, &block|
+        AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
       define_method("have_#{resource_name}_tags") do |name, expected_tags={}|
         AWSSupport::Matchers::HaveAWSObjectTags.new(self, resource_class, name, expected_tags)
@@ -197,8 +214,8 @@ module AWSSupport
       define_method("destroy_an_#{resource_name}") do |name, expected_values={}|
         AWSSupport::Matchers::DestroyAnAWSObject.new(self, resource_class, name)
       end
-      define_method("match_an_#{resource_name}") do |name, expected_values={}|
-        AWSSupport::Matchers::MatchAnAWSObject.new(self, resource_class, name, expected_values)
+      define_method("match_an_#{resource_name}") do |name, expected_values={}, &block|
+        AWSSupport::Matchers::MatchAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
     end
 

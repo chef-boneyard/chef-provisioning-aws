@@ -2,11 +2,12 @@ require 'chef/provisioning/aws_driver/aws_provider'
 require 'set'
 
 class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSProvider
+  provides :aws_auto_scaling_group
 
   protected
 
   def create_aws_object
-    converge_by "create new Auto Scaling Group #{new_resource.name} in #{region}" do
+    converge_by "create Auto Scaling group #{new_resource.name} in #{region}" do
       options = desired_options.dup
       options[:min_size] ||= 1
       options[:max_size] ||= 1
@@ -20,7 +21,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def destroy_aws_object(group)
-    converge_by "delete Auto Scaling Group #{new_resource.name} in #{region}" do
+    converge_by "delete Auto Scaling group #{new_resource.name} in #{region}" do
       group.delete!
     end
   end

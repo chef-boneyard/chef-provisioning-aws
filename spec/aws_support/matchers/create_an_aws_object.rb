@@ -8,17 +8,21 @@ module AWSSupport
       include RSpec::Matchers::Composable
       include AWSSupport::DeepMatcher
 
-      def initialize(example, resource_class, name, expected_values)
+      # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_object
+      def initialize(example, resource_class, name, expected_values, custom_matcher)
         @example = example
         @resource_class = resource_class
         @name = name
         @expected_values = expected_values
+        @custom_matcher = custom_matcher
       end
 
       attr_reader :example
       attr_reader :resource_class
       attr_reader :name
       attr_reader :expected_values
+      attr_reader :custom_matcher
+
       def resource_name
         @resource_class.resource_name
       end
@@ -32,7 +36,7 @@ module AWSSupport
 
         # Converge
         begin
-          recipe.converge
+          recipe.converge unless recipe.converged?
         rescue
           differences += [ "error trying to create #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
         end
@@ -45,6 +49,8 @@ module AWSSupport
         resource.driver example.driver
         resource.managed_entry_store Chef::Provisioning.chef_managed_entry_store
         aws_object = resource.aws_object
+
+        example.instance_exec aws_object, &custom_matcher if custom_matcher
 
         # Check existence
         if aws_object.nil?

@@ -114,11 +114,84 @@ describe Chef::Resource::AwsVpc do
         end
       end
 
+      it "creates aws_vpc tags" do
+        expect_recipe {
+          aws_vpc 'test_vpc' do
+            cidr_block '10.0.0.0/24'
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_vpc('test_vpc')
+        .and have_aws_vpc_tags('test_vpc',
+          {
+            'Name' => 'test_vpc',
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_vpc 'test_vpc' do
+          cidr_block '10.0.0.0/24'
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_vpc tags" do
+          expect_recipe {
+            aws_vpc 'test_vpc' do
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_vpc_tags('test_vpc',
+            {
+              'Name' => 'test_vpc',
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_vpc tags except Name" do
+          expect_recipe {
+            aws_vpc 'test_vpc' do
+              aws_tags {}
+            end
+          }.to have_aws_vpc_tags('test_vpc',
+            {
+              'Name' => 'test_vpc'
+            }
+          ).and be_idempotent
+        end
+      end
+
       it "aws_vpc 'vpc' with no attributes fails to create a VPC (must specify cidr_block)" do
         expect_converge {
           aws_vpc 'test_vpc' do
           end
         }.to raise_error(AWS::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
+      end
+
+      context "When having two VPC's and a peering connection between them" do
+        aws_vpc "test_vpc_1" do
+          cidr_block '20.0.0.0/24'
+        end
+
+        aws_vpc "test_vpc_2" do
+          cidr_block '21.0.0.0/24'
+        end
+
+        aws_vpc_peering_connection "test_peering_connection" do
+          vpc "test_vpc_1"
+          peer_vpc "test_vpc_2"
+        end
+
+        it "deletes the peer connection when one of the vpc's is deleted." do
+          expect_recipe {
+            aws_vpc "test_vpc_1" do
+              action :purge
+            end
+          }.to match_an_aws_vpc_peering_connection('test_peering_connection',
+              :'status.code' => 'deleted'
+          )
+        end
       end
     end
   end

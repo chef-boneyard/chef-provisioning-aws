@@ -53,6 +53,7 @@ RSpec::Core::RakeTask.new(:machine_image) do |spec|
   spec.rspec_opts = "-b -t super_slow -e 'machine_image can create an image in the VPC'"
 end
 
+require "chef/provisioning/aws_driver/version"
 require "github_changelog_generator/task"
 
 GitHubChangelogGenerator::RakeTask.new :changelog do |config|

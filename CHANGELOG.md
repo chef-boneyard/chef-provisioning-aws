@@ -1,8 +1,7 @@
 # Change Log
 
-## [Unreleased](https://github.com/chef/chef-provisioning-aws/tree/HEAD)
-
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.0...HEAD)
+## [1.8.0](https://github.com/chef/chef-provisioning-aws/tree/1.8.0) (2016-02-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.0...1.8.0)
 
 **Fixed bugs:**
 
@@ -33,7 +32,6 @@
 - Transport connectivity is not verified before reporting "is now connectable" [\#388](https://github.com/chef/chef-provisioning-aws/issues/388)
 - Bug when changing existing routes on aws\_route\_table converge [\#367](https://github.com/chef/chef-provisioning-aws/issues/367)
 - aws\_eip\_address create action breaks without public\_ip attribute [\#366](https://github.com/chef/chef-provisioning-aws/issues/366)
-- My travis fix disables all tests for OS PRs, I want it to mark all the tests as pending [\#405](https://github.com/chef/chef-provisioning-aws/pull/405) ([tyler-ball](https://github.com/tyler-ball))
 - Applying chef\_server and managed\_entry\_store to all Provisioning.inline\_resources [\#403](https://github.com/chef/chef-provisioning-aws/pull/403) ([tyler-ball](https://github.com/tyler-ball))
 - Adding a Travis workound so AWS\_TEST\_DRIVER is only exported on Chef repo orgs [\#399](https://github.com/chef/chef-provisioning-aws/pull/399) ([tyler-ball](https://github.com/tyler-ball))
 - Updating all our retry logic to use a standard pattern, fixes \#388 [\#396](https://github.com/chef/chef-provisioning-aws/pull/396) ([tyler-ball](https://github.com/tyler-ball))
@@ -43,17 +41,10 @@
 - Adding sticky sessions to the load balancer [\#386](https://github.com/chef/chef-provisioning-aws/pull/386) ([raskchanky](https://github.com/raskchanky))
 - Use Amazon API version 2 for RDS [\#365](https://github.com/chef/chef-provisioning-aws/pull/365) ([josb](https://github.com/josb))
 
-**Closed issues:**
-
-- Public IP used to ssh despite setting transport\_address\_location: :private\_ip [\#402](https://github.com/chef/chef-provisioning-aws/issues/402)
-- Is it possible to reference a SSL certificate files by filename, rather than inline? [\#392](https://github.com/chef/chef-provisioning-aws/issues/392)
-
 **Merged pull requests:**
 
-- Adding changelog and version update for 1.7.0 release [\#406](https://github.com/chef/chef-provisioning-aws/pull/406) ([tyler-ball](https://github.com/tyler-ball))
 - fix aws\_rds\_subnet\_group example [\#401](https://github.com/chef/chef-provisioning-aws/pull/401) ([keen99](https://github.com/keen99))
 - Don't iterate through CloudSearch index\_fields if none were given [\#397](https://github.com/chef/chef-provisioning-aws/pull/397) ([stevendanna](https://github.com/stevendanna))
-- Fixes \#367. [\#390](https://github.com/chef/chef-provisioning-aws/pull/390) ([joaogbcravo](https://github.com/joaogbcravo))
 - ElasticsearchService requires aws-sdk 2.1.26+ [\#387](https://github.com/chef/chef-provisioning-aws/pull/387) ([stevendanna](https://github.com/stevendanna))
 - Add aws\_elasticsearch\_domain resource [\#385](https://github.com/chef/chef-provisioning-aws/pull/385) ([stevendanna](https://github.com/stevendanna))
 
@@ -69,7 +60,6 @@
 - with\_driver "aws::us-west-2" block breaking VPC launch in loop [\#369](https://github.com/chef/chef-provisioning-aws/issues/369)
 - ready\_machine should wait for "Windows is Ready to use" message [\#355](https://github.com/chef/chef-provisioning-aws/issues/355)
 - Type Error, Can't Dupe NilClass when creating a load balancer [\#351](https://github.com/chef/chef-provisioning-aws/issues/351)
-- ERROR: bad URI\(is not URI?\): https://\[chef\_server\_url\]/organizations/\[organization\_name\]/data/aws\_eip\_address/assign eip [\#257](https://github.com/chef/chef-provisioning-aws/issues/257)
 - Full documentation of the available :bootstrap\_options for a machine [\#230](https://github.com/chef/chef-provisioning-aws/issues/230)
 - Certain security group rules definitions don't match correctly \(not idempotent\) [\#154](https://github.com/chef/chef-provisioning-aws/issues/154)
 - Adding full test coverage for security groups, documenting all the ways rules can be defined, fixes \#154 [\#382](https://github.com/chef/chef-provisioning-aws/pull/382) ([tyler-ball](https://github.com/tyler-ball))
@@ -80,16 +70,12 @@
 
 **Closed issues:**
 
-- Cannot use custom Windows AMI  [\#381](https://github.com/chef/chef-provisioning-aws/issues/381)
-- Provisioning no longer works with stock Windows 2012r2 AMI [\#380](https://github.com/chef/chef-provisioning-aws/issues/380)
 - Support convergence\_options: bootstrap\_no\_proxy [\#377](https://github.com/chef/chef-provisioning-aws/issues/377)
 - instance\_ids found for machines deleted using EC2 GUI [\#364](https://github.com/chef/chef-provisioning-aws/issues/364)
-- local\_route method doesn't exist in aws\_route\_table [\#180](https://github.com/chef/chef-provisioning-aws/issues/180)
 - Would be nice to have :stop action on machines [\#162](https://github.com/chef/chef-provisioning-aws/issues/162)
 
 **Merged pull requests:**
 
-- Preparing 1.6.0 release [\#383](https://github.com/chef/chef-provisioning-aws/pull/383) ([tyler-ball](https://github.com/tyler-ball))
 - Fix index field creation during cloudsearch create. [\#372](https://github.com/chef/chef-provisioning-aws/pull/372) ([tylercloke](https://github.com/tylercloke))
 - Add gemspec files to allow bundler to run from the gem [\#362](https://github.com/chef/chef-provisioning-aws/pull/362) ([ksubrama](https://github.com/ksubrama))
 
@@ -128,12 +114,7 @@
 
 **Closed issues:**
 
--  No resource or method named 'aws\_rds\_instance' for 'Chef::Recipe "test-recipe"' [\#336](https://github.com/chef/chef-provisioning-aws/issues/336)
 - Add CONTRIBUTING.md to chef-provisioning-aws [\#229](https://github.com/chef/chef-provisioning-aws/issues/229)
-
-**Merged pull requests:**
-
-- Prepping for 1.5.0 release [\#361](https://github.com/chef/chef-provisioning-aws/pull/361) ([tyler-ball](https://github.com/tyler-ball))
 
 ## [v1.4.1](https://github.com/chef/chef-provisioning-aws/tree/v1.4.1) (2015-09-22)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.4.0...v1.4.1)
@@ -155,10 +136,6 @@
 **Closed issues:**
 
 - machine :converge\_only ignores chef\_server param when run via chef-zero [\#329](https://github.com/chef/chef-provisioning-aws/issues/329)
-
-**Merged pull requests:**
-
-- Preping for 1.4.1 release [\#341](https://github.com/chef/chef-provisioning-aws/pull/341) ([tyler-ball](https://github.com/tyler-ball))
 
 ## [v1.4.0](https://github.com/chef/chef-provisioning-aws/tree/v1.4.0) (2015-09-16)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.3.1...v1.4.0)

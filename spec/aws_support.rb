@@ -56,7 +56,12 @@ module AWSSupport
 
     before :context do
       image = driver.ec2.images.filter('name', 'test_machine_image').first
-      image.delete if image
+      if image
+        begin
+          image.delete
+        rescue AWS::EC2::Errors::InvalidAMIID::Unavailable
+        end
+      end
 
       default_sg = test_vpc.aws_object.security_groups.filter('group-name', 'default').first
       recipe do

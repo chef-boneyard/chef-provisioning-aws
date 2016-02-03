@@ -338,8 +338,8 @@ module AWSDriver
               elsif ! server_certificate_eql?(listener.server_certificate,
                                               server_cert_from_spec(desired_listener))
                 # Server certificate is mutable - if no immutable changes required a full recreate, update cert
-                perform_action.call("    update server certificate from #{listener.server_certificate} to #{desired_listener[:server_certificate]}") do
-                  listener.server_certificate = desired_listener[:server_certificate]
+                perform_action.call("    update server certificate from #{listener.server_certificate} to #{server_cert_from_spec(desired_listener)}") do
+                  listener.server_certificate = server_cert_from_spec(desired_listener)
                 end
               end
 
@@ -354,7 +354,7 @@ module AWSDriver
             updates << "    set protocol to #{listener[:protocol].inspect}"
             updates << "    set instance port to #{listener[:instance_port].inspect}"
             updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
-            updates << "    set server certificate to #{listener[:server_certificate]}" if listener[:server_certificate]
+            updates << "    set server certificate to #{server_cert_from_spec(listener)}" if server_cert_from_spec(listener)
             perform_action.call(updates) do
               actual_elb.listeners.create(listener)
             end

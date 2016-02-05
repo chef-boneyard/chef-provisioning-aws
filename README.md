@@ -8,7 +8,7 @@ This README is a work in progress.  Please add to it!
 
 There are 3 ways you can provide your AWS Credentials.  We will look for credentials in the order from below and use the first one found.  This precedence order is taken from http://docs.aws.amazon.com/sdkforruby/api/index.html#Configuration:
 
-1. Through the environment variables `ENV["AWS_ACCESS_KEY_ID"]`, `ENV["AWS_SECRET_ACCESS_KEY"]` and optionally `ENV["AWS_SESSION_TOKEN"]`
+1. Through the environment variables `ENV["AWS_ACCESS_KEY_ID"]`, `ENV["AWS_SECRET_ACCESS_KEY"]` and optionally `ENV["AWS_SESSION_TOKEN"]`i
 2. The shared credentials ini file.  The default location is `~/.aws/credentials` but you can overwrite this by specifying `ENV["AWS_CONFIG_FILE"]`.  You can specify
 multiple profiles in this file and select one with the `ENV["AWS_DEFAULT_PROFILE"]`
 environment variable or via the driver url.  For example, a driver url of `aws:staging:us-east-1` would use the profile `staging`.  If you do not specify a profile then the `default` one is used.  Read
@@ -149,6 +149,8 @@ with_machine_options({
   use_private_ip_for_ssh: false, # DEPRECATED, use `transport_address_location`
   transport_address_location: :public_ip, # `:public_ip` (default), `:private_ip` or `:dns`.  Defines how SSH or WinRM should find an address to communicate with the instance.
   is_windows: true, # false by default
+  winrm_username: "Administrator",
+  winrm_password: "password", # Override if you have specified your own password and are not fetching the password from AWS
 })
 ```
 

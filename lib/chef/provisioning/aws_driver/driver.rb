@@ -934,6 +934,14 @@ EOD
       'ubuntu'
     end
 
+    def default_winrm_username
+      'Administrator'
+    end
+
+    def default_winrm_transport
+      'http'
+    end
+
     def keypair_for(bootstrap_options)
       if bootstrap_options[:key_name]
         keypair_name = bootstrap_options[:key_name]
@@ -1033,52 +1041,59 @@ EOD
 
     def create_winrm_transport(machine_spec, machine_options, instance)
       remote_host = determine_remote_host(machine_spec, instance)
-      username = machine_options[:winrm_username] || 'Administrator'
+      username = machine_spec.reference['winrm_username'] ||
+                 machine_options[:winrm_username] ||
+                 default_winrm_username
       # default to http for now, should upgrade to https when knife support self-signed
-      transport_type = machine_options[:winrm_transport] || 'http'
+      transport_type = machine_spec.reference['winrm_transport'] ||
+                       machine_options[:winrm_transport] ||
+                       default_winrm_transport
       type = case transport_type
              when 'http'
                :plaintext
              when 'https'
                :ssl
              end
-      if machine_spec.reference[:winrm_port]
-        port = machine_spec.reference[:winrm_port]
-      else #default port
-        port = case transport_type
-               when 'http'
-                 '5985'
-               when 'https'
-                 '5986'
-               end
-      end
+      port = machine_spec.reference['winrm_port'] ||
+             machine_options[:winrm_port] ||
+             case transport_type
+             when 'http'
+               '5985'
+             when 'https'
+               '5986'
+             end
       endpoint = "#{transport_type}://#{remote_host}:#{port}/wsman"
 
       pem_bytes = get_private_key(instance.key_name)
 
-      if machine_options[:winrm_password]
-        password = machine_options[:winrm_password]
-      else # pull from ec2 and store in reference
-        if machine_spec.reference['winrm_encrypted_password']
-          decoded = Base64.decode64(machine_spec.reference['winrm_encrypted_password'])
-        else
-          encrypted_admin_password = instance.password_data.password_data
-          if encrypted_admin_password.nil? || encrypted_admin_password.empty?
-            raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
-          end
+      password = machine_spec.reference['winrm_password'] ||
+                 machine_options[:winrm_password] ||
+                 begin
+                   if machine_spec.reference['winrm_encrypted_password']
+                     decoded = Base64.decode64(machine_spec.reference['winrm_encrypted_password'])
+                   else
+                     encrypted_admin_password = instance.password_data.password_data
+                     if encrypted_admin_password.nil? || encrypted_admin_password.empty?
+                       raise "You did not specify winrm_password in the machine options and no encrytpted password could be fetched from the instance"
+                     end
+                     machine_spec.reference['winrm_encrypted_password']||=encrypted_admin_password
+                     # ^^ saves encrypted password to the machine_spec
+                     decoded = Base64.decode64(encrypted_admin_password)
+                   end
+                   # decrypt so we can utilize
+                   private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
+                   private_key.private_decrypt decoded
+                 end
 
-          machine_spec.reference['winrm_encrypted_password']||=encrypted_admin_password
-          # ^^ saves encrypted password to the machine_spec
-          decoded = Base64.decode64(encrypted_admin_password)
-        end
-        # decrypt so we can utilize
-        private_key = OpenSSL::PKey::RSA.new(get_private_key(instance.key_name))
-        password = private_key.private_decrypt decoded
-      end
-
-      disable_sspi =  machine_options[:winrm_disable_sspi] || false # default to Negotiate
-      basic_auth_only = machine_options[:winrm_basic_auth_only] || false # disallow Basic auth by default
-      no_ssl_peer_verification = machine_options[:winrm_no_ssl_peer_verification] || false #disallow MITM potential by default
+      disable_sspi =  machine_spec.reference['winrm_disable_sspi'] ||
+                      machine_options[:winrm_disable_sspi] ||
+                      false # default to Negotiate
+      basic_auth_only = machine_spec.reference['winrm_basic_auth_only'] ||
+                        machine_options[:winrm_basic_auth_only] ||
+                        false # disallow Basic auth by default
+      no_ssl_peer_verification = machine_spec.reference['winrm_no_ssl_peer_verification'] ||
+                                 machine_options[:winrm_no_ssl_peer_verification] ||
+                                 false #disallow MITM potential by default
 
       winrm_options = {
         user: username,

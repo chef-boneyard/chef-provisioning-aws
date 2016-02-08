@@ -1090,10 +1090,10 @@ EOD
 
       if no_ssl_peer_verification or type != :ssl
         # =>  we won't verify certs at all
-        Chef::Log.warn "No SSL or no peer verification"
+        Chef::Log.info "No SSL or no peer verification"
       elsif machine_spec.reference['winrm_ssl_thumbprint']
         # we have stored the cert
-        Chef::Log.warn "Using stored fingerprint"
+        Chef::Log.info "Using stored fingerprint"
       else
         # we need to retrieve the cert and verify it by connecting just to
         # retrieve the ssl certificate and compare it to what we see in the

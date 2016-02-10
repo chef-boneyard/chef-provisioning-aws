@@ -50,7 +50,7 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   attribute :outbound_rules, kind_of: [ Array, Hash ]
 
   attribute :security_group_id, kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^sg-[a-f0-9]{8}$/ ? name : nil
+    name.downcase =~ /^sg-[a-f0-9]{8}$/ ? name.downcase : nil
   }
 
   def aws_object
@@ -61,12 +61,12 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
       # provided
       if vpc
         vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: self)
-        results = vpc_object.security_groups.filter('group-name', name).to_a
+        results = vpc_object.security_groups.filter('group-name', name.downcase).to_a
       else
-        results = driver.ec2.security_groups.filter('group-name', name).to_a
+        results = driver.ec2.security_groups.filter('group-name', name.downcase).to_a
       end
       if results.size >= 2
-        raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(name, results)
+        raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(name.downcase, results)
       end
       result = results.first
     end

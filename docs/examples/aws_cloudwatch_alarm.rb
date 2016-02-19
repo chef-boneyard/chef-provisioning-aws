@@ -20,18 +20,19 @@ aws_launch_config 'my-launch-config' do
   instance_type 't1.micro'
 end
 
-aws_auto_scaling_group 'my-auto-scaling-group' do
-  desired_capacity 3
-  min_size 1
-  max_size 5
-  launch_config 'my-launch-config'
-end
-
-policy = aws_scaling_policy 'my-scaling-policy' do
-  auto_scaling_group 'my-auto-scaling-group'
-  adjustment_type 'ChangeInCapacity'
-  scaling_adjustment 2
-end
+scaling_group =
+  aws_auto_scaling_group 'my-auto-scaling-group' do
+    desired_capacity 3
+    min_size 1
+    max_size 5
+    launch_config 'my-launch-config'
+    scaling_policies(
+      'my-scaling-policy' => {
+        adjustment_type: 'ChangeInCapacity',
+        scaling_adjustment: 2
+      }
+    )
+  end
 
 aws_cloudwatch_alarm 'my-test-alert' do
   namespace 'AWS/EC2'
@@ -41,6 +42,7 @@ aws_cloudwatch_alarm 'my-test-alert' do
   period 60
   statistic 'Average'
   threshold 80
-  alarm_actions [policy.arn]
+  alarm_actions [
+    scaling_group.aws_object.scaling_policies['my-scaling-policy'].arn
+  ]
 end
-

@@ -10,12 +10,12 @@ with_driver 'aws::eu-west-1' do
     desired_capacity 3
     min_size 1
     max_size 5
-    launch_config 'my-sweet-launch-config'
-  end
-
-  aws_scaling_policy 'my-amazing-scaling-policy' do
-    auto_scaling_group 'my-awesome-auto-scaling-group'
-    adjustment_type 'ChangeInCapacity'
-    scaling_adjustment 2
+    launch_configuration 'my-sweet-launch-config'
+    scaling_policies(
+      'my-amazing-scaling-policy' => {
+        adjustment_type: 'ChangeInCapacity',
+        scaling_adjustment: 1
+      }
+    )
   end
 end

@@ -11,6 +11,7 @@ class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSRe
   attribute :min_size,             kind_of: Integer
   attribute :max_size,             kind_of: Integer
   attribute :load_balancers,       kind_of: Array,   coerce: proc { |value| [value].flatten }
+  attribute :scaling_policies,     kind_of: Hash,    default: {}
 
   def aws_object
     result = driver.auto_scaling.groups[name]

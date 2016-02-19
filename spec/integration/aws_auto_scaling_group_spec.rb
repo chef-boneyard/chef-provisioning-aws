@@ -11,15 +11,33 @@ describe Chef::Resource::AwsAutoScalingGroup do
       end
 
       it "aws_auto_scaling_group 'test_group' creates an auto scaling group" do
-        r = recipe {
+        expect_recipe {
           aws_auto_scaling_group 'test_group' do
             launch_configuration 'test_config'
             availability_zones ["#{driver.aws_config.region}a"]
             min_size 1
             max_size 2
           end
-        }
-        expect(r).to create_an_aws_auto_scaling_group('test_group')
+        }.to create_an_aws_auto_scaling_group(
+          'test_group').and be_idempotent
+      end
+
+      it "aws_auto_scaling_group 'test_group_with_policy' creates an auto scaling group" do
+        expect_recipe {
+          aws_auto_scaling_group 'test_group_with_policy' do
+            launch_configuration 'test_config'
+            availability_zones ["#{driver.aws_config.region}a"]
+            min_size 1
+            max_size 2
+            scaling_policies(
+              test_policy: {
+                adjustment_type: 'ChangeInCapacity',
+                scaling_adjustment: 1
+              }
+            )
+          end
+        }.to create_an_aws_auto_scaling_group(
+          'test_group_with_policy').and be_idempotent
       end
     end
   end

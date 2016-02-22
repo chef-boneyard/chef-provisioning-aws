@@ -5,8 +5,22 @@ describe Chef::Resource::AwsAutoScalingGroup do
 
   when_the_chef_12_server 'exists', organization: 'foo', server_scope: :context do
     with_aws 'When connected to AWS' do
+      # Select an amazon linux ami based upon region
+      ami = {
+        'eu-west-1' => 'ami-3850624c',
+        'eu-central-1' => 'ami-993383ea',
+        'us-east-1' => 'ami-e024bf89',
+        'us-west-1' => 'ami-951945d0',
+        'us-west-2' => 'ami-16fd7026',
+        'ap-northeast-1' => 'ami-dcfa4edd',
+        'ap-northeast-2' => 'ami-7308c51d',
+        'ap-southeast-1' => 'ami-74dda626',
+        'ap-southeast-2' => 'ami-b5990e8f',
+        'sa-east-1' => 'ami-3e3be423'
+      }[driver.aws_config.region]
+
       aws_launch_configuration 'test_config' do
-        image 'ami-993383ea'
+        image ami
         instance_type 't1.micro'
       end
 

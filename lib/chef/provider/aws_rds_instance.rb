@@ -9,7 +9,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   REQUIRED_OPTIONS = %i(db_instance_identifier allocated_storage engine
                         db_instance_class master_username master_user_password)
 
-  OTHER_OPTIONS = %i(engine_version multi_az iops publicly_accessible db_name port db_subnet_group_name db_parameter_group_name)
+  OTHER_OPTIONS = %i(db_snapshot_identifier engine_version multi_az iops publicly_accessible db_name port db_subnet_group_name db_parameter_group_name)
 
   def update_aws_object(instance)
     Chef::Log.warn("aws_rds_instance does not support modifying a started instance")
@@ -26,7 +26,12 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
 
   def create_aws_object
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
-      new_resource.driver.rds_resource.create_db_instance(options_hash)
+      if new_resource.db_snapshot_identifier
+        snap_options_hash = [:allocated_storage, :master_username, :master_user_password, :engine_version].each { |k| options_hash.delete(k) }
+        new_resource.driver.rds_client.restore_db_instance_from_db_snapshot(options_hash).db_instance
+      else
+        new_resource.driver.rds_resource.create_db_instance(options_hash)
+      end
     end
   end
 

@@ -8,6 +8,7 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
 
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
 
+  attribute :db_snapshot_identifier, kind_of: String
   attribute :engine, kind_of: String
   attribute :engine_version, kind_of: String
   attribute :db_instance_class, kind_of: String

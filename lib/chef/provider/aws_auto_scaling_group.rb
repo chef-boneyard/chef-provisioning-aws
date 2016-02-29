@@ -19,6 +19,10 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
         aws_obj.scaling_policies.put(policy_name.to_s, policy)
       end
 
+      new_resource.notification_configurations.each do |config|
+        aws_obj.notification_configurations.create(config)
+      end
+
       aws_obj
     end
   end

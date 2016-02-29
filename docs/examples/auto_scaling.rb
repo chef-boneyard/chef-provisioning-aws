@@ -11,6 +11,13 @@ with_driver 'aws::eu-west-1' do
     min_size 1
     max_size 5
     launch_configuration 'my-sweet-launch-config'
+    notification_configurations(
+      topic: 'arn::aws::sns::eu-west1:<account_id>:<my-topic>',
+      types: [
+        'autoscaling:EC2_INSTANCE_LAUNCH',
+        'autoscaling:EC2_INSTANCE_TERMINATE'
+      ]
+    )
     scaling_policies(
       'my-amazing-scaling-policy' => {
         adjustment_type: 'ChangeInCapacity',

@@ -24,6 +24,8 @@ describe Chef::Resource::AwsAutoScalingGroup do
         instance_type 't1.micro'
       end
 
+      aws_sns_topic 'test_topic'
+
       it "aws_auto_scaling_group 'test_group' creates an auto scaling group" do
         expect_recipe {
           aws_auto_scaling_group 'test_group' do
@@ -43,6 +45,13 @@ describe Chef::Resource::AwsAutoScalingGroup do
             availability_zones ["#{driver.aws_config.region}a"]
             min_size 1
             max_size 2
+            notification_configurations [{
+              topic: driver.build_arn(service: 'sns', resource: 'test_topic'),
+              types: [
+                'autoscaling:EC2_INSTANCE_LAUNCH',
+                'autoscaling:EC2_INSTANCE_TERMINATE'
+              ]
+            }]
             scaling_policies(
               test_policy: {
                 adjustment_type: 'ChangeInCapacity',

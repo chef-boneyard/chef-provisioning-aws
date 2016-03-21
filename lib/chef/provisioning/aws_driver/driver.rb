@@ -542,10 +542,11 @@ module AWSDriver
           image_options[:instance_id] ||= machine_spec.reference['instance_id']
           image_options[:description] ||= "Image #{image_spec.name} created from machine #{machine_spec.name}"
           Chef::Log.debug "AWS Image options: #{image_options.inspect}"
-          actual_image = ec2.images.create(image_options.to_hash)
+          image_type = ec2_client.create_image(image_options.to_hash)
+          actual_image = ec2_resource.image(image_type.image_id)
           image_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
-            'image_id' => actual_image.id,
+            'image_id' => actual_image.image_id,
             'allocated_at' => Time.now.to_i,
             'from-instance' => image_options[:instance_id]
           }
@@ -565,7 +566,7 @@ module AWSDriver
         aws_tags = image_options.delete(:aws_tags) || {}
         aws_tags['from-instance'] = image_spec.reference['from-instance'] if image_spec.reference['from-instance']
         converge_ec2_tags(actual_image, aws_tags, action_handler)
-        if actual_image.state != :available
+        if actual_image.state.to_sym != :available
           action_handler.report_progress 'Waiting for image to be ready ...'
           wait_until_ready_image(action_handler, image_spec, actual_image)
         end
@@ -1242,7 +1243,7 @@ EOD
     end
 
     def wait_until_ready_image(action_handler, image_spec, image=nil)
-      wait_until_image(action_handler, image_spec, image) { image.state == :available }
+      wait_until_image(action_handler, image_spec, image) { |image| image.state == 'available' }
       action_handler.report_progress "Image #{image_spec.name} is now ready"
     end
 
@@ -1259,6 +1260,8 @@ EOD
             :matching => /did not become ready within/
           ) do |retries, exception|
             action_handler.report_progress "been waiting #{retries*sleep_time}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to become ready ..."
+            # We have to manually reload the instance each loop, otherwise data is stale
+            image.reload
             unless yield(image)
               raise "Image #{image.id} did not become ready within #{max_wait_time} seconds"
             end

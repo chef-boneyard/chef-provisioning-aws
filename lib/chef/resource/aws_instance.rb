@@ -13,7 +13,7 @@ class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWi
   attribute :name, kind_of: String, name_attribute: true
 
   attribute :instance_id, kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^i-[a-f0-9]{8}$/ ? name : nil
+    name =~ /^i-(?:[a-f0-9]{8}|[a-f0-9]{17})$/ ? name : nil
   }
 
   def aws_object

@@ -183,7 +183,14 @@ load_balancer "my_elb" do
           port: 443,
           ssl_certificate_id: "arn:aws:iam::360965486607:server-certificate/cloudfront/foreflight-2015-07-09"
       }
-    ]
+    ],
+    health_check: {
+      healthy_threshold: 2,
+      unhealthy_threshold: 4,
+      interval: 12,
+      timeout: 5,
+      target: 'HTTPS:443/_status'
+    }
   })
 ```
 

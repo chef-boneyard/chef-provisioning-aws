@@ -13,7 +13,7 @@ machine 'ref-machine-2'
 # create and attach ebs volume with machine
 machine 'ref-machine-3' do
   machine_options bootstrap_options: {
-    block_device_mapping: [{
+    block_device_mappings: [{
       device_name: '/dev/xvdf',
       ebs: {
         volume_size: 1 # 1 GB

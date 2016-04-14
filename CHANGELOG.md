@@ -1,7 +1,22 @@
 # Change Log
 
-## [1.8.0](https://github.com/chef/chef-provisioning-aws/tree/1.8.0) (2016-02-03)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.0...1.8.0)
+## [1.9.0](https://github.com/chef/chef-provisioning-aws/tree/1.9.0) (2016-04-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.0...1.9.0)
+
+**Fixed bugs:**
+
+- AWS EC2 long ids support [\#431](https://github.com/chef/chef-provisioning-aws/issues/431)
+- support winrm over https transport [\#348](https://github.com/chef/chef-provisioning-aws/issues/348)
+
+**Merged pull requests:**
+
+- Add support for long instance IDs [\#474](https://github.com/chef/chef-provisioning-aws/pull/474) ([larrywright](https://github.com/larrywright))
+- Winrm+RDP/SSL Fingerprint and Encrypted Password Caching [\#441](https://github.com/chef/chef-provisioning-aws/pull/441) ([hh](https://github.com/hh))
+- Add missing S to the example! [\#432](https://github.com/chef/chef-provisioning-aws/pull/432) ([miguelcnf](https://github.com/miguelcnf))
+- Add a health check to the load balancer options example [\#426](https://github.com/chef/chef-provisioning-aws/pull/426) ([cwandrews](https://github.com/cwandrews))
+
+## [v1.8.0](https://github.com/chef/chef-provisioning-aws/tree/v1.8.0) (2016-02-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.0...v1.8.0)
 
 **Fixed bugs:**
 
@@ -21,6 +36,7 @@
 **Merged pull requests:**
 
 - Switch to us-west-2 to fix tests [\#448](https://github.com/chef/chef-provisioning-aws/pull/448) ([jkeiser](https://github.com/jkeiser))
+- Bump revision to 1.8.0, add github-changelog-generator [\#443](https://github.com/chef/chef-provisioning-aws/pull/443) ([jkeiser](https://github.com/jkeiser))
 - Fix chef-provisioning-aws against 12.6 and 12.7 [\#442](https://github.com/chef/chef-provisioning-aws/pull/442) ([jkeiser](https://github.com/jkeiser))
 - Support for RDS parameter groups. [\#407](https://github.com/chef/chef-provisioning-aws/pull/407) ([tylercloke](https://github.com/tylercloke))
 

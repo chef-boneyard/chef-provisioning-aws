@@ -4,7 +4,7 @@ require 'chef/provisioning/aws_driver/aws_taggable'
 class Chef::Resource::AwsImage < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type Aws::EC2::Image,
+  aws_sdk_type ::Aws::EC2::Image,
                managed_entry_type: :machine_image,
                managed_entry_id_name: 'image_id'
 

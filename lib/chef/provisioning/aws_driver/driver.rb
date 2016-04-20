@@ -536,7 +536,7 @@ module AWSDriver
       image_options = (image_options || {}).to_h.dup
       machine_options = (machine_options || {}).to_h.dup
       aws_tags = image_options.delete(:aws_tags) || {}
-      if actual_image.nil? || !actual_image.exists? || actual_image.state == :failed
+      if actual_image.nil? || !actual_image.exists? || actual_image.state.to_sym == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
           image_options[:name] ||= image_spec.name
           image_options[:instance_id] ||= machine_spec.reference['instance_id']
@@ -1243,7 +1243,7 @@ EOD
     end
 
     def wait_until_ready_image(action_handler, image_spec, image=nil)
-      wait_until_image(action_handler, image_spec, image) { |image| image.state == 'available' }
+      wait_until_image(action_handler, image_spec, image) { |image| image.state.to_sym == :available }
       action_handler.report_progress "Image #{image_spec.name} is now ready"
     end
 

@@ -29,7 +29,15 @@ class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
       # destroyed - we just need to make sure that has completed successfully
       instance = new_resource.driver.ec2_resource.instance(instance_id)
       converge_by "waiting until instance #{instance.id} is :terminated" do
-        instance.wait_until_terminated if instance.exists?
+        if instance.exists?
+          instance.wait_until_terminated do |w|
+            w.delay = 5
+            w.max_attempts = 60
+            w.before_wait do |attempts, response|
+              action_handler.report_progress "waited #{(attempts-1)*5}/#{60*5}s for #{instance.id} status to terminate..."
+            end
+          end
+        end
       end
     end
   end

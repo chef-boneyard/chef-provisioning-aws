@@ -43,6 +43,6 @@ aws_cloudwatch_alarm 'my-test-alert' do
   statistic 'Average'
   threshold 80
   alarm_actions [
-    scaling_group.aws_object.scaling_policies['my-scaling-policy'].arn
+    lazy { scaling_group.aws_object.scaling_policies['my-scaling-policy'].arn }
   ]
 end

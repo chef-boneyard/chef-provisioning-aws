@@ -12,7 +12,18 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
       options[:min_size] ||= 1
       options[:max_size] ||= 1
 
-      new_resource.driver.auto_scaling.groups.create( new_resource.name, options )
+      aws_obj = new_resource.driver.auto_scaling.groups.create(
+        new_resource.name, options)
+
+      new_resource.scaling_policies.each do |policy_name, policy|
+        aws_obj.scaling_policies.put(policy_name.to_s, policy)
+      end
+
+      new_resource.notification_configurations.each do |config|
+        aws_obj.notification_configurations.create(config)
+      end
+
+      aws_obj
     end
   end
 

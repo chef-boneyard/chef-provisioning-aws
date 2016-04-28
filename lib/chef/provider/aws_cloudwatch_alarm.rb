@@ -26,12 +26,6 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
     end
   end
 
-  def value_set(value)
-    return false if value.nil?
-    return true if value.is_a?(TrueClass) || value.is_a?(FalseClass)
-    !value.empty?
-  end
-
   def options_hash
     @options_hash ||= begin
       opts = {}
@@ -39,7 +33,7 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
         opts[opt] = new_resource.send(opt)
       end
       OTHER_OPTS.each do |opt|
-        opts[opt] = new_resource.send(opt) if value_set(new_resource.send(opt))
+        opts[opt] = new_resource.send(opt) if new_resource.property_is_set?(opt)
       end
       AWSResource.lookup_options(opts, resource: new_resource)
       opts

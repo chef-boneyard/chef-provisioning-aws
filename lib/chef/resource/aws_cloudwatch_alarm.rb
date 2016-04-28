@@ -5,21 +5,21 @@ class Chef::Resource::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSRes
 
   aws_sdk_type AWS::CloudWatch::Alarm, id: :name
 
-  attribute :name, :kind_of => String, :name_attribute => true
-  attribute :namespace, :kind_of => String, :required => true
-  attribute :metric_name, :kind_of => String, :required => true
-  attribute :dimensions, :kind_of => Array, :default => []
-  attribute :comparison_operator, :kind_of => String, :required => true
-  attribute :evaluation_periods, :kind_of => Integer, :required => true
-  attribute :period, :kind_of => Integer, :required => true
-  attribute :statistic, :kind_of => String, :required => true
-  attribute :threshold, :kind_of => Integer, :required => true
-  attribute :insufficient_data_actions, :kind_of => Array, :default => []
-  attribute :ok_actions, :kind_of => Array, :default => []
-  attribute :actions_enabled, :kind_of => [TrueClass, FalseClass], :default => false
-  attribute :alarm_actions, :kind_of => Array, :default => []
-  attribute :alarm_description, :kind_of => String, :default => nil
-  attribute :unit, :kind_of => String, :default => nil
+  property :name, String, name_attribute: true
+  property :namespace, String, required: true
+  property :metric_name, String, required: true
+  property :dimensions, Array
+  property :comparison_operator, String, required: true
+  property :evaluation_periods, Integer, required: true
+  property :period, Integer, required: true
+  property :statistic, String, required: true
+  property :threshold, Integer, required: true
+  property :insufficient_data_actions, Array
+  property :ok_actions, Array
+  property :actions_enabled, [TrueClass, FalseClass]
+  property :alarm_actions, Array
+  property :alarm_description, String
+  property :unit, String
 
   def aws_object
     result = driver.cloudwatch.alarms[name]

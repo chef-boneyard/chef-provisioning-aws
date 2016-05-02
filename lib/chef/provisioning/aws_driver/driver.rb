@@ -36,6 +36,7 @@ AWS_V2_SERVICES = {
   "ElasticsearchService" => "elasticsearch",
   "IAM" => "iam",
   "RDS" => "rds",
+  "CloudWatch" => "cloudwatch"
 }
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 
@@ -779,10 +780,6 @@ EOD
 
     def rds
       @rds ||= AWS::RDS.new(config: aws_config)
-    end
-
-    def cloudwatch
-      @cloudwatch ||= AWS::CloudWatch.new(config: aws_config)
     end
 
     def s3

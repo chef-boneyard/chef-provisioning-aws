@@ -1,5 +1,7 @@
-require 'simplecov'
-SimpleCov.start
+begin
+  require 'simplecov'
+  SimpleCov.start
+rescue LoadError; end
 
 # Bring in the RSpec monkeypatch before we do *anything*, so that builtin matchers
 # will get the module.  Not strictly necessary, but cleaner that way.

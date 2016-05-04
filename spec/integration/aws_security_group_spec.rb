@@ -102,6 +102,22 @@ describe Chef::Resource::AwsSecurityGroup do
         end
       end
 
+      context "with an existing security group" do
+        aws_security_group 'test_sg'
+
+        it "uses a case-insensitive name to update it" do
+          expect_recipe {
+            aws_security_group 'Test_Sg' do
+              outbound_rules 22 => '0.0.0.0/0'
+            end
+          }.to update_an_aws_security_group('test_sg',
+            ip_permissions_list_egress: [
+              {groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}], ip_protocol: "tcp", from_port: 22, to_port: 22 }
+            ]
+          ).and be_idempotent
+        end
+      end
+
     end
 
     with_aws "in a VPC" do

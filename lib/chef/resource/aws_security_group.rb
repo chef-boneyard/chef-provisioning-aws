@@ -9,7 +9,7 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
                id: :id,
                option_names: [:security_group, :security_group_id, :security_group_name]
 
-  attribute :name,          kind_of: String, name_attribute: true
+  attribute :name,          kind_of: String, name_attribute: true, coerce: proc {|n| n.downcase}
   attribute :vpc,           kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
   attribute :description,   kind_of: String
 

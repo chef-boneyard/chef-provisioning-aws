@@ -62,6 +62,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # The destination (the left side of the `=>`) is always a CIDR block.
   # The target (the right side of the `=>`) can be one of several things:
   # - { internet_gateway: <AWS Internet Gateway ID or object> }
+  # - { nat_gateway: <AWS Nat Gateway ID or object> }
   # - { instance: <Chef machine name or resource, AWS Instance ID or object> }
   # - { network_interface: <AWS Network Interface ID or object> }
   # - { vpc_peering_connection: <AWS VPC Peering Connection ID or object> }

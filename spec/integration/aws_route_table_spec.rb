@@ -86,6 +86,26 @@ describe Chef::Resource::AwsRouteTable do
         end
       end
 
+      context "with nat gateway", :super_slow do
+        aws_nat_gateway 'test_nat_gateway' do
+          subnet 'test_public_subnet'
+        end
+
+        fit "can route to a nat gateway", :super_slow do
+          expect_recipe {
+            aws_route_table 'test_route_table' do
+              vpc 'test_vpc'
+              routes '0.0.0.0/0' => test_nat_gateway
+            end
+          }.to create_an_aws_route_table('test_route_table',
+            routes: Set[
+                { destination_cidr_block: '10.0.0.0/16', gateway_id: 'local', state: 'active' },
+                { destination_cidr_block: '0.0.0.0/0', nat_gateway_id: test_nat_gateway.aws_object.nat_gateway_id, state: 'active' },
+              ]
+          ).and be_idempotent
+        end
+      end
+
       context "with machines", :super_slow do
         machine 'test_machine' do
           machine_options bootstrap_options: {

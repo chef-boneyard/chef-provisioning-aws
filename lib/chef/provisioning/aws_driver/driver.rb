@@ -36,7 +36,8 @@ AWS_V2_SERVICES = {
   "ElasticsearchService" => "elasticsearch",
   "IAM" => "iam",
   "RDS" => "rds",
-  "CloudWatch" => "cloudwatch"
+  "CloudWatch" => "cloudwatch",
+  "AutoScaling" => "auto_scaling"
 }
 Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
 

@@ -62,6 +62,57 @@ describe Chef::Resource::AwsAutoScalingGroup do
         }.to create_an_aws_auto_scaling_group(
           'test_group_with_policy').and be_idempotent
       end
+
+      it "creates aws_auto_scaling_group tags" do
+        expect_recipe {
+          aws_auto_scaling_group 'test_group_with_policy' do
+            launch_configuration 'test_config'
+            availability_zones ["#{driver.aws_config.region}a"]
+            min_size 1
+            max_size 2
+            aws_tags key1: "value"
+          end
+        }.to create_an_aws_auto_scaling_group('test_group_with_policy'
+        ).and have_aws_auto_scaling_group_tags('test_group_with_policy',
+          {
+            'key1' => 'value'
+          }
+        ).and be_idempotent
+      end
+
+      context "with existing tags" do
+        aws_auto_scaling_group 'test_group_with_policy' do
+          launch_configuration 'test_config'
+          availability_zones ["#{driver.aws_config.region}a"]
+          min_size 1
+          max_size 2
+          aws_tags key1: "value"
+        end
+
+        it "updates aws_auto_scaling_group tags" do
+          expect_recipe {
+            aws_auto_scaling_group 'test_group_with_policy' do
+              aws_tags key1: "value2", key2: nil
+            end
+          }.to have_aws_auto_scaling_group_tags('test_group_with_policy',
+            {
+              'key1' => 'value2',
+              'key2' => ''
+            }
+          ).and be_idempotent
+        end
+
+        it "removes all aws_network_acl tags" do
+          expect_recipe {
+            aws_auto_scaling_group 'test_group_with_policy' do
+              aws_tags({})
+            end
+          }.to have_aws_auto_scaling_group_tags('test_group_with_policy',
+            {}
+          ).and be_idempotent
+        end
+      end
+
     end
   end
 end

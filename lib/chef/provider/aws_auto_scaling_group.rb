@@ -1,7 +1,10 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'set'
+require 'chef/provisioning/aws_driver/tagging_strategy/auto_scaling'
 
 class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSProvider
+  include Chef::Provisioning::AWSDriver::TaggingStrategy::AutoScalingConvergeTags
+
   provides :aws_auto_scaling_group
 
   protected

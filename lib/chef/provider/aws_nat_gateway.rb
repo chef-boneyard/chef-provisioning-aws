@@ -14,16 +14,13 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
     subnet = Chef::Resource::AwsSubnet.get_aws_object(new_resource.subnet, resource: new_resource)
 
     if new_resource.eip_address.nil?
-      eip_name = "#{new_resource.name}-eip"
-      eip_address_resource = nil
-
-      Cheffish.inline_resource(self, action) do
-        eip_address_resource = aws_eip_address eip_name
-      end
-      eip_address = eip_address_resource.aws_object
-    else
-      eip_address = Chef::Resource::AwsEipAddress.get_aws_object(new_resource.eip_address, resource: new_resource)
+      # TODO Ideally it would be nice to automatically manage an eip address but
+      # the lack of tagging support and the limited SDK interaction with these two
+      # resources makes that too hard right now. So we force the user to manage their
+      # eip address as a seperate resource.
+      raise "Nat Gateway create action for '#{new_resource.name}' requires the 'eip_address' attribute."
     end
+    eip_address = Chef::Resource::AwsEipAddress.get_aws_object(new_resource.eip_address, resource: new_resource)
 
     converge_by "create nat gateway #{new_resource.name} in region #{region} for subnet #{subnet}" do
       options = {
@@ -32,18 +29,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
       }
 
       nat_gateway = new_resource.driver.ec2_resource.create_nat_gateway(options)
-      wait_for_state(nat_gateway, ['available', 'failed'])
-
-      if nat_gateway.state == 'failed'
-        if new_resource.eip_address.nil?
-          Cheffish.inline_resource(self, action) do
-            aws_eip_address eip_address do
-              action :destroy
-            end
-          end
-        end
-        fail "Failing creating nat_gateway"
-      end
+      wait_for_state(nat_gateway, ['available'])
       nat_gateway
     end
   end
@@ -65,20 +51,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
   def destroy_aws_object(nat_gateway)
     converge_by "delete nat gateway #{new_resource.name} in region #{region} for subnet #{nat_gateway.subnet_id}" do
       nat_gateway.delete
-      wait_for_state(nat_gateway, ['deleted', 'failed'])
-      fail "Failing deleting nat_gateway" if nat_gateway.state == 'failed'
-    end
-
-    if purging or new_resource.eip_address.nil?
-      eip_address_type = nat_gateway.nat_gateway_addresses.first
-      eip_address = Aws::EC2::VpcAddress.new(eip_address_type.allocation_id, {client: new_resource.driver.ec2_client})
-
-      Cheffish.inline_resource(self, action) do
-        aws_eip_address eip_address.public_ip do
-          action :purge
-          not_if eip_address.nil?
-        end
-      end
+      wait_for_state(nat_gateway, ['deleted'])
     end
   end
 end

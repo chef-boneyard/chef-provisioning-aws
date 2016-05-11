@@ -391,10 +391,12 @@ aws_subnet 'my_subnet' do
 end
 
 machine 'my_machine' do
-  machine_options bootstrap_options: {
-    subnet_id: 'my_subnet',
-    security_group_ids: ['my_sg']
-  }
+  machine_options(
+    bootstrap_options: {
+      subnet_id: 'my_subnet',
+      security_group_ids: ['my_sg']
+    }
+  )
 end
 ```
 

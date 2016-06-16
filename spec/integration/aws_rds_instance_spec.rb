@@ -36,17 +36,17 @@ describe Chef::Resource::AwsRdsInstance do
       end
 
       aws_rds_parameter_group "test-db-parameter-group" do
-        db_parameter_group_family "postgres9.4"
+        db_parameter_group_family "postgres9.5"
         description "testing provisioning"
         parameters [{:parameter_name => "max_connections", :parameter_value => "250", :apply_method => "pending-reboot"}]
       end
 
-      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group and aws_rds_parameter_group" do
+      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group and aws_rds_parameter_group", :focus do
         expect_recipe {
           aws_rds_instance "test-rds-instance" do
             engine "postgres"
             publicly_accessible false
-            db_instance_class "db.t1.micro"
+            db_instance_class "db.t2.micro"
             master_username "thechief"
             master_user_password "securesecure" # 2x security
             multi_az false
@@ -57,7 +57,7 @@ describe Chef::Resource::AwsRdsInstance do
         }.to create_an_aws_rds_instance('test-rds-instance',
                                         engine: 'postgres',
                                         multi_az: false,
-                                        db_instance_class: "db.t1.micro",
+                                        db_instance_class: "db.t2.micro",
                                         master_username: "thechief",
                                        ).and be_idempotent
         r = driver.rds_resource.db_instance("test-rds-instance")
@@ -71,7 +71,7 @@ describe Chef::Resource::AwsRdsInstance do
           aws_rds_instance "test-rds-instance2" do
             engine "postgres"
             publicly_accessible false
-            db_instance_class "db.t1.micro"
+            db_instance_class "db.t2.micro"
             master_username "thechief"
             master_user_password "securesecure"
             multi_az false
@@ -81,7 +81,7 @@ describe Chef::Resource::AwsRdsInstance do
         }.to create_an_aws_rds_instance('test-rds-instance2',
                                         engine: 'postgres',
                                         multi_az: false,
-                                        db_instance_class: "db.t1.micro",
+                                        db_instance_class: "db.t2.micro",
                                         master_username: "thechief",
                                         backup_retention_period: 2)
 
@@ -94,7 +94,7 @@ describe Chef::Resource::AwsRdsInstance do
           aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
             aws_tags key1: "value"
             allocated_storage 5
-            db_instance_class "db.t1.micro"
+            db_instance_class "db.t2.micro"
             engine "postgres"
             master_username "thechief"
             master_user_password "securesecure"
@@ -114,7 +114,7 @@ describe Chef::Resource::AwsRdsInstance do
         aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
           aws_tags key1: "value"
           allocated_storage 5
-          db_instance_class "db.t1.micro"
+          db_instance_class "db.t2.micro"
           engine "postgres"
           master_username "thechief"
           master_user_password "securesecure"
@@ -125,7 +125,7 @@ describe Chef::Resource::AwsRdsInstance do
             aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
               aws_tags key1: "value2", key2: nil
               allocated_storage 5
-              db_instance_class "db.t1.micro"
+              db_instance_class "db.t2.micro"
               engine "postgres"
               master_username "thechief"
               master_user_password "securesecure"
@@ -143,7 +143,7 @@ describe Chef::Resource::AwsRdsInstance do
             aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
               aws_tags({})
               allocated_storage 5
-              db_instance_class "db.t1.micro"
+              db_instance_class "db.t2.micro"
               engine "postgres"
               master_username "thechief"
               master_user_password "securesecure"

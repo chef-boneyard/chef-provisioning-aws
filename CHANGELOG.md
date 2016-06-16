@@ -1,12 +1,24 @@
 # Change Log
 
-## [1.9.0](https://github.com/chef/chef-provisioning-aws/tree/1.9.0) (2016-04-14)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.0...1.9.0)
+## [1.10.0](https://github.com/chef/chef-provisioning-aws/tree/1.10.0) (2016-06-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.0...1.10.0)
+
+**Fixed bugs:**
+
+- aws\_auto\_scaling\_group TAGs? [\#478](https://github.com/chef/chef-provisioning-aws/issues/478)
+- WARN: nil is an invalid value for output\_key\_format of resource chef\_client. In Chef 13, this warning will change to an error. Error: Property output\_key\_format must be one of: Symbol [\#475](https://github.com/chef/chef-provisioning-aws/issues/475)
+- fix how machine\_options are specified [\#483](https://github.com/chef/chef-provisioning-aws/pull/483) ([jgoulah](https://github.com/jgoulah))
+- Added aws\_nat\_gateway resource and provider [\#482](https://github.com/chef/chef-provisioning-aws/pull/482) ([tyler-ball](https://github.com/tyler-ball))
+- Add tagging support for the aws\_auto\_scaling\_group resource [\#479](https://github.com/chef/chef-provisioning-aws/pull/479) ([itmustbejj](https://github.com/itmustbejj))
+
+## [v1.9.0](https://github.com/chef/chef-provisioning-aws/tree/v1.9.0) (2016-04-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.0...v1.9.0)
 
 **Fixed bugs:**
 
 - AWS EC2 long ids support [\#431](https://github.com/chef/chef-provisioning-aws/issues/431)
 - support winrm over https transport [\#348](https://github.com/chef/chef-provisioning-aws/issues/348)
+- Use Amazon API version 2 for aws\_image. [\#469](https://github.com/chef/chef-provisioning-aws/pull/469) ([joaogbcravo](https://github.com/joaogbcravo))
 
 **Merged pull requests:**
 

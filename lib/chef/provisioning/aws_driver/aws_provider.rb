@@ -13,7 +13,7 @@ class AWSProvider < Chef::Provider::LWRPBase
 
   AWSResource = Chef::Provisioning::AWSDriver::AWSResource
 
-  class StatusTimeoutError < TimeoutError
+  class StatusTimeoutError < ::Timeout::Error
     def initialize(aws_object, initial_status, expected_status)
       super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
     end

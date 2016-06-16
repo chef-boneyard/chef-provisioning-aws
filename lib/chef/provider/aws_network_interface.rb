@@ -8,7 +8,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
 
   provides :aws_network_interface
 
-  class NetworkInterfaceStatusTimeoutError < TimeoutError
+  class NetworkInterfaceStatusTimeoutError < ::Timeout::Error
     def initialize(new_resource, initial_status, expected_status)
       super("timed out waiting for #{new_resource} status to change from #{initial_status} to #{expected_status}!")
     end

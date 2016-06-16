@@ -6,8 +6,7 @@ describe Chef::Resource::AwsVpc do
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
     with_aws "When AWS has a DHCP options" do
       # Empty DHCP options for the purposes of associating
-      aws_dhcp_options 'test_dhcp_options' do
-      end
+      aws_dhcp_options 'test_dhcp_options'
 
       context "Creating an aws_vpc" do
         it "aws_vpc 'vpc' with cidr_block '10.0.0.0/24' creates a VPC" do
@@ -190,11 +189,11 @@ describe Chef::Resource::AwsVpc do
             end
           }.to match_an_aws_vpc_peering_connection('test_peering_connection',
               :'status.code' => 'deleted'
-          )
+          ).and be_idempotent
         end
       end
 
-      context "and When :purge action is called for a VPC, and it contains NAT gateways" do #, :super_slow do
+      context "and When :purge action is called for a VPC, and it contains NAT gateways" do
         aws_vpc 'test_vpc' do
           cidr_block '10.0.0.0/24'
           internet_gateway true
@@ -204,18 +203,22 @@ describe Chef::Resource::AwsVpc do
           vpc 'test_vpc'
         end
 
+        aws_eip_address 'test_eip'
+
         aws_nat_gateway 'test_nat_gateway' do
           subnet 'test_subnet'
+          eip_address 'test_eip'
         end
 
-        fit 'they should be deleted' do
+        it 'they should be deleted' do
           r = recipe {
             aws_vpc 'test_vpc' do
               action :purge
             end
           }
           expect(r).to match_an_aws_nat_gateway('test_nat_gateway',
-            state: 'deleted')
+            :state => 'deleted'
+          ).and be_idempotent
         end
       end
     end

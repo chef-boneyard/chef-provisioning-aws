@@ -86,12 +86,14 @@ describe Chef::Resource::AwsRouteTable do
         end
       end
 
-      context "with nat gateway", :super_slow do
+      context "with nat gateway" do
+        aws_eip_address 'test_eip'
         aws_nat_gateway 'test_nat_gateway' do
           subnet 'test_public_subnet'
+          eip_address 'test_eip'
         end
 
-        fit "can route to a nat gateway", :super_slow do
+        it "can route to a nat gateway" do
           expect_recipe {
             aws_route_table 'test_route_table' do
               vpc 'test_vpc'

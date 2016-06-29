@@ -81,10 +81,10 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
                       "CNAME records may only have a single value (a hostname).")
 
 
-    when "SOA", "TXT", "PTR", "AAAA", "SPF"
+    when "SOA", "NS", "TXT", "PTR", "AAAA", "SPF"
       true
     else
-      raise ArgumentError, "Argument '#{type}' must be one of #{%w(SOA A MX SRV CNAME TXT PTR AAAA SPF)}"
+      raise ArgumentError, "Argument '#{type}' must be one of #{%w(SOA NS A MX SRV CNAME TXT PTR AAAA SPF)}"
     end
   end
 

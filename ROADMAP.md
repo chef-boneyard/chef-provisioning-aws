@@ -47,3 +47,7 @@ This is a rough tally of upcoming feature work for `chef-provisioning-aws`. We'v
 - [ ] IAM Policies
 - [ ] CloudFront
 - [ ] CloudWatch
+- [ ] ECS
+  - [ ] Task Definitions
+  - [ ] Services
+  - [ ] Repositories

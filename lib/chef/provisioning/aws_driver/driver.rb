@@ -1150,7 +1150,8 @@ EOD
 
     def create_ssh_transport(machine_spec, machine_options, instance)
       ssh_options = ssh_options_for(machine_spec, machine_options, instance)
-      username = machine_spec.reference['ssh_username'] || machine_options[:ssh_username] || default_ssh_username
+      username = machine_spec.reference['ssh_username'] || machine_options[:ssh_username] || machine_options[:machine_options][:ssh_username] || default_ssh_username
+
       if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.reference['ssh_username']
         Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.reference['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.reference['ssh_username']}.  Please edit the node and change the chef_provisioning.reference.ssh_username attribute if you want to change it.")
       end
@@ -1164,6 +1165,8 @@ EOD
       #Enable pty by default
       options[:ssh_pty_enable] = true
       options[:ssh_gateway] = machine_spec.reference['ssh_gateway'] if machine_spec.reference.has_key?('ssh_gateway')
+      options[:ssh_gateway] = machine_options[:machine_options][:ssh_gateway] if
+        machine_options[:machine_options].has_key?(:ssh_gateway) && options[:ssh_gateway].nil?
 
       Chef::Provisioning::Transport::SSH.new(remote_host, username, ssh_options, options, config)
     end
@@ -1201,6 +1204,10 @@ EOD
       }.merge(machine_options[:ssh_options] || {})
       if instance.respond_to?(:private_key) && instance.private_key
         result[:key_data] = [ instance.private_key ]
+      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_path]
+        result[:key_data] = [ IO.read(machine_options[:bootstrap_options][:key_path]) ]
+      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_name]
+        result[:key_data] = [ get_private_key(machine_options[:bootstrap_options][:key_name]) ]
       elsif instance.respond_to?(:key_name) && instance.key_name
         key = get_private_key(instance.key_name)
         unless key
@@ -1213,10 +1220,6 @@ EOD
           raise "Server was created with key name '#{machine_spec.reference['key_name']}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
         end
         result[:key_data] = [ key ]
-      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_path]
-        result[:key_data] = [ IO.read(machine_options[:bootstrap_options][:key_path]) ]
-      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_name]
-        result[:key_data] = [ get_private_key(machine_options[:bootstrap_options][:key_name]) ]
       else
         # TODO make a way to suggest other keys to try ...
         raise "No key found to connect to #{machine_spec.name} (#{machine_spec.reference.inspect})!"

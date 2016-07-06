@@ -1163,7 +1163,12 @@ EOD
 
       #Enable pty by default
       options[:ssh_pty_enable] = true
-      options[:ssh_gateway] = machine_spec.reference['ssh_gateway'] if machine_spec.reference.has_key?('ssh_gateway')
+
+      if machine_spec.reference.has_key?('ssh_gateway')
+        options[:ssh_gateway] = machine_spec.reference['ssh_gateway']
+      elsif machine_options[:ssh_gateway]
+        options[:ssh_gateway] = machine_options[:ssh_gateway]
+      end
 
       Chef::Provisioning::Transport::SSH.new(remote_host, username, ssh_options, options, config)
     end

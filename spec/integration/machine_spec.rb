@@ -53,6 +53,33 @@ describe Chef::Resource::Machine do
         # The non-idempotence is that it runs chef again, not that it unecessarily modifies the aws_object
       end
 
+      it "successfully converges a machine with custom ssh options", :super_slow do
+        expect_recipe {
+          machine 'test_machine' do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              key_name: 'test_key_pair'
+            },
+            ssh_username: "ubuntu", # Username to use for ssh and WinRM
+            ssh_options: { # a list of options to Net::SSH.start
+              :auth_methods => [ 'publickey' ], # DEFAULT
+              :keys_only => true, # DEFAULT
+              :forward_agent => true, # you may want your ssh-agent to be available on your provisioned machines
+              :remote_forwards => [
+                  # Give remote host access to private git server
+                  {:remote_port => 2222, :local_host => 'git.example.com', :local_port => 22,},
+              ],
+              # You can send net-ssh log info to the Chef::Log if you are having
+              # trouble with ssh.
+              :logger => Chef::Log,
+            }
+          end
+        }.to create_an_aws_instance('test_machine'
+        )#.and be_idempotent
+        # Bug - machine resource with :converge action isn't idempotent
+        # The non-idempotence is that it runs chef again, not that it unecessarily modifies the aws_object
+      end
+
       it "machine with source_dest_check false creates a machine with no source dest check", :super_slow do
         expect_recipe {
           machine 'test_machine' do

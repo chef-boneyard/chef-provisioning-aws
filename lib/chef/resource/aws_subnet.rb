@@ -76,7 +76,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # By default, an implicit association with the main route table is made (`:default_to_main`)
   #
-  attribute :route_table#, kind_of: [ String, AwsRouteTable, AWS::EC2::RouteTable ], equal_to: [ :default_to_main ]
+  attribute :route_table#, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ], equal_to: [ :default_to_main ]
 
   #
   # The Network ACL to associate with this subnet. Subnets may only

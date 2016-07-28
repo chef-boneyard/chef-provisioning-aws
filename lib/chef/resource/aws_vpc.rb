@@ -79,7 +79,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # - An actual `aws_route_table` resource.
   # - An AWS `route_table` object.
   #
-  attribute :main_route_table, kind_of: [ String, AwsRouteTable, AWS::EC2::RouteTable ]
+  attribute :main_route_table, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ]
 
   #
   # The routes for the main route table.

@@ -16,10 +16,15 @@ describe Chef::Resource::LoadBalancer do
         recursive_delete true
       end
 
-      cert_string = "-----BEGIN CERTIFICATE-----\nMIIDejCCAmICCQCpupMy/LKfLTANBgkqhkiG9w0BAQUFADB/MQswCQYDVQQGEwJV\nUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHU2VhdHRsZTENMAsGA1UE\nChMEQ2hlZjEMMAoGA1UECxMDRGV2MQ4wDAYDVQQDEwVUeWxlcjEcMBoGCSqGSIb3\nDQEJARYNdHlsZXJAY2hlZi5pbzAeFw0xNTA4MDQwMDI1NDFaFw0xNjA4MDMwMDI1\nNDFaMH8xCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQH\nEwdTZWF0dGxlMQ0wCwYDVQQKEwRDaGVmMQwwCgYDVQQLEwNEZXYxDjAMBgNVBAMT\nBVR5bGVyMRwwGgYJKoZIhvcNAQkBFg10eWxlckBjaGVmLmlvMIIBIjANBgkqhkiG\n9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz4gFxNSzwwwYrYTTOCNVQL/agpIXmQKKtkE7\n+Up+waOdSR2iZvgc4fowAqQQ5dtVtur6LEA2LDlLILE+7MhlBxPc3V99lhi5p/Pv\neGCPI7k9sYT0iPJwiqvW+/nCo93QoNpUUDgb6WpT/RENFESn99nTE5NjxNx560aq\nSxAPHTogJEz3wC8c6mQQoANOuXzNb41wvOCUI7Tku76AQ9uECFUjtYpXpx8komaY\nAPtwzr87LGdSysE75roagews2MzAJgGG16oUBsJzT45MlIyQorN3AjoZ3fze6kop\nOhAWeYUM61rwTq7JtLXtBG/9yJzTd/eWU8c4cSK8zePx48X9TQIDAQABMA0GCSqG\nSIb3DQEBBQUAA4IBAQBXJQSpDkjxyljnSWjBur4XikLlFuEpdAdu0MILM3GnS3rT\ntoCVPG2U1d+KkhYG0Y9TBxHpK+3lDGYNyFYJN0STzL4cFzMgQlmZKFhVi/YJWKYO\nj9baIB3dy2k8b2XdDe3WxyycQpHjHhFPqpOTMGNV/1PwJNZGQEjc/svr8EalxvZB\neMb3Kk94K7yohvhT+Ze//rr4ArlM1zvEv3QMwSuyJBA2gtH7FgFKWohZnubW+3uc\n9W/Ux/3O1+BKDWp6zyqn/b2SSF51Jt3tSCF+hIMKYeJnJojY/AF9tQ+DtE8EKYRD\n/qzXX2MQLbhm1AzLt4PN63r96ADYlHhOJGNa9ocS\n-----END CERTIFICATE-----"
+      cert_string = "-----BEGIN CERTIFICATE-----\nMIIDlDCCAnygAwIBAgIJAOR3PCV+XjkpMA0GCSqGSIb3DQEBBQUAMDoxCzAJBgNV\nBAYTAlVTMRMwEQYDVQQIEwpTb21lLVN0YXRlMRYwFAYDVQQKEw1DaGVmIFNvZnR3\nYXJlMB4XDTE2MDgwMzE2MTUwNVoXDTQzMTIyMDE2MTUwNVowOjELMAkGA1UEBhMC\nVVMxEzARBgNVBAgTClNvbWUtU3RhdGUxFjAUBgNVBAoTDUNoZWYgU29mdHdhcmUw\nggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDPiAXE1LPDDBithNM4I1VA\nv9qCkheZAoq2QTv5Sn7Bo51JHaJm+Bzh+jACpBDl21W26vosQDYsOUsgsT7syGUH\nE9zdX32WGLmn8+94YI8juT2xhPSI8nCKq9b7+cKj3dCg2lRQOBvpalP9EQ0URKf3\n2dMTk2PE3HnrRqpLEA8dOiAkTPfALxzqZBCgA065fM1vjXC84JQjtOS7voBD24QI\nVSO1ilenHySiZpgA+3DOvzssZ1LKwTvmuhqB7CzYzMAmAYbXqhQGwnNPjkyUjJCi\ns3cCOhnd/N7qSik6EBZ5hQzrWvBOrsm0te0Eb/3InNN395ZTxzhxIrzN4/Hjxf1N\nAgMBAAGjgZwwgZkwHQYDVR0OBBYEFOxyNX8IT5AqXXIlIx49yxf/IYLOMGoGA1Ud\nIwRjMGGAFOxyNX8IT5AqXXIlIx49yxf/IYLOoT6kPDA6MQswCQYDVQQGEwJVUzET\nMBEGA1UECBMKU29tZS1TdGF0ZTEWMBQGA1UEChMNQ2hlZiBTb2Z0d2FyZYIJAOR3\nPCV+XjkpMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQADggEBALagR0Da4UgO\nQap+dbZV6w/xsGuDE8nmb+nT40e5t06H1dlJtqv1KQiZvTE2F4qdb3gNTLriST5d\nIBgb9NvfVwkUx5J/PNJPwGkLGLgPk7SdGZeIht081wm/OQ/EcadAx8hI778AR877\ng6ni7QG+uJsIsuAnsTWC7T+/QNkVp0WvPw2CWPgmWm5Hg4zK6KUMQ5zKi91mMkzv\nclUpgp1qdQOwbS9tDygz5MBsThdsxKZ90I8AxDsPNGFxDZJg9Dj2IvETC3pVvGlh\nMlr7hdYITWdCEPEntDKPA4OOqpJhcfxGbN+Ze/XhpYbqOG9aPYU6w4oqcmjinf+j\nySQz2RMQ9To=\n-----END CERTIFICATE-----"
       private_key_string = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAz4gFxNSzwwwYrYTTOCNVQL/agpIXmQKKtkE7+Up+waOdSR2i\nZvgc4fowAqQQ5dtVtur6LEA2LDlLILE+7MhlBxPc3V99lhi5p/PveGCPI7k9sYT0\niPJwiqvW+/nCo93QoNpUUDgb6WpT/RENFESn99nTE5NjxNx560aqSxAPHTogJEz3\nwC8c6mQQoANOuXzNb41wvOCUI7Tku76AQ9uECFUjtYpXpx8komaYAPtwzr87LGdS\nysE75roagews2MzAJgGG16oUBsJzT45MlIyQorN3AjoZ3fze6kopOhAWeYUM61rw\nTq7JtLXtBG/9yJzTd/eWU8c4cSK8zePx48X9TQIDAQABAoIBAA8teoaHq9Hy+4cN\nNMlhRCXlIhz0hEdLeUuU/8benOCaj7E+OpdfQ/V+763xw86buOwUyVEdLRkU45qz\ne8+jZEgdOsTx6+RjUIio/XWHUlChhpKKD7xIRtTNdn6dKJAFc/GfphTr1Za/kP7s\nFVHLJ6Gny5kd6WkHWt9LHr84oHJZoSjR6YDYdSTL+NtVTwqsKj4EfNY8JAPJI/xI\n9A9t57pvXzwdiya/vXPGytgwkHC/HHWp2sgFvKtJUzuGH0ETDlys9mvXoVQeZ0d9\njhzwIwWAoyvTY9FsUBTCD0aO8r2ylsDVIo2b2cEAZ0Z77OGMUt4sock88sDIICnO\nZVjhV50CgYEA8hKTHpI5ENFvYrTckrc+PnPw7B7xHCCB84ut/CiwzawYRjUx/mtm\nCYYR1xAXdEFrBC21i4Ri8LAIrAQiFGydg2oh4ZQcnEMGKZ0F2VXlsidVNN2tW/50\n8kEaPHPVeP6Trt2kPtpQnhDcuQXbPmOgPBIY2j6nu/Go25e8eICkfhsCgYEA23iy\n8Og1SWZlV5b3ZFyolZiZ9kp0cwyXUGWxUZyw33gBmK6BFkscflI1vfNutxnTDjNl\nALLRoAeIApvXTMFOMUPJsDk90pO7rdlfLznU27lKPyCDkvDGmjCvGGDXrnvi+cc3\ngB3ERfrLJCMoMk9lyg7/KEzzsIjvtTRO79atCLcCgYAGT/+wI2YDj0KVU1wRI2An\nJsTYk3H8Jsjcvf66faEmq98yLX7xQIG3q9xZPF0wNeiBgmOikMA3wI9pVO5ClBaD\nb8gUZtVcKc9GVIbrhPbpb2ckasdzh64rBxGVE/w0HIdjXvpCfVTu2ke3N3ThKp3q\nExq8zjd3ijS6DTnn9orTkwKBgQCxVwpgl4HXWaIx8I7ezfB7UN+3n9oQzO/HyyRI\n6fAR4oqHsRolxXO0rwE2B+pCkd907hqDQfsY8Hz6fqquHtTsAfaLKvXFnhJdG/RJ\n2NUi5soT0FYA+gXAue4CKN6e4wQ5CLzUDTl3wns7LB1i6b06VHvhOK0AzOXE6guO\nyUzwaQKBgDCrGz6IrxEUWl6C14xNNRZBvYTY9oCQpUnup1gMxATJZm4KelKvtKz2\nU1MXpc1i395e+E+tjNAQg0JcBmwkHOMl8c/oAESWPxi11ezalGtUXjIgjBkqqNUE\n/uFqRpNFGwI09JolIqhBTgPWFq6MuuPDJ9IIGJZDQoGEBKmu0k2r\n-----END RSA PRIVATE KEY-----"
 
       aws_server_certificate "load_balancer_cert" do
+        certificate_body cert_string
+        private_key private_key_string
+      end
+
+      aws_server_certificate "load_balancer_cert_2" do
         certificate_body cert_string
         private_key private_key_string
       end
@@ -173,6 +178,13 @@ describe Chef::Resource::LoadBalancer do
                 :protocol => :http,
                 :instance_port => 80,
                 :instance_protocol => :http,
+            },
+            {
+                :port => 8443,
+                :protocol => :https,
+                :instance_port => 80,
+                :instance_protocol => :http,
+                :ssl_certificate_id => load_balancer_cert.aws_object.arn
             }],
             subnets: ["test_public_subnet"],
             security_groups: ["test_security_group"],
@@ -219,6 +231,13 @@ describe Chef::Resource::LoadBalancer do
                     :instance_port => 8080,
                     :instance_protocol => :http,
                     :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                },
+                {
+                    :port => 8443,
+                    :protocol => :https,
+                    :instance_port => 80,
+                    :instance_protocol => :http,
+                    :ssl_certificate_id => load_balancer_cert_2.aws_object.arn
                 }],
                 subnets: ["test_public_subnet2"],
                 security_groups: ["test_security_group2"],
@@ -262,6 +281,13 @@ describe Chef::Resource::LoadBalancer do
                 :instance_port => 8080,
                 :instance_protocol => :http,
                 :server_certificate => {arn: load_balancer_cert.aws_object.arn}
+            },
+            {
+                :port => 8443,
+                :protocol => :https,
+                :instance_port => 80,
+                :instance_protocol => :http,
+                :server_certificate => {arn: load_balancer_cert_2.aws_object.arn}
             }],
             subnets: [test_public_subnet2.aws_object],
             security_groups: [test_security_group2.aws_object],

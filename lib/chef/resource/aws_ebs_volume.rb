@@ -20,7 +20,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   attribute :device,            kind_of: String
 
   attribute :volume_id,         kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^vol-[a-f0-9]{8}$/ ? name : nil
+    name =~ /^vol-(?:[a-f0-9]{8}|[a-f0-9]{17})$/ ? name : nil
   }
 
   def aws_object

@@ -1,7 +1,21 @@
 # Change Log
 
-## [1.10.0](https://github.com/chef/chef-provisioning-aws/tree/1.10.0) (2016-06-16)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.0...1.10.0)
+## [1.11.0](https://github.com/chef/chef-provisioning-aws/tree/1.11.0) (2016-08-11)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.10.0...1.11.0)
+
+**Fixed bugs:**
+
+- EBS IDs are about to get longer [\#488](https://github.com/chef/chef-provisioning-aws/issues/488)
+
+**Merged pull requests:**
+
+- Preparing for EBS volume IDs to get longer [\#495](https://github.com/chef/chef-provisioning-aws/pull/495) ([tyler-ball](https://github.com/tyler-ball))
+- Fixing some errors I ran across with not using the V2 Route Table object [\#494](https://github.com/chef/chef-provisioning-aws/pull/494) ([tyler-ball](https://github.com/tyler-ball))
+- prototype - Add SOA and NS support back to route53 [\#490](https://github.com/chef/chef-provisioning-aws/pull/490) ([keen99](https://github.com/keen99))
+- Add ECS to Resources not started yet [\#424](https://github.com/chef/chef-provisioning-aws/pull/424) ([cwandrews](https://github.com/cwandrews))
+
+## [v1.10.0](https://github.com/chef/chef-provisioning-aws/tree/v1.10.0) (2016-06-16)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.0...v1.10.0)
 
 **Fixed bugs:**
 
@@ -10,6 +24,10 @@
 - fix how machine\_options are specified [\#483](https://github.com/chef/chef-provisioning-aws/pull/483) ([jgoulah](https://github.com/jgoulah))
 - Added aws\_nat\_gateway resource and provider [\#482](https://github.com/chef/chef-provisioning-aws/pull/482) ([tyler-ball](https://github.com/tyler-ball))
 - Add tagging support for the aws\_auto\_scaling\_group resource [\#479](https://github.com/chef/chef-provisioning-aws/pull/479) ([itmustbejj](https://github.com/itmustbejj))
+
+**Merged pull requests:**
+
+- Preparing 1.10.0 release [\#486](https://github.com/chef/chef-provisioning-aws/pull/486) ([tyler-ball](https://github.com/tyler-ball))
 
 ## [v1.9.0](https://github.com/chef/chef-provisioning-aws/tree/v1.9.0) (2016-04-14)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.0...v1.9.0)
@@ -71,6 +89,7 @@
 
 **Merged pull requests:**
 
+- fix case where ssl\_certificate\_id changes after create fails with 'expected string value' [\#449](https://github.com/chef/chef-provisioning-aws/pull/449) ([keen99](https://github.com/keen99))
 - fix aws\_rds\_subnet\_group example [\#401](https://github.com/chef/chef-provisioning-aws/pull/401) ([keen99](https://github.com/keen99))
 - Don't iterate through CloudSearch index\_fields if none were given [\#397](https://github.com/chef/chef-provisioning-aws/pull/397) ([stevendanna](https://github.com/stevendanna))
 - ElasticsearchService requires aws-sdk 2.1.26+ [\#387](https://github.com/chef/chef-provisioning-aws/pull/387) ([stevendanna](https://github.com/stevendanna))
@@ -336,7 +355,7 @@
 
 - Fixing a myriad of tests [\#208](https://github.com/chef/chef-provisioning-aws/pull/208) ([tyler-ball](https://github.com/tyler-ball))
 - Updating ref files to run correctly [\#192](https://github.com/chef/chef-provisioning-aws/pull/192) ([tyler-ball](https://github.com/tyler-ball))
-- Aws Tags [\#190](https://github.com/chef/chef-provisioning-aws/pull/190) ([patrick-wright](https://github.com/patrick-wright))
+- Aws Tags [\#190](https://github.com/chef/chef-provisioning-aws/pull/190) ([wrightp](https://github.com/wrightp))
 
 ## [v1.1.1](https://github.com/chef/chef-provisioning-aws/tree/v1.1.1) (2015-04-28)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.1.0...v1.1.1)
@@ -349,7 +368,7 @@
 **Merged pull requests:**
 
 - Updating to use the new \*spec.driver\_url syntax exposed in chef-provisioning 1.0 [\#191](https://github.com/chef/chef-provisioning-aws/pull/191) ([tyler-ball](https://github.com/tyler-ball))
-- add destroy\_an\_aws\_object [\#186](https://github.com/chef/chef-provisioning-aws/pull/186) ([patrick-wright](https://github.com/patrick-wright))
+- add destroy\_an\_aws\_object [\#186](https://github.com/chef/chef-provisioning-aws/pull/186) ([wrightp](https://github.com/wrightp))
 
 ## [v1.1.0](https://github.com/chef/chef-provisioning-aws/tree/v1.1.0) (2015-04-16)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.2.2...v1.1.0)
@@ -365,12 +384,12 @@
 **Merged pull requests:**
 
 - Updating destroy to remove instances and images on non-purge destroy [\#187](https://github.com/chef/chef-provisioning-aws/pull/187) ([tyler-ball](https://github.com/tyler-ball))
-- update aws\_ebs\_volume :availability\_zone to exclude region setting [\#185](https://github.com/chef/chef-provisioning-aws/pull/185) ([patrick-wright](https://github.com/patrick-wright))
+- update aws\_ebs\_volume :availability\_zone to exclude region setting [\#185](https://github.com/chef/chef-provisioning-aws/pull/185) ([wrightp](https://github.com/wrightp))
 - Updated security group examples to use the correct hash key for ports. [\#181](https://github.com/chef/chef-provisioning-aws/pull/181) ([msonnabaum](https://github.com/msonnabaum))
 - Fixed incorrect resource params in vpc example. [\#179](https://github.com/chef/chef-provisioning-aws/pull/179) ([msonnabaum](https://github.com/msonnabaum))
 - Added version constraint for aws-sdk. [\#178](https://github.com/chef/chef-provisioning-aws/pull/178) ([msonnabaum](https://github.com/msonnabaum))
 - AWS Proxy & Session Token Support [\#177](https://github.com/chef/chef-provisioning-aws/pull/177) ([afiune](https://github.com/afiune))
-- network interface \(create, update, destroy\) [\#167](https://github.com/chef/chef-provisioning-aws/pull/167) ([patrick-wright](https://github.com/patrick-wright))
+- network interface \(create, update, destroy\) [\#167](https://github.com/chef/chef-provisioning-aws/pull/167) ([wrightp](https://github.com/wrightp))
 - Better AWS tests [\#152](https://github.com/chef/chef-provisioning-aws/pull/152) ([jkeiser](https://github.com/jkeiser))
 
 ## [v0.2.2](https://github.com/chef/chef-provisioning-aws/tree/v0.2.2) (2015-04-10)
@@ -440,7 +459,7 @@
 
 **Merged pull requests:**
 
-- aws\_ebs\_volume \(jk/based on create\_update\_delete branch\) [\#142](https://github.com/chef/chef-provisioning-aws/pull/142) ([patrick-wright](https://github.com/patrick-wright))
+- aws\_ebs\_volume \(jk/based on create\_update\_delete branch\) [\#142](https://github.com/chef/chef-provisioning-aws/pull/142) ([wrightp](https://github.com/wrightp))
 - Standardize create/update/delete [\#136](https://github.com/chef/chef-provisioning-aws/pull/136) ([jkeiser](https://github.com/jkeiser))
 - Make security groups idempotent, add better syntax [\#132](https://github.com/chef/chef-provisioning-aws/pull/132) ([jkeiser](https://github.com/jkeiser))
 - Add DHCP options support [\#127](https://github.com/chef/chef-provisioning-aws/pull/127) ([jkeiser](https://github.com/jkeiser))
@@ -564,7 +583,7 @@
 - Default key support [\#26](https://github.com/chef/chef-provisioning-aws/pull/26) ([johnewart](https://github.com/johnewart))
 - Combine update and create load balancer into idempotent action [\#22](https://github.com/chef/chef-provisioning-aws/pull/22) ([jkeiser](https://github.com/jkeiser))
 - Make AWS machines convergent [\#18](https://github.com/chef/chef-provisioning-aws/pull/18) ([jkeiser](https://github.com/jkeiser))
-- rename fog to aws [\#16](https://github.com/chef/chef-provisioning-aws/pull/16) ([patrick-wright](https://github.com/patrick-wright))
+- rename fog to aws [\#16](https://github.com/chef/chef-provisioning-aws/pull/16) ([wrightp](https://github.com/wrightp))
 
 ## [v0.1.1](https://github.com/chef/chef-provisioning-aws/tree/v0.1.1) (2014-11-05)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1...v0.1.1)

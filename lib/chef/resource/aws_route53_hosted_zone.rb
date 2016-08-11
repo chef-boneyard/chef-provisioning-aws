@@ -126,7 +126,7 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
       if record_set_resources
         populate_zone_info(record_set_resources, zone)
 
-        change_list = record_set_resources.map { |rs| rs.to_aws_change_struct(CREATE) }
+        change_list = record_set_resources.map { |rs| rs.to_aws_change_struct(UPDATE) }
 
         new_resource.driver.route53_client.change_resource_record_sets(hosted_zone_id: new_resource.aws_route53_zone_id,
                                                                        change_batch: {

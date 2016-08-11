@@ -384,6 +384,17 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 resource_records: [{ value: "10 50 8889 chef-server.example.com" },
                                    { value: "20 70 80 narf.net" }],
               },
+              soa: {
+                name: "feegle.com.",
+                type: "SOA",
+                resource_records: [{ value: "ns-1641.awsdns-13.co.uk. awsdns-hostmaster.amazon.com. 2 7200 900 1209600 86400"}],
+              },
+              ns: {
+                name: "feegle.com.",
+                type: "NS",
+                resource_records: [{ value: "ns1.amazon.com." },
+                                   { value: "ns2.amazon.org." }],
+              },
             }}
 
             it "handles CNAME records" do
@@ -480,6 +491,38 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   }
                 end
               }.to raise_error(Chef::Exceptions::ValidationFailed, /MX records must have a priority and mail server/)
+            end
+
+            it "handles SOA records" do
+              expect_recipe {
+                aws_route53_hosted_zone "feegle.com" do
+                  record_sets {
+                    aws_route53_record_set "SOA-host" do
+                      rr_name "feegle.com."
+                      type "SOA"
+                      ttl 300
+                      resource_records ["ns-1641.awsdns-13.co.uk. awsdns-hostmaster.amazon.com. 2 7200 900 1209600 86400"]
+                    end
+                  }
+                end
+              }.to create_an_aws_route53_hosted_zone("feegle.com",
+                                                     resource_record_sets: [ {}, expected[:soa] ]).and be_idempotent
+            end
+
+            it "handles NS records" do
+              expect_recipe {
+                aws_route53_hosted_zone "feegle.com" do
+                  record_sets {
+                    aws_route53_record_set "NS-host" do
+                      rr_name "feegle.com."
+                      type "NS"
+                      ttl 300
+                      resource_records %w[ns1.amazon.com. ns2.amazon.org.]
+                    end
+                  }
+                end
+              }.to create_an_aws_route53_hosted_zone("feegle.com",
+                                                     resource_record_sets: [ expected[:ns], {} ]).and be_idempotent
             end
 
             # we don't validate TXT values:

@@ -1,7 +1,14 @@
 # Change Log
 
-## [1.11.0](https://github.com/chef/chef-provisioning-aws/tree/1.11.0) (2016-08-11)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.10.0...1.11.0)
+## [v2.0.0](https://github.com/chef/chef-provisioning-aws/tree/v2.0.0) (2016-08-25)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.11.0...v2.0.0)
+
+**Implemented enhancements:**
+
+- Require Ruby 2.2.2+ and chef-zero 5.0+ [\#496](https://github.com/chef/chef-provisioning-aws/pull/496) ([jkeiser](https://github.com/jkeiser))
+
+## [v1.11.0](https://github.com/chef/chef-provisioning-aws/tree/v1.11.0) (2016-08-11)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.10.0...v1.11.0)
 
 **Fixed bugs:**
 

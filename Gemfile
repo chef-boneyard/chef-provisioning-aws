@@ -1,6 +1,6 @@
 source "https://rubygems.org"
-gem "simplecov"
 gemspec
 
-#gem 'chef-provisioning', path: '../chef-provisioning'
-#gem 'chef-provisioning', github: 'chef/chef-provisioning', branch: 'master'
+gem "simplecov"
+gem "chef", git: "https://github.com/chef/chef" # until Chef 12.14 is released
+gem "chef-provisioning", git: "https://github.com/chef/chef-provisioning", branch: "jk/bump" # until chef-provisioning 2.0 is released

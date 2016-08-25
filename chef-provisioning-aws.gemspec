@@ -12,7 +12,9 @@ Gem::Specification.new do |s|
   s.email = 'jewart@getchef.com'
   s.homepage = 'https://github.com/opscode/chef-provisioning-aws'
 
-  s.add_dependency 'chef-provisioning', '~> 1.4'
+  s.required_ruby_version = ">= 2.2.2"
+
+  s.add_dependency 'chef-provisioning', '~> 2.0'
 
   s.add_dependency 'aws-sdk-v1', '>= 1.59.0'
   s.add_dependency 'aws-sdk', ['>= 2.1.26', '< 3.0']
@@ -20,7 +22,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'ubuntu_ami', '~> 0.4', '>= 0.4.1'
 
   # chef-zero is only a development dependency because we leverage its RSpec support
-  s.add_development_dependency 'chef-zero', '~> 4.2'
+  s.add_development_dependency 'chef-zero', '~> 5.0'
   s.add_development_dependency 'chef', '~> 12.4'
   s.add_development_dependency 'rspec', '~> 3.0'
   s.add_development_dependency 'rake'

@@ -1,7 +1,7 @@
 class Chef
 module Provisioning
 module AWSDriver
-  VERSION = '1.11.0'
+  VERSION = '2.0.0'
 end
 end
 end

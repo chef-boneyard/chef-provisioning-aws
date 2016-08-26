@@ -9,12 +9,12 @@ Gem::Specification.new do |s|
   s.summary = 'Provisioner for creating aws containers in Chef Provisioning.'
   s.description = s.summary
   s.author = 'John Ewart'
-  s.email = 'jewart@getchef.com'
-  s.homepage = 'https://github.com/opscode/chef-provisioning-aws'
+  s.email = 'jewart@chef.io'
+  s.homepage = 'https://github.com/chef/chef-provisioning-aws'
 
-  s.required_ruby_version = ">= 2.2.2"
+  s.required_ruby_version = ">= 2.1.9"
 
-  s.add_dependency 'chef-provisioning', '~> 2.0'
+  s.add_dependency 'chef-provisioning', '>= 1.0', '< 3.0'
 
   s.add_dependency 'aws-sdk-v1', '>= 1.59.0'
   s.add_dependency 'aws-sdk', ['>= 2.1.26', '< 3.0']

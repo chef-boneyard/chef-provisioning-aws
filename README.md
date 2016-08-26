@@ -1,6 +1,7 @@
 # Chef Provisioning AWS
+[![Build Status](https://travis-ci.org/chef/chef-provisioning-aws.svg?branch=master)](https://travis-ci.org/chef/chef-provisioning-aws)[![Gem Version](https://badge.fury.io/rb/chef-provisioning-aws.svg)](https://badge.fury.io/rb/chef-provisioning-aws)
 
-This README is a work in progress.  Please add to it!
+This README is a work in progress.  Feel free to open PRs expanding it!
 
 # Prerequisites
 

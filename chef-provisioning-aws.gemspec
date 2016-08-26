@@ -21,16 +21,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'retryable', '~> 2.0', '>= 2.0.1'
   s.add_dependency 'ubuntu_ami', '~> 0.4', '>= 0.4.1'
 
-  # chef-zero is only a development dependency because we leverage its RSpec support
-  s.add_development_dependency 'chef-zero', '~> 5.0'
-  s.add_development_dependency 'chef', '~> 12.4'
-  s.add_development_dependency 'rspec', '~> 3.0'
-  s.add_development_dependency 'rake'
-  s.add_development_dependency 'pry'
-  s.add_development_dependency 'pry-byebug'
-  s.add_development_dependency 'pry-stack_explorer'
-  s.add_development_dependency 'github_changelog_generator'
-
   s.bindir       = "bin"
   s.executables  = %w( )
 

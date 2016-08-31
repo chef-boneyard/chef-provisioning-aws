@@ -1,6 +1,13 @@
 source "https://rubygems.org"
 gemspec
 
+gem "chef", git: "https://github.com/chef/chef" # until stable 12.14 is released (won't load new cheffish and such otherwise)
+
+gem "chef-zero", ">= 4.0"
+gem "rspec", "~> 3.0"
+gem "rake"
+gem "pry"
+gem "pry-byebug"
+gem "pry-stack_explorer"
+gem "github_changelog_generator"
 gem "simplecov"
-gem "chef", git: "https://github.com/chef/chef" # until Chef 12.14 is released
-gem "chef-provisioning", git: "https://github.com/chef/chef-provisioning", branch: "jk/bump" # until chef-provisioning 2.0 is released

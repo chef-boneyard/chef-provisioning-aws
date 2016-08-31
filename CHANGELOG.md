@@ -1,5 +1,12 @@
 # Change Log
 
+## [2.0.1](https://github.com/chef/chef-provisioning-aws/tree/2.0.1) (2016-08-31)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.0.0...2.0.1)
+
+**Implemented enhancements:**
+
+- Move development deps to the Gemfile and loosen provisioning dependency [\#500](https://github.com/chef/chef-provisioning-aws/pull/500) ([tas50](https://github.com/tas50))
+
 ## [v2.0.0](https://github.com/chef/chef-provisioning-aws/tree/v2.0.0) (2016-08-25)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.11.0...v2.0.0)
 

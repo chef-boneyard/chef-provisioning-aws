@@ -1210,6 +1210,31 @@ EOD
       end
     end
 
+    def private_key_for(machine_spec, machine_options, instance)
+      if instance.respond_to?(:private_key) && instance.private_key
+        instance.private_key
+      elsif instance.respond_to?(:key_name) && instance.key_name
+        key = get_private_key(instance.key_name)
+        unless key
+          raise "Server has key name '#{instance.key_name}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
+        end
+        key
+      elsif machine_spec.reference['key_name']
+        key = get_private_key(machine_spec.reference['key_name'])
+        unless key
+          raise "Server was created with key name '#{machine_spec.reference['key_name']}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
+        end
+        key
+      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_path]
+        IO.read(machine_options[:bootstrap_options][:key_path])
+      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_name]
+        get_private_key(machine_options[:bootstrap_options][:key_name])
+      else
+        # TODO make a way to suggest other keys to try ...
+        raise "No key found to connect to #{machine_spec.name} (#{machine_spec.reference.inspect})!"
+      end
+    end
+
     def ssh_options_for(machine_spec, machine_options, instance)
       result = {
         # TODO create a user known hosts file
@@ -1219,27 +1244,10 @@ EOD
         :keys_only => true,
         :host_key_alias => "#{instance.id}.AWS"
       }.merge(machine_options[:ssh_options] || {})
-      if instance.respond_to?(:private_key) && instance.private_key
-        result[:key_data] = [ instance.private_key ]
-      elsif instance.respond_to?(:key_name) && instance.key_name
-        key = get_private_key(instance.key_name)
-        unless key
-          raise "Server has key name '#{instance.key_name}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
-        end
-        result[:key_data] = [ key ]
-      elsif machine_spec.reference['key_name']
-        key = get_private_key(machine_spec.reference['key_name'])
-        unless key
-          raise "Server was created with key name '#{machine_spec.reference['key_name']}', but the corresponding private key was not found locally.  Check if the key is in Chef::Config.private_key_paths: #{Chef::Config.private_key_paths.join(', ')}"
-        end
-        result[:key_data] = [ key ]
-      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_path]
-        result[:key_data] = [ IO.read(machine_options[:bootstrap_options][:key_path]) ]
-      elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_name]
-        result[:key_data] = [ get_private_key(machine_options[:bootstrap_options][:key_name]) ]
-      else
-        # TODO make a way to suggest other keys to try ...
-        raise "No key found to connect to #{machine_spec.name} (#{machine_spec.reference.inspect})!"
+
+      unless result.has_key?(:key_data)
+        result[:keys_only] = true
+        result[:key_data] = [ private_key_for(machine_spec, machine_options, instance) ]
       end
       result
     end

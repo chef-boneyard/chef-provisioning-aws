@@ -1244,7 +1244,6 @@ EOD
         :keys_only => true,
         :host_key_alias => "#{instance.id}.AWS"
       }.merge(machine_options[:ssh_options] || {})
-
       unless result.has_key?(:key_data)
         result[:keys_only] = true
         result[:key_data] = [ private_key_for(machine_spec, machine_options, instance) ]

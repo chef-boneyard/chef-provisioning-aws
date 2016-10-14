@@ -407,7 +407,6 @@ describe Chef::Resource::Machine do
         expect(r).to destroy_an_aws_instance('test_machine2')
       end
 
-      # https://github.com/chef/chef-provisioning-aws/pull/295
       context "with a custom key" do
         let(:private_key) {
           k = OpenSSL::PKey::RSA.new(2048)
@@ -415,10 +414,13 @@ describe Chef::Resource::Machine do
           f.write(k.to_pem)
           k
         }
-        let(:public_key) {private_key.public_key}
+        let(:private_key_pem) {
+          private_key.to_pem
+        }
         let(:private_key_path) {
           Pathname.new(ENV['HOME']).join(".ssh", key_pair_name).expand_path
         }
+        let(:public_key) {private_key.public_key}
         let(:key_pair_name) { "test_key_pair_#{Random.rand(100)}" }
 
         before do
@@ -439,10 +441,29 @@ describe Chef::Resource::Machine do
           expect_recipe {
             machine 'test_machine' do
               machine_options bootstrap_options: {
+                instance_type: 't2.medium',
                 key_name: key_pair_name,
                 key_path: private_key_path
               }
-              action :allocate
+              action :ready
+            end
+          }.to create_an_aws_instance('test_machine'
+          ).and be_idempotent
+        end
+
+        it "uses key_data from the ssh_options", :super_slow do
+          expect_recipe {
+            machine 'test_machine' do
+              machine_options(
+                bootstrap_options: {
+                  instance_type: 't2.medium',
+                  key_name: key_pair_name
+                },
+                ssh_options: {
+                  key_data: [private_key_pem]
+                }
+              )
+              action :ready
             end
           }.to create_an_aws_instance('test_machine'
           ).and be_idempotent

@@ -406,6 +406,41 @@ perform [lookup_options](https://github.com/chef/chef-provisioning-aws/blob/mast
 This tries to turn elements with names like `vpc`, `security_group_ids`, `machines`, `launch_configurations`,
 `load_balancers`, etc. to the correct AWS object.
 
+# How to update Security Groups for EC2-VPC instances
+The behavior of the `machine` resource is that once a machine has been allocated,
+the `bootstrap_options` can not be modified. This currently reflects AWS's
+restrictions on EC2-Classic instances, but AWS *does* allow users to modify the
+security groups associated with EC2-VPC instances. This is because the security
+groups for EC2-VPC instances are _actually_ associated with that instance's
+Network Interface. This means that if you wish to modify the security groups
+associated with an EC2-VPC instance, you'll want to use the `aws_network_interface`
+resource.
+
+The first step is to find the Network Interface ID (`eni-XXXXXXX`) associated
+with your machine. You can do this by inspecting the instance details in the AWS
+Console or by using the AWS CLI. If you want to use the AWS CLI, you can use
+this command replacing `MACHINE_NAME` with the name of the `machine` resource
+you wish to update.
+
+```shell
+aws ec2 describe-instances --filter "Name=tag:Name,Values=MACHINE_NAME" | grep NetworkInterfaceId
+```
+
+Once you have the Network Interface ID, in a chef-provisioning recipe you can
+specify the following resource:
+
+```ruby
+require 'chef/provisioning/aws_driver'
+with_driver 'aws' # specify the profile / region as appropriate
+
+aws_network_interface 'eni-XXXXXXXX' do
+  security_groups ['sg-XXXXXXXX', 'sg-YYYYYYYY']
+end
+```
+
+This resource can be in the same chef-provisioning recipe as the corresponding
+machine resource, or it can be in a different one.
+
 # Running Integration Tests
 
 To run the integration tests execute `bundle exec rspec`.  If you have not set it up,

@@ -1413,18 +1413,24 @@ EOD
           "machines #{machine_specs.map { |s| s.name }.join(", ")}"
         end
         description = [ "creating #{machine_description} on #{driver_url}" ]
-        bootstrap_options.each_pair { |key,value| description << "  #{key}: #{value.inspect}" }
+
+        parallel_bootstrap_options = bootstrap_options.merge({:max_count => machine_specs.size, :min_count => machine_specs.size})
+        parallel_bootstrap_options.each_pair { |key, value| description << "  #{key}: #{value.inspect}" }
         action_handler.report_progress description
         if action_handler.should_perform_actions
           # Actually create the servers
-          parallelizer.parallelize(1.upto(machine_specs.size)) do |i|
 
+          instances = create_instances(parallel_bootstrap_options)
+
+          parallelizer.parallelize(1.upto(machine_specs.size)) do |i|
             # Assign each one to a machine spec
             machine_spec = machine_specs.pop
+            instance = instances.pop
+            instance.wait_until_exists
             machine_options = specs_and_options[machine_spec]
 
             clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
-            instance = create_instance_and_reference(clean_bootstrap_options, action_handler, machine_spec, machine_options)
+            create_instance_reference(instance, clean_bootstrap_options, action_handler, machine_spec, machine_options)
             converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
 
             action_handler.performed_action "machine #{machine_spec.name} created as #{instance.id} on #{driver_url}"
@@ -1459,8 +1465,9 @@ EOD
       aws_tagger.converge_tags
     end
 
-    def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
-      instance = nil
+    def create_instances(bootstrap_options)
+      instances = []
+
       # IAM says the instance profile is ready, but EC2 doesn't think it is
       # Not using retry_with_backoff here because we need to match on a string
       Retryable.retryable(
@@ -1470,12 +1477,15 @@ EOD
         :matching => /Invalid IAM Instance Profile name/
       ) do |retries, exception|
         Chef::Log.debug("Instance creation InvalidParameterValue exception is #{exception.inspect}")
-        instance = ec2_resource.create_instances(bootstrap_options.to_hash)[0]
+        ec2_resource.create_instances(bootstrap_options.to_hash).each do |instance|
+          instances << instance
+        end
       end
 
-      # Make sure the instance is ready to be tagged
-      instance.wait_until_exists
+      instances
+    end
 
+    def create_instance_reference(instance, bootstrap_options, action_handler, machine_spec, machine_options)
       # Sometimes tagging fails even though the instance 'exists'
       Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::EC2::Errors::InvalidInstanceIDNotFound) do
         instance.create_tags({tags: [{key: "Name", value: machine_spec.name}]})
@@ -1507,6 +1517,12 @@ EOD
       %w(is_windows winrm_username winrm_port winrm_password ssh_username sudo transport_address_location ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]
       end
+    end
+
+    def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
+      instance = create_instances(bootstrap_options)
+      instance.wait_until_exists
+      create_instance_reference(instance, bootstrap_options, action_handler, machine_spec, machine_options)
       instance
     end
 

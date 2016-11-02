@@ -35,6 +35,5 @@ describe Chef::Resource::MachineBatch do
         ).and be_idempotent
       end
     end
-
   end
 end

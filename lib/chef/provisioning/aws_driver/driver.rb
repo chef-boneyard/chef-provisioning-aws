@@ -1520,7 +1520,7 @@ EOD
     end
 
     def create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
-      instance = create_instances(bootstrap_options)
+      instance = create_instances(bootstrap_options).first
       instance.wait_until_exists
       create_instance_reference(instance, bootstrap_options, action_handler, machine_spec, machine_options)
       instance

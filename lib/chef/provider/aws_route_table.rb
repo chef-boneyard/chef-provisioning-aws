@@ -72,6 +72,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     current_routes = {}
     route_table.routes.each do |route|
       # Ignore the automatic local route
+      next if route.nil?
       route_target = route.gateway_id || route.nat_gateway_id || route.instance_id || route.network_interface_id || route.vpc_peering_connection_id
       next if route_target == 'local'
       next if ignore_route_targets.find { |target| route_target.match(/#{target}/) }

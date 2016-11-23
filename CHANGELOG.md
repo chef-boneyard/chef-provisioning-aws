@@ -1,11 +1,23 @@
 # Change Log
 
-## [2.0.1](https://github.com/chef/chef-provisioning-aws/tree/2.0.1) (2016-08-31)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.0.0...2.0.1)
+## [2.1.0](https://github.com/chef/chef-provisioning-aws/tree/2.1.0) (2016-11-23)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.0.0...2.1.0)
 
-**Implemented enhancements:**
+**Fixed bugs:**
 
-- Move development deps to the Gemfile and loosen provisioning dependency [\#500](https://github.com/chef/chef-provisioning-aws/pull/500) ([tas50](https://github.com/tas50))
+- Move development deps to the Gemfile and loosen provisioning [\#500](https://github.com/chef/chef-provisioning-aws/pull/500) ([tas50](https://github.com/tas50))
+
+**Closed issues:**
+
+- Error when using the machine resource in a LWRP [\#503](https://github.com/chef/chef-provisioning-aws/issues/503)
+- route53 - broken support for SOA and NS records [\#489](https://github.com/chef/chef-provisioning-aws/issues/489)
+
+**Merged pull requests:**
+
+- Workaround S3 endopoints in routes [\#513](https://github.com/chef/chef-provisioning-aws/pull/513) ([adecarolis](https://github.com/adecarolis))
+- Add security group update workaround to README [\#509](https://github.com/chef/chef-provisioning-aws/pull/509) ([tduffield](https://github.com/tduffield))
+- Prioritize usage of key\_data of user provisioning config over all private key settings [\#504](https://github.com/chef/chef-provisioning-aws/pull/504) ([baurzhan-konurbayev](https://github.com/baurzhan-konurbayev))
+- look at winrm\_no\_ssl\_peer\_verification [\#493](https://github.com/chef/chef-provisioning-aws/pull/493) ([hh](https://github.com/hh))
 
 ## [v2.0.0](https://github.com/chef/chef-provisioning-aws/tree/v2.0.0) (2016-08-25)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.11.0...v2.0.0)

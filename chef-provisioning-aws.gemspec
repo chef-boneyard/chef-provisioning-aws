@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.extra_rdoc_files = ['README.md', 'LICENSE' ]
   s.summary = 'Provisioner for creating aws containers in Chef Provisioning.'
   s.description = s.summary
-  s.author = 'John Ewart'
-  s.email = 'jewart@chef.io'
+  s.author = 'Tyler Ball'
+  s.email = 'tball@chef.io'
   s.homepage = 'https://github.com/chef/chef-provisioning-aws'
 
   s.required_ruby_version = ">= 2.1.9"

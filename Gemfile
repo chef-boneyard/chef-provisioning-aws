@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 gemspec
 
-gem "chef", git: "https://github.com/chef/chef" # until stable 12.14 is released (won't load new cheffish and such otherwise)
+gem "chef"
 
 gem "chef-zero", ">= 4.0"
 gem "rspec", "~> 3.0"

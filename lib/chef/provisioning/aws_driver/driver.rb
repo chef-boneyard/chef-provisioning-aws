@@ -170,6 +170,7 @@ module AWSDriver
       lb_aws_tags = lb_options.delete(:aws_tags)
       health_check  = lb_options.delete(:health_check)
       sticky_sessions = lb_options.delete(:sticky_sessions)
+      proxy_protocol = lb_options.delete(:proxy_protocol)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -444,6 +445,62 @@ module AWSDriver
                 load_balancer_name: actual_elb.name,
                 load_balancer_port: ss_port,
                 policy_names: policy_names
+              )
+            end
+          end
+        end
+      end
+
+      # Update the load balancer proxy protocol settings
+      if proxy_protocol
+        policy_name = "#{actual_elb.name}-proxy-protocol-policy"
+        policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
+        elb_description =
+          elb.client.describe_load_balancers(load_balancer_names: [actual_elb.name])[:load_balancer_descriptions].first
+
+        existing_protocol_policy = policies[:policy_descriptions].detect do |policy_description|
+          policy_description[:policy_type_name] == 'ProxyProtocolPolicyType' &&
+            policy_description[:policy_name] == policy_name
+        end
+
+        # Create a proxy policy for elb if does not exist
+        unless existing_protocol_policy
+          perform_action.call("  creating proxy protocol policy for #{actual_elb.name}") do
+            elb.client.create_load_balancer_policy(
+              load_balancer_name: actual_elb.name,
+              policy_name: policy_name,
+              policy_type_name: 'ProxyProtocolPolicyType',
+              policy_attributes: [
+                {
+                  attribute_name: 'ProxyProtocol',
+                  attribute_value: 'true'
+                }
+              ]
+            )
+          end
+        end
+
+        listeners = elb_description[:listener_descriptions]
+        instance_ports = listeners.map { |listener| listener[:listener][:instance_port] }.compact
+        backend_server_descriptions = elb_description[:backend_server_descriptions]
+
+        # Add or remove the proxy policy for the backend ports
+        instance_ports.each do |port|
+          bs_description = backend_server_descriptions.detect { |desc| desc[:instance_port] == port }
+          if proxy_protocol[:instance_ports].include?(port) && bs_description.nil?
+            perform_action.call("  adding #{policy_name} policy for backend port #{port}") do
+              elb.client.set_load_balancer_policies_for_backend_server(
+                load_balancer_name: actual_elb.name,
+                instance_port: port,
+                policy_names: [policy_name]
+              )
+            end
+          elsif !proxy_protocol[:instance_ports].include?(port) && bs_description
+            perform_action.call("  removing #{policy_name} policy for backend port #{port}") do
+              elb.client.set_load_balancer_policies_for_backend_server(
+                load_balancer_name: actual_elb.name,
+                instance_port: port,
+                policy_names: []
               )
             end
           end

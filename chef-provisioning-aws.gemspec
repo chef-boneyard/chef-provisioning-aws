@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.author = 'Tyler Ball'
   s.email = 'tball@chef.io'
   s.homepage = 'https://github.com/chef/chef-provisioning-aws'
+  s.license = 'Apache-2.0'
 
   s.required_ruby_version = ">= 2.1.9"
 

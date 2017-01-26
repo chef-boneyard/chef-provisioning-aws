@@ -98,7 +98,7 @@ module AWSDriver
 
     def load_default
       config_file = ENV['AWS_CONFIG_FILE'] || File.expand_path('~/.aws/config')
-      credentials_file = ENV['AWS_CREDENTIAL_FILE'] || File.expand_path('~/.aws/credentials')
+      credentials_file = ENV['AWS_SHARED_CREDENTIALS_FILE'] || ENV['AWS_CREDENTIAL_FILE'] || File.expand_path('~/.aws/credentials')
       if File.file?(config_file)
         if File.file?(credentials_file)
           load_inis(config_file, credentials_file)

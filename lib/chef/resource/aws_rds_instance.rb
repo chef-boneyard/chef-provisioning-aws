@@ -6,6 +6,7 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
 
   aws_sdk_type ::Aws::RDS::DBInstance, id: :db_instance_identifier
 
+  ## first class attributes for RDS parameters
   attribute :db_instance_identifier, kind_of: String, name_attribute: true
 
   attribute :engine, kind_of: String
@@ -29,6 +30,18 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   # RDS has a ton of options, allow users to set any of them via a
   # custom Hash
   attribute :additional_options, kind_of: Hash, default: {}
+
+  ## aws_rds_instance specific attributes
+  ##the existing state
+  attribute :wait_for_create, kind_of: [TrueClass, FalseClass], default: false
+  attribute :wait_for_delete, kind_of: [TrueClass, FalseClass], default: true
+  #and new - wait for update by default
+  attribute :wait_for_update, kind_of: [TrueClass, FalseClass], default: true
+  # when we wait - how times we retry and how long we sleep between retries
+  # this is long by default because a lot of modifications, ie instance up/downgrade, take a long time.
+  attribute :wait_time, kind_of: Integer, default: 10
+  attribute :wait_tries, kind_of: Integer, default: 600
+
 
   def aws_object
     result = self.driver.rds_resource.db_instance(name)

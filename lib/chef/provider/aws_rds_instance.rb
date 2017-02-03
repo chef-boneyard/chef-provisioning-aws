@@ -20,6 +20,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
 ## one, of course), which is effectively a non-op.
   def update_aws_object(instance)
 
+    # TODO
     ### these options need to be transformed...this could get hairy?
     ### create and modify use different names for them.
     ### and re-naming an instance could definitely get weird.
@@ -61,7 +62,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
             sleep new_resource.wait_time  #it takes a few seconds before the instance goes out of 'available'
             slept=true
           end
-          converge_by "waiting until RDS instance is available after update" do
+          converge_by "waiting until RDS instance is available after update  #{new_resource.db_instance_identifier} in #{region}" do
             wait_for(
               aws_object: instance,
               query_method: :db_instance_status,
@@ -87,30 +88,39 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
     end
 
     Chef::Log.info "Create RDS instance: #{new_resource.db_instance_identifier}"
-
+    instance={}
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
-      new_resource.driver.rds_resource.create_db_instance(options_hash)
+      instance=new_resource.driver.rds_resource.create_db_instance(options_hash)
     end
 
     if new_resource.wait_for_create
-      converge_by "waiting until RDS instance is available after create" do
-        wait_for(
-          aws_object: instance,
-          query_method: :db_instance_status,
-          expected_responses: ['available'],
-          tries: new_resource.wait_tries,
-          sleep: new_resource.wait_time
-        ) { |instance|
-            instance.reload
-            Chef::Log.info "Create RDS instance: waiting for #{new_resource.db_instance_identifier} to be available.  State: #{instance.db_instance_status} - pending: #{instance.pending_modified_values.to_h}"
-          }
+      converge_by "waiting until RDS instance is available after create  #{new_resource.db_instance_identifier} in #{region}" do
+        ## custom wait loop - we can't use wait_for because we want to check for multiple possibilities, and some of them are undef at the time we start the loop.
+        ## wait for:
+        ##   endpoint address to be available - at this point, the instance is typically usable. we get access to the instance a good 1000+s earlier than we would waiting for available.
+        ##   available or backing-up states, just in case we can't/dont get an endpoint address for some reason.
+        tries = new_resource.wait_tries
+        while instance.nil? \
+         or defined?(instance.endpoint).nil? \
+         or defined?(instance.endpoint.address).nil? \
+         or instance.db_instance_status == 'available' \
+         or instance.db_instance_status == 'backing-up'
+          instance.reload  #reload first so we get a useful final log
+          Chef::Log.info "Create RDS instance: waiting for #{new_resource.db_instance_identifier} to be available.  State: #{instance.db_instance_status}, pending modifications: #{instance.pending_modified_values.to_h}, endpoint: #{instance.endpoint.to_h if ! instance.endpoint.nil? }"
+          sleep new_resource.wait_time
+          tries -= 1
+          raise StatusTimeoutError.new(instance, instance.db_instance_status, "endpoint available, 'available', or 'backing-up'") if tries < 0
+        end
+        Chef::Log.info "Create RDS instance:  #{new_resource.db_instance_identifier} endpoint address = #{instance.endpoint.address}:#{instance.endpoint.port}"
       end
-    end
+    end # end wait?
   end #def create
 
   def destroy_aws_object(instance)
+
+    ### No need to wait before destroy - destroy doesnt require an available/etc state.
     converge_by "delete RDS instance #{new_resource.db_instance_identifier} in #{region}" do
-      instance.delete(skip_final_snapshot: true)
+      instance.delete(skip_final_snapshot: new_resource.skip_final_snapshot)
     end
     if new_resource.wait_for_delete
       # Wait up to sleep * tries / 60 minutes for the db instance to shutdown
@@ -118,13 +128,16 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
         wait_for(
           aws_object: instance,
           # http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Status.html
-          # It cannot _actually_ return a deleted status, we're just looking for the error
+          # It cannot _actually_ return a deletsed status, we're just looking for the error
           query_method: :db_instance_status,
           expected_responses: ['deleted'],
           acceptable_errors: [::Aws::RDS::Errors::DBInstanceNotFound],
           tries: new_resource.wait_tries,
           sleep: new_resource.wait_time
-        ) { |instance| instance.reload }
+        ) { |instance|
+            instance.reload
+            Chef::Log.info "Delete RDS instance: waiting for #{new_resource.db_instance_identifier} to be deleted.  State: #{instance.db_instance_status}"
+       }
       end
     end
   end #def destroy
@@ -146,3 +159,4 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   end
 
 end
+

@@ -42,6 +42,7 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   attribute :wait_time, kind_of: Integer, default: 10
   attribute :wait_tries, kind_of: Integer, default: 600
 
+  attribute :skip_final_snapshot, kind_of: [TrueClass, FalseClass], default: true
 
   def aws_object
     result = self.driver.rds_resource.db_instance(name)

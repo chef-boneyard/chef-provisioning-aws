@@ -99,9 +99,15 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
         ## wait for:
         ##   endpoint address to be available - at this point, the instance is typically usable. we get access to the instance a good 1000+s earlier than we would waiting for available.
         ##   available or backing-up states, just in case we can't/dont get an endpoint address for some reason.
+        #just in case - sometimes instance is still nil when we get here, so avoid error cases
+        tries = 10
+        while instance.nil?
+          sleep 10
+          tries -= 1
+          raise "timed out waiting for #{new_resource.db_instance_identifier} instance object to become non-nil, something failed" if tries < 0
+        end
         tries = new_resource.wait_tries
-        while instance.nil? \
-         or defined?(instance.endpoint).nil? \
+        while defined?(instance.endpoint).nil? \
          or defined?(instance.endpoint.address).nil? \
          or instance.db_instance_status == 'available' \
          or instance.db_instance_status == 'backing-up'

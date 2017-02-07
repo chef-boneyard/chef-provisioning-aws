@@ -79,7 +79,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     else
       if elastic_ip.associated?
         converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
-          aws_object.disassociate
+          elastic_ip.disassociate
         end
       end
     end

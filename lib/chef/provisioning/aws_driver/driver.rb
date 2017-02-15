@@ -849,7 +849,7 @@ EOD
     end
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
-      bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+      bootstrap_options = symbolize_keys(machine_options[:bootstrap_options] || {})
       # These are hardcoded for now - only 1 machine at a time
       bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type
@@ -1565,6 +1565,15 @@ EOD
       result[:instance_protocol] ||= result[:protocol]
 
       result
+    end
+
+    def symbolize_keys(hash)
+      new_hash = {}
+      hash.each do |k, v|
+        v = symbolize_keys(v) if v.is_a?(Hash)
+        new_hash[k.to_sym] = v
+      end
+      new_hash
     end
 
     def default_instance_type

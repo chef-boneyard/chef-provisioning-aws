@@ -6,7 +6,8 @@ describe Chef::Resource::AwsKeyPair do
   when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
     with_aws "when connected to AWS" do
       before :each do
-        driver.ec2.key_pairs['test_key_pair'].delete
+        require 'pry'; binding.pry
+        driver.ec2_resource.key_pair('test_key_pair').delete
       end
 
       it "aws_key_pair 'test_key_pair' creates a key pair" do

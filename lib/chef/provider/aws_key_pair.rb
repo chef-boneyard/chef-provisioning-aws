@@ -1,7 +1,5 @@
 require 'chef/provider/lwrp_base'
 require 'chef/provisioning/aws_driver/aws_provider'
-require 'aws-sdk-v1'
-
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_key_pair
@@ -13,7 +11,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   action :destroy do
     if current_resource_exists?
       converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
-        driver.ec2.key_pairs[new_resource.name].delete
+        delete(new_resource.name)
       end
     end
   end
@@ -75,8 +73,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            driver.ec2.key_pairs[new_resource.name].delete
-            driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+            delete(new_resource.name)
+            import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -88,7 +86,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        driver.ec2.key_pairs.import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
+        import(new_resource.name, Cheffish::KeyFormatter.encode(desired_key, :format => :openssh))
       end
     end
   end
@@ -180,5 +178,18 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
     if new_public_key_path && ::File.exist?(new_public_key_path)
       current_resource.public_key_path new_public_key_path
     end
+  end
+
+  private
+
+  def delete(name)
+    driver.ec2_resource.key_pair(name).delete
+  end
+
+  def import(name, data)
+    driver.ec2_resource.import_key_pair(
+      key_name: name,
+      public_key_material: data
+    )
   end
 end

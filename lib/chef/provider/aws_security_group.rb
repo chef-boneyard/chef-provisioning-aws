@@ -157,6 +157,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
+      rule[:groups].map! { |h| h.select{|x| x != :group_name } } if rule[:groups]
       add_rule(actual_rules, [ port_range ], rule[:groups]) if rule[:groups]
       add_rule(actual_rules, [ port_range ], rule[:ip_ranges].map { |r| r[:cidr_ip] }) if rule[:ip_ranges]
     end

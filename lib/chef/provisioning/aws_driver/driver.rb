@@ -160,9 +160,21 @@ module AWSDriver
       [ driver_url, config ]
     end
 
+    def deep_symbolize_keys(hash_like)
+      if hash_like.nil? || hash_like.empty?
+        return {}
+      end
+      r = {}
+      hash_like.each do |key, value|
+        value = deep_symbolize_keys(value) if value.respond_to?(:values)
+        r[key.to_sym] = value
+      end
+      r
+    end
+
     # Load balancer methods
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
-      lb_options = (lb_options || {}).to_h
+      lb_options = deep_symbolize_keys(lb_options)
       lb_options = AWSResource.lookup_options(lb_options, managed_entry_store: lb_spec.managed_entry_store, driver: self)
       # We delete the attributes, tags, health check, and sticky sessions here because they are not valid in the create call
       # and must be applied afterward
@@ -518,6 +530,7 @@ module AWSDriver
     end
 
     def destroy_load_balancer(action_handler, lb_spec, lb_options)
+      lb_options = deep_symbolize_keys(lb_options)
       return if lb_spec == nil
 
       actual_elb = load_balancer_for(lb_spec)
@@ -535,8 +548,8 @@ module AWSDriver
     # Image methods
     def allocate_image(action_handler, image_spec, image_options, machine_spec, machine_options)
       actual_image = image_for(image_spec)
-      image_options = (image_options || {}).to_h.dup
-      machine_options = (machine_options || {}).to_h.dup
+      image_options = deep_symbolize_keys(image_options)
+      machine_options = deep_symbolize_keys(machine_options)
       aws_tags = image_options.delete(:aws_tags) || {}
       if actual_image.nil? || !actual_image.exists? || actual_image.state.to_sym == :failed
         action_handler.perform_action "Create image #{image_spec.name} from machine #{machine_spec.name} with options #{image_options.inspect}" do
@@ -564,7 +577,7 @@ module AWSDriver
       if actual_image.nil? || !actual_image.exists?
         raise 'Cannot ready an image that does not exist'
       else
-        image_options = (image_options || {}).to_h.dup
+        image_options = deep_symbolize_keys(image_options)
         aws_tags = image_options.delete(:aws_tags) || {}
         aws_tags['from-instance'] = image_spec.reference['from-instance'] if image_spec.reference['from-instance']
         converge_ec2_tags(actual_image, aws_tags, action_handler)
@@ -576,6 +589,7 @@ module AWSDriver
     end
 
     def destroy_image(action_handler, image_spec, image_options)
+      image_options = deep_symbolize_keys(image_options)
       # TODO the driver should automatically be set by `inline_resource`
       d = self
       Provisioning.inline_resource(action_handler) do
@@ -648,6 +662,7 @@ EOD
 
     # Machine methods
     def allocate_machine(action_handler, machine_spec, machine_options)
+      machine_options = deep_symbolize_keys(machine_options)
       instance = instance_for(machine_spec)
       bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
@@ -668,6 +683,7 @@ EOD
     end
 
     def ready_machine(action_handler, machine_spec, machine_options)
+      machine_options = deep_symbolize_keys(machine_options)
       instance = instance_for(machine_spec)
       converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
 
@@ -716,6 +732,7 @@ EOD
     end
 
     def stop_machine(action_handler, machine_spec, machine_options)
+      machine_options = deep_symbolize_keys(machine_options)
       instance = instance_for(machine_spec)
       if instance && instance.exists?
         wait_until_machine(action_handler, machine_spec, "finish coming up so we can stop it", instance) { |instance| instance.state.name != "pending" }
@@ -729,6 +746,7 @@ EOD
     end
 
     def destroy_machine(action_handler, machine_spec, machine_options)
+      machine_options = deep_symbolize_keys(machine_options)
       d = self
       Provisioning.inline_resource(action_handler) do
         aws_instance machine_spec.name do
@@ -849,7 +867,7 @@ EOD
     end
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
-      bootstrap_options = (machine_options[:bootstrap_options] || {}).to_h.dup
+      bootstrap_options = (machine_options[:bootstrap_options] || {}).dup
       # These are hardcoded for now - only 1 machine at a time
       bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type
@@ -1502,7 +1520,7 @@ EOD
           Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
           @transport_address_location_warned = true
         end
-        machine_options = Cheffish::MergedConfig.new(machine_options, {:transport_address_location => :private_ip})
+        machine_options[:transport_address_location] ||= :private_ip
       end
       %w(is_windows winrm_username winrm_port winrm_password ssh_username sudo transport_address_location ssh_gateway).each do |key|
         machine_spec.reference[key] = machine_options[key.to_sym] if machine_options[key.to_sym]

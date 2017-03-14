@@ -1,7 +1,17 @@
 # Change Log
 
-## [2.1.0](https://github.com/chef/chef-provisioning-aws/tree/2.1.0) (2016-11-23)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.0.0...2.1.0)
+## [2.2.0](https://github.com/chef/chef-provisioning-aws/tree/2.2.0) (2017-03-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.1.0...2.2.0)
+
+**Merged pull requests:**
+
+- Updating to support Cheffish 5.0 [\#528](https://github.com/chef/chef-provisioning-aws/pull/528) ([tyler-ball](https://github.com/tyler-ball))
+- Fix Classic use of SG names in rules [\#519](https://github.com/chef/chef-provisioning-aws/pull/519) ([dafyddcrosby](https://github.com/dafyddcrosby))
+- Add license to attributes [\#518](https://github.com/chef/chef-provisioning-aws/pull/518) ([dafyddcrosby](https://github.com/dafyddcrosby))
+- Add support for RDS creation from DB snapshot [\#515](https://github.com/chef/chef-provisioning-aws/pull/515) ([GolubevV](https://github.com/GolubevV))
+
+## [v2.1.0](https://github.com/chef/chef-provisioning-aws/tree/v2.1.0) (2016-11-23)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.0.0...v2.1.0)
 
 **Fixed bugs:**
 

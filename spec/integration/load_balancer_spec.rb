@@ -334,7 +334,7 @@ describe Chef::Resource::LoadBalancer do
           )
 
           listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
-          expect(listener_descriptions.size).to eql(1)
+          expect(listener_descriptions.size).to eql(2)
           https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
           expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
         end

@@ -32,3 +32,4 @@ x.rb
 coverage
 .envrc
 .ruby-version
+spec/persistence_file.txt

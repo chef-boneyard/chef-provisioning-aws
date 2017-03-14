@@ -24,6 +24,7 @@ RSpec.configure do |rspec|
 #  rspec.order = 'random'
   rspec.expect_with(:rspec) { |c| c.syntax = :expect }
 #  rspec.before { allow($stdout).to receive(:write) }
+  rspec.example_status_persistence_file_path = "spec/persistence_file.txt"
 end
 
 #Chef::Log.level = :debug

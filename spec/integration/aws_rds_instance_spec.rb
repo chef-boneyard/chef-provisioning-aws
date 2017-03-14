@@ -41,7 +41,7 @@ describe Chef::Resource::AwsRdsInstance do
         parameters [{:parameter_name => "max_connections", :parameter_value => "250", :apply_method => "pending-reboot"}]
       end
 
-      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group and aws_rds_parameter_group", :focus do
+      it "aws_rds_instance 'test-rds-instance' creates an rds instance that can parse the aws_rds_subnet_group and aws_rds_parameter_group" do
         expect_recipe {
           aws_rds_instance "test-rds-instance" do
             engine "postgres"

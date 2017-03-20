@@ -222,5 +222,25 @@ describe Chef::Resource::AwsVpc do
         end
       end
     end
+
+    with_aws "with no other objects" do
+      context "When operating in different regions" do
+        let(:regions) { %w(us-west-1 us-west-2) }
+
+        it "creates both VPCs" do
+          expect_recipe {
+            regions.each_with_index do |region, idx|
+              with_driver "aws::#{region}" do
+                aws_vpc "test_vpc_#{idx}" do
+                  cidr_block "10.0.#{idx}.0/24"
+                end
+              end
+            end
+          }.to create_an_aws_vpc("test_vpc_0"
+          ).and create_an_aws_vpc("test_vpc_1"
+          ).and be_idempotent
+        end
+      end
+    end
   end
 end

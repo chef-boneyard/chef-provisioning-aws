@@ -4,7 +4,7 @@ require 'chef/provisioning/aws_driver/aws_taggable'
 class Chef::Resource::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::ELB::LoadBalancer
+  aws_sdk_type Aws::AutoScaling::LoadBalancer
 
   attribute :name, kind_of: String,  name_attribute: true
 

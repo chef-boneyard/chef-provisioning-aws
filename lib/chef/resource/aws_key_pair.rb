@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+  require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::EC2::KeyPair, id: :name
+  aws_sdk_type Aws::EC2::KeyPair, id: :name
 
   # Private key to use as input (will be generated if it does not exist)
   attribute :private_key_path, :kind_of => String

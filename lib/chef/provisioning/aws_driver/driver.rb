@@ -20,14 +20,14 @@ require 'chef/provisioning/aws_driver/credentials2'
 require 'chef/provisioning/aws_driver/aws_tagger'
 
 require 'yaml'
-require 'aws-sdk-v1'
+# require 'aws-sdk-v1'
 require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
 require 'base64'
 
 # loads the entire aws-sdk
-AWS.eager_autoload!
+Aws.eager_autoload!
 AWS_V2_SERVICES = {
   "EC2" => "ec2",
   "Route53" => "route53",

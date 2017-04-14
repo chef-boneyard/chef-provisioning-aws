@@ -27,7 +27,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 #
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
-  aws_sdk_type AWS::EC2::VPC,
+  aws_sdk_type Aws::EC2::Types::Vpc,
                id: :id,
                option_names: [:vpc, :vpc_id, :peer_vpc_id]
 

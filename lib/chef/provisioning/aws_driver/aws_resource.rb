@@ -1,4 +1,4 @@
-require 'aws'
+require 'aws-sdk'
 require 'chef/provisioning/aws_driver/super_lwrp'
 require 'chef/provisioning/chef_managed_entry_store'
 # Enough resources will eventually require this that we put 1 require in here

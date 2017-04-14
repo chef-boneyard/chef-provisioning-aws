@@ -33,7 +33,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   #
   # This is required for new route tables.
   #
-  attribute :vpc,    kind_of: [ String, AwsVpc, AWS::EC2::VPC ], required: true
+  attribute :vpc,    kind_of: [ String, AwsVpc, Aws::EC2::Types::Vpc ], required: true
 
   #
   # Enable route propagation from one or more virtual private gateways

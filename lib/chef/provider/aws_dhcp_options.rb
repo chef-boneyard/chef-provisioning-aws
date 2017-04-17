@@ -15,7 +15,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
 
     converge_by "create DHCP options #{new_resource.name} in #{region}" do
       dhcp_options = new_resource.driver.ec2.dhcp_options.create(options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidDhcpOptionsID::NotFound) do
+      retry_with_backoff(Aws::EC2::Errors::InvalidDhcpOptionsID::NotFound) do
         dhcp_options.tags['Name'] = new_resource.name
       end
       dhcp_options

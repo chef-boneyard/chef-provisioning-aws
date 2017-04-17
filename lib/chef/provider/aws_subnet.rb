@@ -35,7 +35,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
       subnet = new_resource.driver.ec2.subnets.create(cidr_block, options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidSubnetID::NotFound) do
+      retry_with_backoff(Aws::EC2::Errors::InvalidSubnetID::NotFound) do
         subnet.tags['Name'] = new_resource.name
         subnet.tags['VPC'] = new_resource.vpc
       end
@@ -76,7 +76,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         # It is common during subnet purging for the instance to be terminated but
         # temporarily hanging around - this causes a `The network interface at device index 0 cannot be detached`
         # error to be raised when trying to detach
-        retry_with_backoff(AWS::EC2::Errors::OperationNotPermitted) do
+        retry_with_backoff(Aws::EC2::Errors::OperationNotPermitted) do
           Cheffish.inline_resource(self, action) do
             aws_network_interface network do
               action :purge
@@ -91,7 +91,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available
       begin
         subnet.delete
-      rescue AWS::EC2::Errors::InvalidSubnetID::NotFound
+      rescue Aws::EC2::Errors::InvalidSubnetID::NotFound
       end
     end
   end

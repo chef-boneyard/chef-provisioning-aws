@@ -20,7 +20,6 @@ require 'chef/provisioning/aws_driver/credentials2'
 require 'chef/provisioning/aws_driver/aws_tagger'
 
 require 'yaml'
-# require 'aws-sdk-v1'
 require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
@@ -309,7 +308,7 @@ module AWSDriver
 
         action_handler.perform_action updates do
           # IAM says the server certificate exists, but ELB throws this error
-          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(AWS::ELB::Errors::CertificateNotFound) do
+          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(Aws::ELB::Errors::CertificateNotFound) do
             actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
           end
 
@@ -405,7 +404,7 @@ module AWSDriver
                   load_balancer_name: actual_elb.name,
                   subnets: attach_subnets
                 )
-              rescue AWS::ELB::Errors::InvalidConfigurationRequest => e
+              rescue Aws::ELB::Errors::InvalidConfigurationRequest => e
                 Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
@@ -867,6 +866,96 @@ EOD
       strategy = convergence_strategy_for(machine_spec, machine_options)
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
+
+    def cloudsearch(api_version="20130101")
+      @cloudsearch ||= {}
+      @cloudsearch[api_version] ||= Aws::CloudSearch::Client.const_get("V#{api_version}").new
+      @cloudsearch[api_version]
+    end
+
+    def ec2
+      @ec2 ||= Aws::EC2.new(config: aws_config)
+    end
+
+    AWS_V2_SERVICES.each do |load_name, short_name|
+      class_eval <<-META
+
+      def #{short_name}_client
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new(**aws_config_2)
+      end
+
+      def #{short_name}_resource
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
+      end
+
+      META
+    end
+
+    def elb
+      @elb ||= Aws::ELB.new(config: aws_config)
+    end
+
+    def elasticache
+      @elasticache ||= Aws::ElastiCache::Client.new(config: aws_config)
+    end
+
+    def iam
+      @iam ||= Aws::IAM.new(config: aws_config)
+    end
+
+    def rds
+      @rds ||= Aws::RDS.new(config: aws_config)
+    end
+
+    def s3
+      @s3 ||= Aws::S3.new(config: aws_config)
+    end
+
+    def sns
+      @sns ||= Aws::SNS.new(config: aws_config)
+    end
+
+    def sqs
+      @sqs ||= Aws::SQS.new(config: aws_config)
+    end
+
+    def auto_scaling
+      @auto_scaling ||= Aws::AutoScaling.new(config: aws_config)
+    end
+
+    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
+      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
+    end
+
+    def parse_arn(arn)
+      parts = arn.split(':', 6)
+      {
+        partition: parts[1],
+        service: parts[2],
+        region: parts[3],
+        account_id: parts[4],
+        resource: parts[5]
+      }
+    end
+
+    def account_id
+      begin
+        # We've got an AWS account root credential or an IAM admin with access rights
+        current_user = iam.client.get_user
+        arn = current_user[:user][:arn]
+      rescue Aws::IAM::Errors::AccessDenied => e
+        # If we don't have access, the error message still tells us our account ID and user ...
+        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
+        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
+          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
+        end
+        arn = $1
+      end
+      parse_arn(arn)[:account_id]
+    end
+
+    # For creating things like AWS keypairs exclusively
+    @@chef_default_lock = Mutex.new
 
     def machine_for(machine_spec, machine_options, instance = nil)
       instance ||= instance_for(machine_spec)

@@ -84,7 +84,7 @@ class Chef::Resource::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_eip_address` resource.
   # - nil, meaning that no EIP exists yet and needs to be created.
   #
-  attribute :eip_address, kind_of: [ String, AWS::EC2::ElasticIp, AwsEipAddress, nil ], default: nil
+  attribute :eip_address, kind_of: [ String, Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, nil ], default: nil
 
   attribute :nat_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^nat-[A-Fa-f0-9]{17}$/ ? name : nil

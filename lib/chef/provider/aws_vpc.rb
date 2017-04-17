@@ -48,7 +48,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "create VPC #{new_resource.name} in #{region}" do
       vpc = new_resource.driver.ec2.vpcs.create(new_resource.cidr_block, options)
       wait_for_state(vpc, [:available])
-      retry_with_backoff(AWS::EC2::Errors::InvalidVpcID::NotFound) do
+      retry_with_backoff(Aws::EC2::Errors::InvalidVpcID::NotFound) do
         vpc.tags['Name'] = new_resource.name
       end
       vpc
@@ -222,7 +222,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     current_driver = self.new_resource.driver
     current_chef_server = self.new_resource.chef_server
     case new_resource.internet_gateway
-      when String, Chef::Resource::AwsInternetGateway, AWS::EC2::InternetGateway
+      when String, Chef::Resource::AwsInternetGateway, Aws::EC2::InternetGateway
         new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
         if !current_ig
           Cheffish.inline_resource(self, action) do

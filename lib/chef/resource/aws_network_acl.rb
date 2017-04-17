@@ -5,7 +5,7 @@ require 'chef/resource/aws_subnet'
 class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::NetworkACL
+  aws_sdk_type Aws::EC2::NetworkAcl
 
   #
   # The name of this network acl.
@@ -20,7 +20,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
+  attribute :vpc, kind_of: [ String, AwsVpc, Aws::EC2::Vpc ]
 
   #
   # Accepts rules in the format:
@@ -55,7 +55,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
       # network_acls don't have an `exists?` method so have to query an attribute
       result.vpc_id
       result
-    rescue AWS::EC2::Errors::InvalidNetworkAclID::NotFound
+    rescue Aws::EC2::Errors::InvalidNetworkAclID::NotFound
       nil
     end
   end

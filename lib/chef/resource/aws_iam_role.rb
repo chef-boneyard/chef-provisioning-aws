@@ -44,7 +44,7 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   #
   # TODO: add when we get a policy resource
   #
-  # attribute :managed_policies, kind_of: [Array, String, ::Aws::Iam::Policy, AwsIamPolicy], coerce: proc { |value| [value].flatten }
+  # attribute :managed_policies, kind_of: [Array, String, ::Aws::IAM::Policy, AwsIamPolicy], coerce: proc { |value| [value].flatten }
 
   def aws_object
     driver.iam_resource.role(name).load

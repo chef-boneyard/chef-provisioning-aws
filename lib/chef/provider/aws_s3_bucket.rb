@@ -28,12 +28,12 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.enable_website_hosting
       if !bucket.website?
         converge_by "enable website configuration for bucket #{new_resource.name}" do
-          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
+          bucket.website_configuration = Aws::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
       elsif modifies_website_configuration?(bucket)
         converge_by "reconfigure website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
-          bucket.website_configuration = AWS::S3::WebsiteConfiguration.new(
+          bucket.website_configuration = Aws::S3::WebsiteConfiguration.new(
             new_resource.website_options)
         end
       end

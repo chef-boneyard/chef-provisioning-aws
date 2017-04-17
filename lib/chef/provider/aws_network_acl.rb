@@ -24,7 +24,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
       Chef::Log.debug("VPC: #{options[:vpc]}")
 
       network_acl = new_resource.driver.ec2.network_acls.create(options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidNetworkAclID::NotFound) do
+      retry_with_backoff(Aws::EC2::Errors::InvalidNetworkAclID::NotFound) do
         network_acl.tags['Name'] = new_resource.name
       end
       network_acl

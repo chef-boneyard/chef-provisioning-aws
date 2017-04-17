@@ -16,7 +16,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::Subnet, :id => :id
+  aws_sdk_type Aws::EC2::Subnet, :id => :id
 
   require 'chef/resource/aws_vpc'
   require 'chef/resource/aws_network_acl'
@@ -35,7 +35,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
+  attribute :vpc, kind_of: [ String, AwsVpc, Aws::EC2::Vpc ]
 
   #
   # The CIDR block of IP addresses allocated to this subnet.
@@ -84,7 +84,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # TODO: See if it's possible to disassociate a Network ACL.
   #
-  attribute :network_acl, kind_of: [ String, AwsNetworkAcl, AWS::EC2::NetworkACL ]
+  attribute :network_acl, kind_of: [ String, AwsNetworkAcl, Aws::EC2::NetworkAcl ]
 
   attribute :subnet_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^subnet-[a-f0-9]{8}$/ ? name : nil
@@ -97,7 +97,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
       begin
         # Try to access it to see if it exists (no `exists?` method)
         result.vpc_id
-      rescue AWS::EC2::Errors::InvalidSubnetID::NotFound
+      rescue Aws::EC2::Errors::InvalidSubnetID::NotFound
         result = nil
       end
     end

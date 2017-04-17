@@ -6,7 +6,7 @@ require 'chef/resource/aws_security_group'
 # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_cache_cluster-instance_method
 class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResource
   # Note: There isn't actually an SDK class for Elasticache.
-  aws_sdk_type AWS::ElastiCache
+  aws_sdk_type Aws::ElastiCache
 
   # See http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_cache_cluster-instance_method
   # for information on possible values for each attribute. Values are passed
@@ -63,9 +63,9 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
 
   # Security Groups
   #
-  # @param :security_groups [String, Array, AwsSecurityGroup, AWS::EC2::SecurityGroup] one or more VPC security groups associated with the cache cluster.
+  # @param :security_groups [String, Array, AwsSecurityGroup, Aws::EC2::SecurityGroup] one or more VPC security groups associated with the cache cluster.
   attribute :security_groups,
-            kind_of: [ String, Array, AwsSecurityGroup, AWS::EC2::SecurityGroup ],
+            kind_of: [ String, Array, AwsSecurityGroup, Aws::EC2::SecurityGroup ],
             required: true,
             coerce: proc { |v| [v].flatten }
 
@@ -74,7 +74,7 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
       driver.elasticache
         .describe_cache_clusters(cache_cluster_id: cluster_name)
         .data[:cache_clusters].first
-    rescue AWS::ElastiCache::Errors::CacheClusterNotFound
+    rescue Aws::ElastiCache::Errors::CacheClusterNotFound
       nil
     end
   end

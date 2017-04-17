@@ -24,7 +24,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       Chef::Log.debug("VPC: #{options[:vpc]}")
 
       sg = new_resource.driver.ec2.security_groups.create(new_resource.name, options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidSecurityGroupsID::NotFound, AWS::EC2::Errors::InvalidGroup::NotFound) do
+      retry_with_backoff(Aws::EC2::Errors::InvalidSecurityGroupsID::NotFound, Aws::EC2::Errors::InvalidGroup::NotFound) do
         sg.tags['Name'] = new_resource.name
       end
       sg
@@ -244,7 +244,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   end
 
   #
-  # Turns an actor_spec into a uniform array, containing CIDRs, AWS::EC2::LoadBalancers and AWS::EC2::SecurityGroups.
+  # Turns an actor_spec into a uniform array, containing CIDRs, Aws::EC2::LoadBalancers and Aws::EC2::SecurityGroups.
   #
   def get_actors(vpc, actor_spec)
     result = case actor_spec
@@ -277,12 +277,12 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
 
     # If a load balancer is specified, grab it and then get its automatic security group
-    when /^elb-[a-fA-F0-9]{8}$/, AWS::ELB::LoadBalancer, Chef::Resource::AwsLoadBalancer
+    when /^elb-[a-fA-F0-9]{8}$/, Aws::ELB::LoadBalancer, Chef::Resource::AwsLoadBalancer
       lb = Chef::Resource::AwsLoadBalancer.get_aws_object(actor_spec, resource: new_resource)
       get_actors(vpc, lb.source_security_group)
 
     # If a security group is specified, grab it
-    when /^sg-[a-fA-F0-9]{8}$/, AWS::EC2::SecurityGroup, Chef::Resource::AwsSecurityGroup
+    when /^sg-[a-fA-F0-9]{8}$/, Aws::EC2::SecurityGroup, Chef::Resource::AwsSecurityGroup
       Chef::Resource::AwsSecurityGroup.get_aws_object(actor_spec, resource: new_resource)
 
     # If an IP addresses / CIDR are passed, return it verbatim; otherwise, assume it's the
@@ -300,7 +300,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       raise "Unexpected actor #{actor_spec} in rules list"
     end
 
-    result = { user_id: result.owner_id, group_id: result.id } if result.is_a?(AWS::EC2::SecurityGroup)
+    result = { user_id: result.owner_id, group_id: result.id } if result.is_a?(Aws::EC2::SecurityGroup)
 
     [ result ].flatten
   end

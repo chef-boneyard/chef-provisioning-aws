@@ -20,11 +20,11 @@ module AWSSupport
   require 'aws_support/aws_resource_run_wrapper'
 
   # Add AWS to the list of objects which can be matched against a Hash or Array
-  require 'aws'
+  require 'aws-sdk'
   require 'aws_support/deep_matcher/matchable_object'
   require 'aws_support/deep_matcher/matchable_array'
   DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(AutoScaling|EC2|ELB|IAM|S3|RDS|CloudSearch|CloudWatch|Route53|ElasticsearchService)($|::)/ }
-  DeepMatcher::MatchableArray.matchable_classes  << AWS::Core::Data::List
+  DeepMatcher::MatchableArray.matchable_classes  #<< AWS::Core::Data::List
 
   def purge_all
     before :all do

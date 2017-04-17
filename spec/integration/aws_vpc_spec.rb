@@ -165,7 +165,7 @@ describe Chef::Resource::AwsVpc do
         expect_converge {
           aws_vpc 'test_vpc' do
           end
-        }.to raise_error(AWS::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
+        }.to raise_error(Aws::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
       end
 
       context "When having two VPC's and a peering connection between them" do

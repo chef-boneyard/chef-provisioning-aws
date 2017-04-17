@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'aws'
+require 'aws-sdk'
 require 'set'
 
 describe Chef::Resource::AwsRdsSubnetGroup do

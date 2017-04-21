@@ -111,7 +111,7 @@ module AWSDriver
       region = nil if region && region.empty?
 
       credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
-      @aws_config = AWS.config(
+      @aws_config = Aws.config.update(
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
         region: region || credentials[:region],
@@ -908,7 +908,8 @@ EOD
     end
 
     def s3
-      @s3 ||= Aws::S3.new(config: aws_config)
+      aws_config.delete(:proxy_uri)
+      @s3 ||= Aws::S3::Client.new( aws_config)
     end
 
     def sns

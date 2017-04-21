@@ -12,7 +12,8 @@ class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   attribute :recursive_delete, :kind_of => [TrueClass, FalseClass], :default => false
 
   def aws_object
-    result = driver.s3.buckets[name]
+    resource = Aws::S3::Resource.new(driver.s3)
+    result = resource.buckets.find{|b| b.name==name}
     result && result.exists? ? result : nil
   end
 end

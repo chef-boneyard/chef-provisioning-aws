@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type Aws::IAM::ServerCertificate
+  aws_sdk_type ::Aws::IAM::ServerCertificate
 
   attribute :name, kind_of: String, name_attribute: true
 
@@ -12,10 +12,10 @@ class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSR
   def aws_object
     begin
       cert = driver.iam.server_certificates[name]
-      # this will trigger a Aws::IAM::Errors::NoSuchEntity if the cert does not exist
+      # this will trigger a ::Aws::IAM::Errors::NoSuchEntity if the cert does not exist
       cert.arn
       cert
-    rescue Aws::IAM::Errors::NoSuchEntity
+    rescue ::Aws::IAM::Errors::NoSuchEntity
       nil
     end
   end

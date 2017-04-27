@@ -3,7 +3,7 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type Aws::AutoScaling::AutoScalingGroup
+  aws_sdk_type ::Aws::AutoScaling::AutoScalingGroup
 
   attribute :name,                        kind_of: String,  name_attribute: true
   attribute :options,                     kind_of: Hash,    default: {}

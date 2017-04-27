@@ -32,7 +32,7 @@ class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   #
   # This is required for new peering connections.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
 
   #
   # The VPC to peer
@@ -45,7 +45,7 @@ class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   #
   # This is required for new peering connections.
   #
-  attribute :peer_vpc, kind_of: [ String, AwsVpc, Aws::EC2::Vpc ]
+  attribute :peer_vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
 
   #
   # The target VPC account id to peer

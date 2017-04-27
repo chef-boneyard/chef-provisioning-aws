@@ -42,7 +42,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
       # TODO is InUse really a status guaranteed to go away??
       begin
         launch_configuration.delete
-      rescue Aws::AutoScaling::Errors::ResourceInUse
+      rescue ::Aws::AutoScaling::Errors::ResourceInUse
         sleep 5
         retry
       end

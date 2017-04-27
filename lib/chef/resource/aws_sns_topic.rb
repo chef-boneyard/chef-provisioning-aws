@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type Aws::SNS::Topic
+  aws_sdk_type ::Aws::SNS::Topic
 
   attribute :name, kind_of: String, name_attribute: true
   attribute :arn,  kind_of: String, default: lazy { driver.build_arn(service: 'sns', resource: name) }
@@ -11,7 +11,7 @@ class Chef::Resource::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSResource
     begin
       # Test whether it exists or not by asking for a property
       result.display_name
-    rescue Aws::SNS::Errors::NotFound
+    rescue ::Aws::SNS::Errors::NotFound
       result = nil
     end
     result

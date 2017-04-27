@@ -34,7 +34,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     eni = nil
     converge_by "create new #{new_resource} in #{region}" do
       eni = new_resource.driver.ec2.network_interfaces.create(options)
-      retry_with_backoff(Aws::EC2::Errors::InvalidNetworkInterfaceID::NotFound) do
+      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceID::NotFound) do
         eni.tags['Name'] = new_resource.name
       end
       eni
@@ -120,7 +120,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     #
     # If we were told to attach the network interface to a machine, do so
     #
-    if expected_instance.is_a?(Aws::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
+    if expected_instance.is_a?(::Aws::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
       when :available
         attach(eni)

@@ -13,7 +13,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type Aws::EC2::DhcpOptions
+  aws_sdk_type ::Aws::EC2::DhcpOptions
 
   #
   # The Chef "idempotence name" of this DHCP options set.

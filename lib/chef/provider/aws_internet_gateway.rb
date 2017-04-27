@@ -18,7 +18,7 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
     converge_by "create internet gateway #{new_resource.name} in region #{region}" do
       internet_gateway = new_resource.driver.ec2.internet_gateways.create
-      retry_with_backoff(Aws::EC2::Errors::InvalidInternetGatewayID::NotFound) do
+      retry_with_backoff(::Aws::EC2::Errors::InvalidInternetGatewayID::NotFound) do
         internet_gateway.tags['Name'] = new_resource.name
       end
 

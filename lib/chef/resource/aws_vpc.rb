@@ -27,7 +27,7 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 #
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
-  aws_sdk_type Aws::EC2::Vpc,
+  aws_sdk_type ::Aws::EC2::Vpc,
                id: :id,
                option_names: [:vpc, :vpc_id, :peer_vpc_id]
 
@@ -69,7 +69,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #   detach if not.
   # - You may specify the AWS ID of an actual Internet Gateway
   #
-  attribute :internet_gateway#, kind_of: [ String, Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
+  attribute :internet_gateway#, kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
 
   #
   # The main route table.
@@ -105,7 +105,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   # The DHCP options for this VPC.
   #
-  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, Aws::EC2::DhcpOptions, String ]
+  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, ::Aws::EC2::DhcpOptions, String ]
 
   #
   # Indicates whether the DNS resolution is supported for the VPC. If this

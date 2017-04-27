@@ -1,7 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type Aws::SQS::Queue
+  aws_sdk_type ::Aws::SQS::Queue
 
   attribute :name,    kind_of: String, name_attribute: true
   attribute :options, kind_of: Hash
@@ -9,7 +9,7 @@ class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
   def aws_object
     begin
       driver.sqs.queues.named(name)
-    rescue Aws::SQS::Errors::NonExistentQueue
+    rescue ::Aws::SQS::Errors::NonExistentQueue
       nil
     end
   end

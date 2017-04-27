@@ -5,7 +5,7 @@ class Chef::Resource::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSR
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
   # there is no class for a parameter group specifically
-  aws_sdk_type Aws::RDS
+  aws_sdk_type ::Aws::RDS
 
   attribute :name, kind_of: String, name_attribute: true
   attribute :db_parameter_group_family, kind_of: String, required: true
@@ -27,7 +27,7 @@ class Chef::Resource::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSR
     object[:parameters] = parameters
 
     object
-  rescue Aws::RDS::Errors::DBParameterGroupNotFound
+  rescue ::Aws::RDS::Errors::DBParameterGroupNotFound
     nil
   end
 

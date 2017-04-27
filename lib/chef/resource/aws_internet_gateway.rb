@@ -12,7 +12,7 @@
 class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type Aws::EC2::InternetGateway, id: :id
+  aws_sdk_type ::Aws::EC2::InternetGateway, id: :id
 
   require 'chef/resource/aws_vpc'
 
@@ -34,7 +34,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
 
   attribute :internet_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^igw-[a-f0-9]{8}$/ ? name : nil

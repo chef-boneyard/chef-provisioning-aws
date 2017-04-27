@@ -1,6 +1,7 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'chef/provisioning/aws_driver/tagging_strategy/s3'
 require 'date'
+
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   def aws_tagger
@@ -37,7 +38,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
     else
       if website_exist?(new_resource,bucket)
         converge_by "disable website configuration for bucket #{new_resource.name}" do
-          new_resource.driver.s3.delete_bucket_website(bucket: bucket.name)
+          new_resource.driver.s3_client.delete_bucket_website(bucket: new_resource.name)
         end
       end
     end
@@ -48,7 +49,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   def create_aws_object
     converge_by "create S3 bucket #{new_resource.name}" do
       options = new_resource.options.merge({bucket: new_resource.name})
-      new_resource.driver.s3.create_bucket(options)
+      new_resource.driver.s3_client.create_bucket(options)
       # S3 buckets already have a top level name property so they don't need
       # a 'Name' tag
     end
@@ -73,17 +74,16 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   def website_exist?(new_resource,bucket)
-    return true if new_resource.driver.s3.get_bucket_website(bucket: bucket.name)
-  rescue
+    return true if new_resource.driver.s3_client.get_bucket_website(bucket: new_resource.name) 
+  rescue Aws::S3::Errors::NoSuchWebsiteConfiguration
     return false
   end
 
   def create_website(bucket,new_resource )
     website_configuration = Aws::S3::Types::WebsiteConfiguration.new(
             new_resource.website_options)
-    s3 = new_resource.driver.s3
-    s3.put_bucket_website( bucket: bucket.name,  website_configuration:website_configuration)
-    
+    s3_client = new_resource.driver.s3_client
+    s3_client.put_bucket_website( bucket: new_resource.name,  website_configuration:website_configuration)
   end
 
   def modifies_website_configuration?(aws_object)
@@ -94,9 +94,9 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
     current_web_config = (aws_object.website.data || {}).to_hash
 
-    (current_web_config[:index_document] != new_web_config.fetch(:index_document, {}) ||
-    current_web_config[:error_document] != new_web_config.fetch(:error_document, {}) ||
-    current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, []))
+    (current_web_config[:index_document] != new_web_config.fetch(:index_document, nil) ||
+    current_web_config[:error_document] != new_web_config.fetch(:error_document, nil) ||
+    current_web_config[:routing_rules] != new_web_config.fetch(:routing_rules, nil))
   end
 
   def s3_website_endpoint_region

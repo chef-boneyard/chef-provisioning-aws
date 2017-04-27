@@ -34,7 +34,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
           u = new_resource.driver.iam.client.get_user
           # We've got an AWS account root credential or an IAM admin with access rights
           u[:user][:arn].match('^arn:aws:iam::([0-9]{12}):.*$')[1]
-        rescue Aws::IAM::Errors::AccessDenied => e
+        rescue ::Aws::IAM::Errors::AccessDenied => e
           # We've got an AWS IAM Credential
           e.to_s.match('^User: arn:aws:iam::([0-9]{12}):.*$')[1]
         end

@@ -16,7 +16,7 @@ class S3
       bucket: bucket_name
     })
     Hash[resp.tag_set.map {|t| [t.key, t.value]}]
-  rescue Aws::S3::Errors::NoSuchTagSet => e
+  rescue ::Aws::S3::Errors::NoSuchTagSet => e
     # Instead of returning nil or empty, AWS raises an error :)
     {}
   end

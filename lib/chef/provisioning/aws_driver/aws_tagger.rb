@@ -37,7 +37,7 @@ class AWSTagger
     Retryable.retryable(
       :tries => 20,
       :sleep => lambda { |n| [2**n, 10].min },
-      :on => [Base64, ::Aws::Errors::ServiceError,]
+      :on => [::Aws::EC2::Errors, Aws::S3::Errors, ::Aws::S3::Errors::ServiceError,]
     ) do |retries, exception|
       if retries > 0
         Chef::Log.info "Retrying the tagging, previous try failed with #{exception.inspect}"

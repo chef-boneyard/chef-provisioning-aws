@@ -53,7 +53,14 @@ class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourc
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2_resource.dhcp_options(id) if id
-    result && result.exists? ? result : nil
+    ec2_resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = ec2_resource.dhcp_options(id) if id
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidDhcpOptionIDNotFound
+    return false
   end
 end

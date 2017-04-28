@@ -327,7 +327,10 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     desired_dhcp_options = Chef::Resource::AwsDhcpOptions.get_aws_object(new_resource.dhcp_options, resource: new_resource)
     if dhcp_options != desired_dhcp_options
       converge_by "change DHCP options for #{new_resource.to_s} to #{new_resource.dhcp_options} (#{desired_dhcp_options.id}) - was #{dhcp_options.id}" do
-        vpc.dhcp_options = desired_dhcp_options
+        vpc.associate_dhcp_options({
+          dhcp_options_id: desired_dhcp_options.id, # required
+          dry_run: false,
+        })
       end
     end
   end

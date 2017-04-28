@@ -14,18 +14,24 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
     end
 
     converge_by "create DHCP options #{new_resource.name} in #{region}" do
-      dhcp_options = new_resource.driver.ec2.dhcp_options.create(options)
-      retry_with_backoff(::Aws::EC2::Errors::InvalidDhcpOptionsID::NotFound) do
-        dhcp_options.tags['Name'] = new_resource.name
-      end
-      dhcp_options
+      create_dhcp_options options
     end
+  end
+
+  def create_dhcp_options options
+    options = options.map{|k,v| {key: k.to_s.gsub('_', '-'), values: Array(v)}}
+    ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+    dhcp_options = ec2_resource.create_dhcp_options({dhcp_configurations: options})
+    retry_with_backoff(::Aws::EC2::Errors::InvalidDhcpOptionIDNotFound) do
+      dhcp_options.create_tags({tags: [{key: "Name", value: new_resource.name}]})
+    end
+    dhcp_options
   end
 
   def update_aws_object(dhcp_options)
     # Verify unmodifiable attributes of existing dhcp_options
-    config = dhcp_options.configuration
-    differing_options = desired_options.select { |name, value| config[name] != value }
+    config = dhcp_options.data.to_h[:dhcp_configurations].map{|a|{a[:key].gsub('-', '_').to_sym => a[:values].map{|k|k[:value]} }}.reduce Hash.new, :merge
+    differing_options = desired_options.select { |name, value| config[name] != Array(value) }
     if !differing_options.empty?
       old_dhcp_options = dhcp_options
       # Report what we are trying to change ...
@@ -36,14 +42,18 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
 
       # create new dhcp_options
       if action_handler.should_perform_actions
-        dhcp_options = AWS.ec2(config: dhcp_options.config).dhcp_options.create(config.merge(desired_options))
+        dhcp_options = create_dhcp_options(config.merge(desired_options))
       end
       action_handler.report_progress "create DHCP options #{dhcp_options.id} with new attributes in #{region}"
 
       # attach dhcp_options to existing vpcs
-      old_dhcp_options.vpcs.each do |vpc|
-        action_handler.perform_action "attach DHCP options #{dhcp_options.id} to vpc #{vpc.id}" do
-          vpc.dhcp_options = dhcp_options
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+      ec2_resource.vpcs.each do |vpc|
+        if vpc.dhcp_options_id == old_dhcp_options.id
+          dhcp_options.associate_with_vpc({
+            dry_run: false,
+            vpc_id: vpc.id, # required
+          })
         end
       end
 

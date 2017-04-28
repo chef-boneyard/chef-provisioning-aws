@@ -875,8 +875,7 @@ EOD
     end
 
     def ec2
-      aws_config.delete(:proxy_uri)
-      @ec2 ||= ::Aws::EC2::Client.new( aws_config)
+      @ec2 ||= ::Aws::EC2::Client.new(aws_config)
     end
 
     AWS_V2_SERVICES.each do |load_name, short_name|
@@ -910,7 +909,6 @@ EOD
     end
 
     def s3_client
-      aws_config.delete(:proxy_uri)
       @s3 ||= ::Aws::S3::Client.new( aws_config)
     end
 

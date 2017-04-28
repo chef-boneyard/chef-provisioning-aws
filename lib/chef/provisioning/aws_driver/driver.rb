@@ -948,7 +948,7 @@ EOD
       end
 
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
-      bootstrap_options
+      deep_symbolize_keys(bootstrap_options)
     end
 
     def default_ssh_username

@@ -1,6 +1,6 @@
 require 'chef/provisioning/aws_driver/driver'
 
-describe Aws::Route53::Types::ResourceRecordSet do
+describe ::Aws::Route53::Types::ResourceRecordSet do
   it "returns the correct RecordSet unique key" 
   it "returns the correct AWS change struct"
 end

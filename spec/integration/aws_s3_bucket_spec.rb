@@ -70,7 +70,7 @@ describe Chef::Resource::AwsS3Bucket do
 
         ruby_block "upload s3 object" do
           block do
-            Aws::S3.new.buckets[bucket_name].objects["test-object"].write("test-content")
+            ::Aws::S3.new.buckets[bucket_name].objects["test-object"].write("test-content")
           end
         end
       }

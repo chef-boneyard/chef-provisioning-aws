@@ -12,7 +12,7 @@ describe Chef::Provisioning::AWSDriver::Driver do
 
   before do
     expect_any_instance_of(Chef::Provisioning::AWSDriver::Driver).to receive(:aws_credentials).and_return(aws_credentials)
-    expect(AWS).to receive(:config) do |h|
+    expect(Aws.config).to receive(:update) do |h|
       expect(h).to include({
         access_key_id:     "id",
         secret_access_key: "secret",

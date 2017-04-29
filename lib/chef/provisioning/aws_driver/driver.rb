@@ -1274,6 +1274,7 @@ EOD
       convergence_options = Cheffish::MergedConfig.new(
         machine_options[:convergence_options] || {},
         ohai_hints: { 'ec2' => '' })
+      convergence_options=deep_symbolize_keys(convergence_options)
 
       # Defaults
       if !machine_spec.reference

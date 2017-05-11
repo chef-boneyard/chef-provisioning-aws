@@ -874,7 +874,8 @@ EOD
     end
 
     def ec2
-      @ec2 ||= ::Aws::EC2.new(config: aws_config)
+      aws_config.delete(:proxy_uri)
+      @ec2 ||= ::Aws::EC2::Client.new( aws_config)
     end
 
     AWS_V2_SERVICES.each do |load_name, short_name|

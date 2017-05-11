@@ -14,7 +14,8 @@ class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
   attribute :allow_overwrite, :kind_of => [TrueClass, FalseClass], :default => false
 
   def aws_object
-    result = driver.ec2.key_pairs[name]
-    result && result.exists? ? result : nil
+    resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = resource.key_pairs.find{|b| b.name==name}
+    result
   end
 end

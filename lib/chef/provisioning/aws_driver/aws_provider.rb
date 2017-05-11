@@ -29,7 +29,7 @@ class AWSProvider < Chef::Provider::LWRPBase
   end
 
   def region
-    new_resource.driver.region
+    new_resource.driver.aws_config[:region]
   end
 
   #

@@ -92,7 +92,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.subnets[id] if id
+    result = driver.ec2_resource.subnet(id) if id
     if result
       begin
         # Try to access it to see if it exists (no `exists?` method)

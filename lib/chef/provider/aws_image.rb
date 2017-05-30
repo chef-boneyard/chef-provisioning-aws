@@ -12,7 +12,7 @@ class Chef::Provider::AwsImage < Chef::Provisioning::AWSDriver::AWSProvider
     unless instance_id
       # This is an old image and doesn't have the tag added - lets try and find it from the block device mapping
       image.block_device_mappings.map do |dev, opts|
-        snapshot = new_resource.driver.ec2.snapshots[opts[:snapshot_id]]
+        snapshot = new_resource.driver.ec2_resource.snapshot(opts[:snapshot_id])
         desc = snapshot.description
         m = /CreateImage\(([^\)]+)\)/.match(desc)
         if m

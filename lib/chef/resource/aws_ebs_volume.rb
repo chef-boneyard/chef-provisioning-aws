@@ -25,7 +25,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.volumes[id] if id
+    result = driver.ec2_resource.volume(id) if id
     result && result.exists? && ![:deleted, :deleting].include?(result.status) ? result : nil
   end
 end

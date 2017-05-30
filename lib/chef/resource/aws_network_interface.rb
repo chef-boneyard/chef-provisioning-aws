@@ -30,7 +30,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.network_interfaces[id] if id
+    result = driver.ec2_resource.network_interface(id) if id
     result && result.exists? ? result : nil
   end
 end

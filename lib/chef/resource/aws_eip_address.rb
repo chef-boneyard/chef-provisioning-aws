@@ -16,7 +16,7 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
 
   def aws_object
     driver, public_ip = get_driver_and_id
-    result = driver.ec2.elastic_ips[public_ip] if public_ip
+    result = driver.ec2_resource.elastic_ip(public_ip) if public_ip
     result && result.exists? ? result : nil
   end
 

@@ -53,7 +53,7 @@ class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourc
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.dhcp_options[id] if id
+    result = driver.ec2_resource.dhcp_options(id) if id
     result && result.exists? ? result : nil
   end
 end

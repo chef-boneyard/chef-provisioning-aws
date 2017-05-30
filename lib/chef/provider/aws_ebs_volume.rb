@@ -39,7 +39,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   def create_aws_object
     volume = nil
     converge_by "create #{new_resource} in #{region}" do
-      volume = new_resource.driver.ec2.volumes.create(initial_options)
+      volume = new_resource.driver.ec2_resource.create_volume(initial_options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidVolumeID::NotFound) do
         volume.tags['Name'] = new_resource.name
       end

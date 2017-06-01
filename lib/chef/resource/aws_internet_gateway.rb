@@ -42,7 +42,14 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.internet_gateways[id] if id
-    result && result.exists? ? result : nil
+    ec2_resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = ec2_resource.internet_gateway(id) if id
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidInternetGatewayIDNotFound
+    return false
   end
 end

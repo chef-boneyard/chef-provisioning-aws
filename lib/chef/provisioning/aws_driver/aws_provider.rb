@@ -273,9 +273,10 @@ class AWSProvider < Chef::Provider::LWRPBase
       Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       begin
         yield(aws_object) if block_given?
-        current_response = aws_object.send(query_method)
+        vpc = new_resource.driver.ec2.describe_vpcs(vpc_ids: [aws_object.vpc_id]).vpcs
+        current_response = '[:'+vpc[0].state+']'
         Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
-        unless expected_responses.include?(current_response)
+        unless expected_responses.to_s.include?(current_response)
           raise StatusTimeoutError.new(aws_object, current_response, expected_responses)
         end
       rescue *acceptable_errors

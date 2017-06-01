@@ -17,9 +17,10 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
     desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource) if new_resource.vpc
 
     converge_by "create internet gateway #{new_resource.name} in region #{region}" do
-      internet_gateway = new_resource.driver.ec2.internet_gateways.create
-      retry_with_backoff(::Aws::EC2::Errors::InvalidInternetGatewayID::NotFound) do
-        internet_gateway.tags['Name'] = new_resource.name
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+      internet_gateway = ec2_resource.create_internet_gateway
+      retry_with_backoff(::Aws::EC2::Errors::InvalidInternetGatewayIDNotFound) do
+        internet_gateway.create_tags({tags: [{key: "Name", value: new_resource.name}]})
       end
 
       if desired_vpc
@@ -31,7 +32,8 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
   end
 
   def update_aws_object(internet_gateway)
-    current_vpc = internet_gateway.vpc
+    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(:internet_gateway_ids=>[internet_gateway.id])
+    current_vpc = ec2_resource.internet_gateways.first.attachments.first
 
     if new_resource.vpc
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
@@ -51,7 +53,7 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
   private
 
   def attach_vpc(vpc, desired_gateway)
-    if vpc.internet_gateway && vpc.internet_gateway != desired_gateway
+    if vpc.internet_gateways.first && vpc.internet_gateways.first != desired_gateway
       current_driver = self.new_resource.driver
       current_chef_server = self.new_resource.chef_server
       Cheffish.inline_resource(self, action) do
@@ -64,14 +66,16 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
       end
     end
     converge_by "attach vpc #{vpc.id} to #{desired_gateway.id}" do
-      desired_gateway.vpc = vpc
+      desired_gateway.attach_to_vpc(vpc_id: vpc.id)
     end
   end
 
   def detach_vpc(internet_gateway)
-    if internet_gateway.vpc
-      converge_by "detach vpc #{internet_gateway.vpc.id} from internet gateway #{internet_gateway.id}" do
-        internet_gateway.detach(internet_gateway.vpc)
+    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(:internet_gateway_ids=>[internet_gateway.id])
+    vpc_id = ec2_resource.internet_gateways.first.attachments.first.vpc_id
+    if vpc_id
+      converge_by "detach vpc #{vpc_id} from internet gateway #{internet_gateway.id}" do
+        internet_gateway.detach_from_vpc(vpc_id: vpc_id)
       end
     end
   end

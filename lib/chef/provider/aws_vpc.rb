@@ -46,10 +46,11 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
 
     converge_by "create VPC #{new_resource.name} in #{region}" do
-      vpc = new_resource.driver.ec2.vpcs.create(new_resource.cidr_block, options)
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2) 
+      vpc = ec2_resource.create_vpc({cidr_block: new_resource.cidr_block, instance_tenancy: options[:instance_tenancy]})
       wait_for_state(vpc, [:available])
-      retry_with_backoff(::Aws::EC2::Errors::InvalidVpcID::NotFound) do
-        vpc.tags['Name'] = new_resource.name
+      retry_with_backoff(::Aws::EC2::Errors::InvalidVpcIDNotFound) do
+        ec2_resource.create_tags(resources: [vpc.vpc_id],tags: [{key: "Name", value: new_resource.name}])
       end
       vpc
     end
@@ -170,11 +171,12 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     end
 
     # Detach or destroy the internet gateway
-    ig = vpc.internet_gateway
+    ig = vpc.internet_gateways.first
     if ig
       Cheffish.inline_resource(self, action) do
         aws_internet_gateway ig do
-          if ig.tags['OwnedByVPC'] == vpc.id
+          ig_tag = ig.tags.find{|i|i.key=='OwnedByVPC'}.value
+          if ig_tag == vpc.id
             action :purge
           else
             action :detach
@@ -218,7 +220,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_internet_gateway(vpc)
-    current_ig = vpc.internet_gateway
+    current_ig = vpc.internet_gateways.first
     current_driver = self.new_resource.driver
     current_chef_server = self.new_resource.chef_server
     case new_resource.internet_gateway

@@ -33,7 +33,6 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
 
   require 'chef/resource/aws_dhcp_options'
   require 'chef/resource/aws_route_table'
-
   #
   # The name of this VPC.
   #
@@ -134,7 +133,14 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.vpcs[id] if id
-    result && result.exists? ? result : nil
+    ec2_resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = ec2_resource.vpc(id) if id
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidVpcIDNotFound
+    return false
   end
 end

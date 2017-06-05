@@ -19,10 +19,10 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   def create_aws_object
     converge_by "create security group #{new_resource.name} in #{region}" do
       options = { description: new_resource.description }
-      options[:vpc] = new_resource.vpc if new_resource.vpc
+      options[:vpc_id] = new_resource.vpc if new_resource.vpc
       options[:group_name] = new_resource.name
       options = AWSResource.lookup_options(options, resource: new_resource)
-      Chef::Log.debug("VPC: #{options[:vpc]}")
+      Chef::Log.debug("VPC: #{options[:vpc_id]}")
 
       sg = new_resource.driver.ec2_resource.create_security_group(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidSecurityGroupsID::NotFound, ::Aws::EC2::Errors::InvalidGroup::NotFound) do

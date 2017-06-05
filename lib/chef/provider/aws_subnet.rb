@@ -29,12 +29,12 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if !cidr_block
       cidr_block = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
     end
-    options = { :vpc => new_resource.vpc }
+    options = { :vpc => new_resource.vpc, :cidr_block => new_resource.cidr_block }
     options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
     options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(options, resource: new_resource)
 
     converge_by "create subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc]}) in #{region}" do
-      subnet = new_resource.driver.ec2.subnets.create(cidr_block, options)
+      subnet = new_resource.driver.ec2_resource.create_subnet(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidSubnetID::NotFound) do
         subnet.tags['Name'] = new_resource.name
         subnet.tags['VPC'] = new_resource.vpc

@@ -33,7 +33,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def create_aws_object
     eni = nil
     converge_by "create new #{new_resource} in #{region}" do
-      eni = new_resource.driver.ec2.network_interfaces.create(options)
+      eni = new_resource.driver.ec2_resource.create_network_interface(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceID::NotFound) do
         eni.tags['Name'] = new_resource.name
       end

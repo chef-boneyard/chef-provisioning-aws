@@ -44,6 +44,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   def create_aws_object
     options = { }
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
+    options[:cidr_block] = new_resource.cidr_block
 
     converge_by "create VPC #{new_resource.name} in #{region}" do
       ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2) 

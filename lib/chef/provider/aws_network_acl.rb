@@ -18,12 +18,12 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   def create_aws_object
     converge_by "create network ACL #{new_resource.name} in #{region}" do
       options = {}
-      options[:vpc] = new_resource.vpc if new_resource.vpc
+      options[:vpc_id] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
 
-      Chef::Log.debug("VPC: #{options[:vpc]}")
+      Chef::Log.debug("VPC: #{options[:vpc_id]}")
 
-      network_acl = new_resource.driver.ec2.network_acls.create(options)
+      network_acl = new_resource.driver.ec2_resource.create_network_acl(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkAclID::NotFound) do
         network_acl.tags['Name'] = new_resource.name
       end

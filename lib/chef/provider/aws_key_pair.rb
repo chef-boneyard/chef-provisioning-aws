@@ -13,7 +13,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   action :destroy do
     if current_resource_exists?
       converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
-        driver.ec2.delete_key_pair({key_name:new_resource.name})
+        drive.ec2_resource.key_pair(new_resource.name).delete
       end
     end
   end
@@ -75,8 +75,8 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       if !new_fingerprints.any? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            driver.ec2.delete_key_pair({key_name:new_resource.name})
-            driver.ec2.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
+            driver.ec2_resource.key_pair(new_resource.name).delete
+            driver.ec2_resource.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -88,7 +88,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        driver.ec2.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
+        driver.ec2_resource.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
       end
     end
   end

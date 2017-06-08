@@ -1442,6 +1442,7 @@ EOD
             machine_options = specs_and_options[machine_spec]
 
             clean_bootstrap_options = Marshal.load(Marshal.dump(bootstrap_options))
+            clean_bootstrap_options = deep_symbolize_keys(clean_bootstrap_options)
             instance = create_instance_and_reference(clean_bootstrap_options, action_handler, machine_spec, machine_options)
             converge_ec2_tags(instance, machine_options[:aws_tags], action_handler)
 

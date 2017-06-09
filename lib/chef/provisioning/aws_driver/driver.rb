@@ -161,12 +161,22 @@ module AWSDriver
     end
 
     def deep_symbolize_keys(hash_like)
+      # Process arrays first...
+      if hash_like.is_a?(Array)
+        hash_like.length.times do |e|
+          hash_like[e]=deep_symbolize_keys(hash_like[e]) if hash_like[e].respond_to?(:values) or hash_like[e].is_a?(Array)
+        end
+        return hash_like
+      end
+      # Otherwise return ourselves if not a hash
+      return hash_like if not hash_like.respond_to?(:values)
+      # Otherwise we are hash like, push on through...
       if hash_like.nil? || hash_like.empty?
         return {}
       end
       r = {}
       hash_like.each do |key, value|
-        value = deep_symbolize_keys(value) if value.respond_to?(:values)
+        value = deep_symbolize_keys(value) if value.respond_to?(:values) or value.is_a?(Array)
         r[key.to_sym] = value
       end
       r
@@ -948,7 +958,7 @@ EOD
       end
 
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
-      bootstrap_options
+      deep_symbolize_keys(bootstrap_options)
     end
 
     def default_ssh_username
@@ -1274,6 +1284,7 @@ EOD
       convergence_options = Cheffish::MergedConfig.new(
         machine_options[:convergence_options] || {},
         ohai_hints: { 'ec2' => '' })
+      convergence_options=deep_symbolize_keys(convergence_options)
 
       # Defaults
       if !machine_spec.reference

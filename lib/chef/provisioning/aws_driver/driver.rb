@@ -925,7 +925,7 @@ EOD
       @auto_scaling ||= ::Aws::AutoScaling.new(config: aws_config)
     end
 
-    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
+    def build_arn(partition: 'aws', service: nil, region: aws_config[:region], account_id: self.account_id, resource: nil)
       "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
     end
 

@@ -204,7 +204,7 @@ module AWSDriver
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
         Chef::Log.debug "AWS Load Balancer options: #{lb_options.inspect}"
 
-        updates = [ "create load balancer #{lb_spec.name} in #{aws_config.region}" ]
+        updates = [ "create load balancer #{lb_spec.name} in #{aws_config[:region]}" ]
         updates << "  enable availability zones #{lb_options[:availability_zones]}" if lb_options[:availability_zones]
         updates << "  attach subnets #{lb_options[:subnets].join(', ')}" if lb_options[:subnets]
         updates << "  with listeners #{lb_options[:listeners]}" if lb_options[:listeners]
@@ -227,7 +227,7 @@ module AWSDriver
         # Header gets printed the first time we make an update
         perform_action = proc do |desc, &block|
           perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
-          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
+          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config[:region]}", desc ].flatten, &block
         end
 
         # TODO: refactor this whole giant method into many smaller method calls
@@ -482,7 +482,7 @@ module AWSDriver
         if instances_to_add.size > 0
           perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
             instance_ids_to_add = instances_to_add.map { |s| s.reference['instance_id'] }
-            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config[:region]}")
             actual_elb.instances.add(instance_ids_to_add)
           end
         end
@@ -677,7 +677,7 @@ EOD
       bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
       if instance == nil || !instance.exists? || instance.state.name == "terminated"
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config[:region]}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
           instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
         end
@@ -704,7 +704,7 @@ EOD
       if instance.state.name != "running"
         wait_until_machine(action_handler, machine_spec, "finish stopping", instance) { |instance| instance.state.name != "stopping" }
         if instance.state.name == "stopped"
-          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
+          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config[:region]} ..." do
             instance.start
           end
         end
@@ -747,7 +747,7 @@ EOD
       if instance && instance.exists?
         wait_until_machine(action_handler, machine_spec, "finish coming up so we can stop it", instance) { |instance| instance.state.name != "pending" }
         if instance.state.name == "running"
-          action_handler.perform_action "Stop #{machine_spec.name} (#{instance.id}) in #{aws_config.region} ..." do
+          action_handler.perform_action "Stop #{machine_spec.name} (#{instance.id}) in #{aws_config[:region]} ..." do
             instance.stop
           end
         end
@@ -828,7 +828,7 @@ EOD
       @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
     end
 
-    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
+    def build_arn(partition: 'aws', service: nil, region: aws_config[:region], account_id: self.account_id, resource: nil)
       "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
     end
 
@@ -881,7 +881,7 @@ EOD
       # These are hardcoded for now - only 1 machine at a time
       bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type
-      image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
+      image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config[:region])
       bootstrap_options[:image_id] = image_id
       bootstrap_options.delete(:key_path)
       if !bootstrap_options[:key_name]

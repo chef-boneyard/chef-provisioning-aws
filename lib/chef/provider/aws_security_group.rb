@@ -18,15 +18,18 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
 
   def create_aws_object
     converge_by "create security group #{new_resource.name} in #{region}" do
-      options = { description: new_resource.description }
+      options = { description: new_resource.description.to_s }
       options[:vpc_id] = new_resource.vpc if new_resource.vpc
       options[:group_name] = new_resource.name
+      if options[:description].nil? or options[:description]==""
+        options[:description] = new_resource.name.to_s
+      end
       options = AWSResource.lookup_options(options, resource: new_resource)
       Chef::Log.debug("VPC: #{options[:vpc_id]}")
 
       sg = new_resource.driver.ec2_resource.create_security_group(options)
-      retry_with_backoff(::Aws::EC2::Errors::InvalidSecurityGroupsID::NotFound, ::Aws::EC2::Errors::InvalidGroup::NotFound) do
-        sg.tags['Name'] = new_resource.name
+      retry_with_backoff(::Aws::EC2::Errors::InvalidSecurityGroupsIDNotFound, ::Aws::EC2::Errors::InvalidGroupNotFound) do
+        new_resource.driver.ec2_resource.create_tags(resources: [sg.id],tags: [{key: "Name", value: new_resource.name}]) 
       end
       sg
     end
@@ -47,14 +50,14 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
 
   def destroy_aws_object(sg)
     converge_by "delete security group #{new_resource.to_s} in #{region}" do
-      sg.delete
+      sg.delete({ dry_run: false })
     end
   end
 
   private
 
   def apply_rules(sg)
-    vpc = sg.vpc
+    vpc = sg.vpc_id
     if !new_resource.outbound_rules.nil?
       update_outbound_rules(sg, vpc)
     end

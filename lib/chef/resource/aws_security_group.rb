@@ -61,9 +61,9 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
       # provided
       if vpc
         vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: self)
-        results = vpc_object.security_groups.filter('group-name', name).to_a
+        results=vpc_object.security_groups.to_a.select { |s| s.group_name == name or s.id == name }
       else
-        results = driver.ec2_resource.security_groups.filter('group-name', name).to_a
+        results=driver.ec2_resource.security_groups.to_a.select { |s| s.group_name == name or s.id == name }
       end
       if results.size >= 2
         raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(name, results)

@@ -290,7 +290,7 @@ module AWSDriver
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb || !actual_elb.exists?
+      if !actual_elb
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
           lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instances[s.reference['instance_id']].subnet }.uniq
@@ -308,8 +308,9 @@ module AWSDriver
 
         action_handler.perform_action updates do
           # IAM says the server certificate exists, but ELB throws this error
-          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ELB::Errors::CertificateNotFound) do
-            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ElasticLoadBalancing::Errors::CertificateNotFound) do
+            lb_options[:load_balancer_name]=lb_spec.name
+            actual_elb = elb.create_load_balancer(lb_options)
           end
 
           lb_spec.reference = {
@@ -361,7 +362,7 @@ module AWSDriver
           # an unecessary ones
           actual_zones_subnets = {}
           actual_elb.subnets.each do |subnet|
-            actual_zones_subnets[subnet.id] = subnet.availability_zone.name
+            actual_zones_subnets[subnet] = Chef::Resource::AwsSubnet.get_aws_object(subnet, driver: self).availability_zone
           end
 
           # Only 1 of subnet or AZ will be populated b/c of our check earlier
@@ -375,7 +376,7 @@ module AWSDriver
                 {:name => 'availabilityZone', :values => [zone]},
                 {:name => 'defaultForAz', :values => ['true']}
               ]
-              default_subnet = ec2_client.describe_subnets(:filters => filters)[:subnet_set]
+              default_subnet = ec2_client.describe_subnets(:filters => filters)[:subnets]
               if default_subnet.size != 1
                 raise "Could not find default subnet in availability zone #{zone}"
               end
@@ -384,7 +385,7 @@ module AWSDriver
             end
           end
           unless lb_options[:subnets].nil? || lb_options[:subnets].empty?
-            subnet_query = ec2_client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnet_set]
+            subnet_query = ec2_client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnets]
             # AWS raises an error on an unknown subnet, but not an unknown AZ
             subnet_query.each do |subnet|
               zone = subnet[:availability_zone].downcase
@@ -404,7 +405,7 @@ module AWSDriver
                   load_balancer_name: actual_elb.name,
                   subnets: attach_subnets
                 )
-              rescue ::Aws::ELB::Errors::InvalidConfigurationRequest => e
+              rescue ::Aws::ElasticLoadBalancing::Errors::InvalidConfigurationRequest => e
                 Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
@@ -432,7 +433,7 @@ module AWSDriver
         # Update listeners - THIS IS NOT ATOMIC
         if lb_options[:listeners]
           add_listeners = {}
-          lb_options[:listeners].each { |l| add_listeners[l[:port]] = l }
+          lb_options[:listeners].each { |l| add_listeners[l[:load_balancer_port]] = l }
           actual_elb.listeners.each do |listener|
             desired_listener = add_listeners.delete(listener.port)
             if desired_listener
@@ -469,7 +470,7 @@ module AWSDriver
             end
           end
           add_listeners.values.each do |listener|
-            updates = [ "  add listener #{listener[:port]}" ]
+            updates = [ "  add listener #{listener[:load_balanacer_port]}" ]
             updates << "    set protocol to #{listener[:protocol].inspect}"
             updates << "    set instance port to #{listener[:instance_port].inspect}"
             updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
@@ -639,10 +640,10 @@ module AWSDriver
       return if lb_spec == nil
 
       actual_elb = load_balancer_for(lb_spec)
-      if actual_elb && actual_elb.exists?
+      if actual_elb
         # Remove ELB from AWS
         action_handler.perform_action "Deleting EC2 ELB #{lb_spec.id}" do
-          actual_elb.delete
+          elb.delete_load_balancer({load_balancer_name: actual_elb.load_balancer_name })
         end
       end
 
@@ -893,7 +894,7 @@ EOD
     end
 
     def elb
-      @elb ||= ::Aws::ELB.new(config: aws_config)
+      @elb ||= ::Aws::ElasticLoadBalancing::Client.new(aws_config)
     end
 
     def elasticache
@@ -1578,7 +1579,7 @@ EOD
     def converge_elb_tags(aws_object, tags, action_handler)
       elb_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::ELB.new(
         elb_client,
-        aws_object.name,
+        aws_object,
         tags
       )
       aws_tagger = Chef::Provisioning::AWSDriver::AWSTagger.new(elb_strategy, action_handler)
@@ -1644,7 +1645,7 @@ EOD
           from.delete(:instance_port)
           from.delete(:instance_protocol)
           to = get_listener(to)
-          to.delete(:port)
+          to.delete(:load_balancer_port)
           to.delete(:protocol)
           to.merge(from)
         end
@@ -1664,21 +1665,21 @@ EOD
       when Hash
         result.merge!(listener)
       when Array
-        result[:port] = listener[0] if listener.size >= 1
+        result[:load_balancer_port] = listener[0] if listener.size >= 1
         result[:protocol] = listener[1] if listener.size >= 2
       when Symbol,String
         result[:protocol] = listener
       when Integer
-        result[:port] = listener
+        result[:load_balancer_port] = listener
       else
         raise "Invalid listener #{listener}"
       end
 
       # If either port or protocol are set, set the other
-      if result[:port] && !result[:protocol]
-        result[:protocol] = PROTOCOL_DEFAULTS[result[:port]]
-      elsif result[:protocol] && !result[:port]
-        result[:port] = PORT_DEFAULTS[result[:protocol]]
+      if result[:load_balancer_port] && !result[:protocol]
+        result[:protocol] = PROTOCOL_DEFAULTS[result[:load_balancer_port]]
+      elsif result[:protocol] && !result[:load_balancer_port]
+        result[:load_balancer_port] = PORT_DEFAULTS[result[:protocol]]
       end
       if result[:instance_port] && !result[:instance_protocol]
         result[:instance_protocol] = PROTOCOL_DEFAULTS[result[:instance_port]]
@@ -1687,7 +1688,7 @@ EOD
       end
 
       # If instance_port is still unset, copy port/protocol over
-      result[:instance_port] ||= result[:port]
+      result[:instance_port] ||= result[:load_balancer_port]
       result[:instance_protocol] ||= result[:protocol]
 
       result

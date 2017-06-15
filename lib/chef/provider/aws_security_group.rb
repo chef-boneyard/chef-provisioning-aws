@@ -93,19 +93,81 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     #
     # Actually update the rules (remove, add)
     #
-    update_rules(desired_rules, sg.ip_permissions_list,
+    update_rules(desired_rules, sg.ip_permissions,
 
       authorize: proc do |port_range, protocol, actors|
         names = actors.map { |a| a.is_a?(Hash) ? a[:group_id] : a }
         converge_by "authorize #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
-          sg.authorize_ingress(protocol, port_range, *actors)
+          names.each do |iprange|
+           begin
+            if iprange.include?('-')
+=begin
+              sg.authorize_ingress({
+                group
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  prefix_list_ids: [{
+                    prefix_list_id: iprange
+                  }]
+                }]
+              })
+=end
+            else
+              sg.authorize_ingress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  ip_ranges: [{
+                    cidr_ip: iprange
+                  }]
+                }]
+              })
+            end
+           rescue ::Aws::EC2::Errors::InvalidPermissionDuplicate => e
+             Chef::Log.debug("Ignoring duplicate permission")
+           end
+          end
         end
       end,
 
       revoke: proc do |port_range, protocol, actors|
         names = actors.map { |a| a.is_a?(Hash) ? a[:group_id] : a }
         converge_by "revoke the ability of #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
-          sg.revoke_ingress(protocol, port_range, *actors)
+          names.each do |iprange|
+           begin
+            if iprange.include?('-')
+=begin
+              sg.revoke_ingress({
+                group
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  prefix_list_ids: [{
+                    prefix_list_id: iprange
+                  }]
+                }]
+              })
+=end
+            else
+              sg.revoke_ingress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  ip_ranges: [{
+                    cidr_ip: iprange
+                  }]
+                }]
+              })
+            end
+           rescue ::Aws::EC2::Errors::InvalidPermissionNotFound => e
+             Chef::Log.debug("Ignoring missing permission")
+           end
+          end
         end
       end
     )
@@ -136,19 +198,84 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     #
     # Actually update the rules (remove, add)
     #
-    update_rules(desired_rules, sg.ip_permissions_list_egress,
+    Chef::Log.info("dr: #{desired_rules}")
+    update_rules(desired_rules, sg.ip_permissions_egress,
 
       authorize: proc do |port_range, protocol, actors|
+        Chef::Log.info("proto: #{protocol.inspect}")
+        Chef::Log.info("port_range: #{port_range.inspect}")
         names = actors.map { |a| a.is_a?(Hash) ? a[:group_id] : a }
         converge_by "authorize group #{new_resource.name} (#{sg.id}) to send traffic to #{names.join(', ')} on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
-          sg.authorize_egress(*actors, ports: port_range, protocol: protocol)
+          names.each do |iprange|
+           begin
+            if iprange.include?('-')
+=begin
+              sg.authorize_egress({
+                group
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  prefix_list_ids: [{
+                    prefix_list_id: iprange
+                  }]
+                }]
+              })
+=end
+            else
+              sg.authorize_egress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  ip_ranges: [{
+                    cidr_ip: iprange
+                  }]
+                }]
+              })
+            end
+           rescue ::Aws::EC2::Errors::InvalidPermissionDuplicate => e
+             Chef::Log.debug("Ignoring duplicate permission")
+           end
+          end
         end
       end,
 
       revoke: proc do |port_range, protocol, actors|
         names = actors.map { |a| a.is_a?(Hash) ? a[:group_id] : a }
         converge_by "revoke the ability of group #{new_resource.name} (#{sg.id}) to send traffic to #{names.join(', ')} on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
-          sg.revoke_egress(*actors, ports: port_range, protocol: protocol)
+          names.each do |iprange|
+           begin
+            if iprange.include?('-')
+=begin
+              sg.revoke_egress({
+                group
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  prefix_list_ids: [{
+                    prefix_list_id: iprange
+                  }]
+                }]
+              })
+=end
+            else
+              sg.revoke_egress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  ip_ranges: [{
+                    cidr_ip: iprange
+                  }]
+                }]
+              })
+            end
+           rescue ::Aws::EC2::Errors::InvalidPermissionNotFound => e
+             Chef::Log.debug("Ignoring missing permission")
+           end
+          end
         end
       end
     )
@@ -161,8 +288,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
-      rule[:groups].map! { |h| h.select{|x| x != :group_name } } if rule[:groups]
-      add_rule(actual_rules, [ port_range ], rule[:groups]) if rule[:groups]
+      rule[:user_id_group_pairs].map! { |h| h.select{|x| x != :group_name } } if rule[:user_id_group_pairs]
+      add_rule(actual_rules, [ port_range ], rule[:user_id_group_pairs]) if rule[:user_id_group_pairs]
       add_rule(actual_rules, [ port_range ], rule[:ip_ranges].map { |r| r[:cidr_ip] }) if rule[:ip_ranges]
     end
 
@@ -281,9 +408,19 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
 
     # If a load balancer is specified, grab it and then get its automatic security group
-    when /^elb-[a-fA-F0-9]{8}$/, ::Aws::ELB::LoadBalancer, Chef::Resource::AwsLoadBalancer
-      lb = Chef::Resource::AwsLoadBalancer.get_aws_object(actor_spec, resource: new_resource)
-      get_actors(vpc, lb.source_security_group)
+    when /^elb-[a-fA-F0-9]{8}$/, Aws::ElasticLoadBalancing::Types::LoadBalancerDescription, Chef::Resource::AwsLoadBalancer
+      lb=actor_spec
+      if lb.class != Aws::ElasticLoadBalancing::Types::LoadBalancerDescription
+        lb = Chef::Resource::AwsLoadBalancer.get_aws_object(actor_spec, resource: new_resource)
+      end
+      # get secgroup via vpc_id
+      vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: new_resource)
+      results = vpc_object.security_groups.to_a.select { |s| s.group_name == lb.source_security_group.group_name }
+      if results.size == 1  
+        get_actors(vpc, results.first.id)
+      else
+        raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(lb.source_security_group.group_name, results)
+      end
 
     # If a security group is specified, grab it
     when /^sg-[a-fA-F0-9]{8}$/, ::Aws::EC2::SecurityGroup, Chef::Resource::AwsSecurityGroup
@@ -301,7 +438,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
 
     else
-      raise "Unexpected actor #{actor_spec} in rules list"
+      raise "Unexpected actor #{actor_spec} / #{actor_spec.class} in rules list"
     end
 
     result = { user_id: result.owner_id, group_id: result.id } if result.is_a?(::Aws::EC2::SecurityGroup)

@@ -49,7 +49,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       raise "cidr_block for subnet #{new_resource.name} is #{new_resource.cidr_block}, but existing subnet (#{subnet.id})'s cidr_block is #{subnet.cidr_block}.  Modification of subnet cidr_block is unsupported!"
     end
     vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
-    if vpc && subnet.vpc != vpc
+    if vpc && subnet.vpc.id != vpc.id
       raise "VPC for subnet #{new_resource.name} is #{new_resource.vpc} (#{vpc.id}), but existing subnet (#{subnet.id})'s vpc is #{subnet.vpc.id}.  Modification of subnet VPC is unsupported!"
     end
     if new_resource.availability_zone && subnet.availability_zone_name != new_resource.availability_zone

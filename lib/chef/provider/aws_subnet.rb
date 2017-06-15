@@ -91,7 +91,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available
       begin
         subnet.delete
-      rescue ::Aws::EC2::Errors::InvalidSubnetID::NotFound
+      rescue ::Aws::EC2::Errors::InvalidSubnetIDNotFound
       end
     end
   end

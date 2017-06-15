@@ -97,7 +97,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
       begin
         # Try to access it to see if it exists (no `exists?` method)
         result.vpc_id
-      rescue ::Aws::EC2::Errors::InvalidSubnetID::NotFound
+      rescue ::Aws::EC2::Errors::InvalidSubnetIDNotFound
         result = nil
       end
     end

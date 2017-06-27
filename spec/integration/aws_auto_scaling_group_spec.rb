@@ -17,7 +17,7 @@ describe Chef::Resource::AwsAutoScalingGroup do
         'ap-southeast-1' => 'ami-74dda626',
         'ap-southeast-2' => 'ami-b5990e8f',
         'sa-east-1' => 'ami-3e3be423'
-      }[driver.aws_config.region]
+      }[driver.region]
 
       aws_launch_configuration 'test_config' do
         image ami
@@ -30,7 +30,7 @@ describe Chef::Resource::AwsAutoScalingGroup do
         expect_recipe {
           aws_auto_scaling_group 'test_group' do
             launch_configuration 'test_config'
-            availability_zones ["#{driver.aws_config.region}a"]
+            availability_zones ["#{driver.region}a"]
             min_size 1
             max_size 2
           end
@@ -42,7 +42,7 @@ describe Chef::Resource::AwsAutoScalingGroup do
         expect_recipe {
           aws_auto_scaling_group 'test_group_with_policy' do
             launch_configuration 'test_config'
-            availability_zones ["#{driver.aws_config.region}a"]
+            availability_zones ["#{driver.region}a"]
             min_size 1
             max_size 2
             notification_configurations [{
@@ -67,7 +67,7 @@ describe Chef::Resource::AwsAutoScalingGroup do
         expect_recipe {
           aws_auto_scaling_group 'test_group_with_policy' do
             launch_configuration 'test_config'
-            availability_zones ["#{driver.aws_config.region}a"]
+            availability_zones ["#{driver.region}a"]
             min_size 1
             max_size 2
             aws_tags key1: "value"
@@ -83,7 +83,7 @@ describe Chef::Resource::AwsAutoScalingGroup do
       context "with existing tags" do
         aws_auto_scaling_group 'test_group_with_policy' do
           launch_configuration 'test_config'
-          availability_zones ["#{driver.aws_config.region}a"]
+          availability_zones ["#{driver.region}a"]
           min_size 1
           max_size 2
           aws_tags key1: "value"

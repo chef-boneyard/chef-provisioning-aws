@@ -38,7 +38,7 @@ describe Chef::Resource::AwsEbsVolume do
       it "aws_ebs_volume 'test_volume_az' creates an ebs volume when provided proper full AZ" do
         expect_recipe {
           aws_ebs_volume "test_volume_az" do
-            availability_zone "#{driver.aws_config.region}a"
+            availability_zone "#{driver.region}a"
           end
         }.to create_an_aws_ebs_volume('test_volume_az')
          .and be_idempotent

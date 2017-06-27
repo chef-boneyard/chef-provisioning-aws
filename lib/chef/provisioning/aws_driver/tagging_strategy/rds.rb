@@ -26,7 +26,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
     # http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Tagging.html#USER_Tagging.ARN
     def construct_arn(new_resource)
       @arn ||= begin
-        region = new_resource.driver.aws_config.region
+        region = new_resource.driver.region
         name = new_resource.name
         rds_type = new_resource.rds_tagging_type
         # Taken from example on https://forums.aws.amazon.com/thread.jspa?threadID=108012

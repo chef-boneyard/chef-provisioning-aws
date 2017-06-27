@@ -42,7 +42,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
 
   def desired_options
     @desired_options ||= begin
-      options = new_resource.options
+      options = new_resource.options.dup
       %w(launch_configuration min_size max_size availability_zones desired_capacity load_balancers).each do |var|
         var = var.to_sym
         value = new_resource.public_send(var)

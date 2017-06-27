@@ -156,17 +156,121 @@ module AWSDriver
       end
     end
 
+    def region
+      aws_config_2[:region]
+    end
+
+    def cloudsearch(api_version="20130101")
+      @cloudsearch ||= {}
+      @cloudsearch[api_version] ||= AWS::CloudSearch::Client.const_get("V#{api_version}").new
+      @cloudsearch[api_version]
+    end
+
+    def ec2
+      @ec2 ||= AWS::EC2.new(config: aws_config)
+    end
+
+    AWS_V2_SERVICES.each do |load_name, short_name|
+      class_eval <<-META
+
+      def #{short_name}_client
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new(**aws_config_2)
+      end
+
+      def #{short_name}_resource
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
+      end
+
+      META
+    end
+
+    def elb
+      @elb ||= AWS::ELB.new(config: aws_config)
+    end
+
+    def elasticache
+      @elasticache ||= AWS::ElastiCache::Client.new(config: aws_config)
+    end
+
+    def iam
+      @iam ||= AWS::IAM.new(config: aws_config)
+    end
+
+    def rds
+      @rds ||= AWS::RDS.new(config: aws_config)
+    end
+
+    def s3
+      @s3 ||= AWS::S3.new(config: aws_config)
+    end
+
+    def sns
+      @sns ||= AWS::SNS.new(config: aws_config)
+    end
+
+    def sqs
+      @sqs ||= AWS::SQS.new(config: aws_config)
+    end
+
+    def auto_scaling
+      @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
+    end
+
+    def build_arn(partition: 'aws', service: nil, region: self.region, account_id: self.account_id, resource: nil)
+      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
+    end
+
+    def parse_arn(arn)
+      parts = arn.split(':', 6)
+      {
+        partition: parts[1],
+        service: parts[2],
+        region: parts[3],
+        account_id: parts[4],
+        resource: parts[5]
+      }
+    end
+
+    def account_id
+      begin
+        # We've got an AWS account root credential or an IAM admin with access rights
+        current_user = iam.client.get_user
+        arn = current_user[:user][:arn]
+      rescue AWS::IAM::Errors::AccessDenied => e
+        # If we don't have access, the error message still tells us our account ID and user ...
+        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
+        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
+          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
+        end
+        arn = $1
+      end
+      parse_arn(arn)[:account_id]
+    end
+
+    # For creating things like AWS keypairs exclusively
+    @@chef_default_lock = Mutex.new
+
     def self.canonicalize_url(driver_url, config)
       [ driver_url, config ]
     end
 
     def deep_symbolize_keys(hash_like)
+      # Process arrays first...
+      if hash_like.is_a?(Array)
+        hash_like.length.times do |e|
+          hash_like[e]=deep_symbolize_keys(hash_like[e]) if hash_like[e].respond_to?(:values) or hash_like[e].is_a?(Array)
+        end
+        return hash_like
+      end
+      # Otherwise return ourselves if not a hash
+      return hash_like if not hash_like.respond_to?(:values)
+      # Otherwise we are hash like, push on through...
       if hash_like.nil? || hash_like.empty?
         return {}
       end
       r = {}
       hash_like.each do |key, value|
-        value = deep_symbolize_keys(value) if value.respond_to?(:values)
+        value = deep_symbolize_keys(value) if value.respond_to?(:values) or value.is_a?(Array)
         r[key.to_sym] = value
       end
       r
@@ -194,7 +298,7 @@ module AWSDriver
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
         Chef::Log.debug "AWS Load Balancer options: #{lb_options.inspect}"
 
-        updates = [ "create load balancer #{lb_spec.name} in #{aws_config.region}" ]
+        updates = [ "create load balancer #{lb_spec.name} in #{region}" ]
         updates << "  enable availability zones #{lb_options[:availability_zones]}" if lb_options[:availability_zones]
         updates << "  attach subnets #{lb_options[:subnets].join(', ')}" if lb_options[:subnets]
         updates << "  with listeners #{lb_options[:listeners]}" if lb_options[:listeners]
@@ -217,7 +321,7 @@ module AWSDriver
         # Header gets printed the first time we make an update
         perform_action = proc do |desc, &block|
           perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
-          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{aws_config.region}", desc ].flatten, &block
+          action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{region}", desc ].flatten, &block
         end
 
         # TODO: refactor this whole giant method into many smaller method calls
@@ -472,7 +576,7 @@ module AWSDriver
         if instances_to_add.size > 0
           perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
             instance_ids_to_add = instances_to_add.map { |s| s.reference['instance_id'] }
-            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{aws_config.region}")
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{region}")
             actual_elb.instances.add(instance_ids_to_add)
           end
         end
@@ -667,7 +771,7 @@ EOD
       bootstrap_options = bootstrap_options_for(action_handler, machine_spec, machine_options)
 
       if instance == nil || !instance.exists? || instance.state.name == "terminated"
-        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{aws_config.region}" do
+        action_handler.perform_action "Create #{machine_spec.name} with AMI #{bootstrap_options[:image_id]} in #{region}" do
           Chef::Log.debug "Creating instance with bootstrap options #{bootstrap_options}"
           instance = create_instance_and_reference(bootstrap_options, action_handler, machine_spec, machine_options)
         end
@@ -694,7 +798,7 @@ EOD
       if instance.state.name != "running"
         wait_until_machine(action_handler, machine_spec, "finish stopping", instance) { |instance| instance.state.name != "stopping" }
         if instance.state.name == "stopped"
-          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{aws_config.region} ..." do
+          action_handler.perform_action "Start #{machine_spec.name} (#{machine_spec.reference['instance_id']}) in #{region} ..." do
             instance.start
           end
         end
@@ -737,7 +841,7 @@ EOD
       if instance && instance.exists?
         wait_until_machine(action_handler, machine_spec, "finish coming up so we can stop it", instance) { |instance| instance.state.name != "pending" }
         if instance.state.name == "running"
-          action_handler.perform_action "Stop #{machine_spec.name} (#{instance.id}) in #{aws_config.region} ..." do
+          action_handler.perform_action "Stop #{machine_spec.name} (#{instance.id}) in #{region} ..." do
             instance.stop
           end
         end
@@ -762,96 +866,6 @@ EOD
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
 
-    def cloudsearch(api_version="20130101")
-      @cloudsearch ||= {}
-      @cloudsearch[api_version] ||= AWS::CloudSearch::Client.const_get("V#{api_version}").new
-      @cloudsearch[api_version]
-    end
-
-    def ec2
-      @ec2 ||= AWS::EC2.new(config: aws_config)
-    end
-
-    AWS_V2_SERVICES.each do |load_name, short_name|
-      class_eval <<-META
-
-      def #{short_name}_client
-        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new(**aws_config_2)
-      end
-
-      def #{short_name}_resource
-        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
-      end
-
-      META
-    end
-
-    def elb
-      @elb ||= AWS::ELB.new(config: aws_config)
-    end
-
-    def elasticache
-      @elasticache ||= AWS::ElastiCache::Client.new(config: aws_config)
-    end
-
-    def iam
-      @iam ||= AWS::IAM.new(config: aws_config)
-    end
-
-    def rds
-      @rds ||= AWS::RDS.new(config: aws_config)
-    end
-
-    def s3
-      @s3 ||= AWS::S3.new(config: aws_config)
-    end
-
-    def sns
-      @sns ||= AWS::SNS.new(config: aws_config)
-    end
-
-    def sqs
-      @sqs ||= AWS::SQS.new(config: aws_config)
-    end
-
-    def auto_scaling
-      @auto_scaling ||= AWS::AutoScaling.new(config: aws_config)
-    end
-
-    def build_arn(partition: 'aws', service: nil, region: aws_config.region, account_id: self.account_id, resource: nil)
-      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
-    end
-
-    def parse_arn(arn)
-      parts = arn.split(':', 6)
-      {
-        partition: parts[1],
-        service: parts[2],
-        region: parts[3],
-        account_id: parts[4],
-        resource: parts[5]
-      }
-    end
-
-    def account_id
-      begin
-        # We've got an AWS account root credential or an IAM admin with access rights
-        current_user = iam.client.get_user
-        arn = current_user[:user][:arn]
-      rescue AWS::IAM::Errors::AccessDenied => e
-        # If we don't have access, the error message still tells us our account ID and user ...
-        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
-        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
-          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
-        end
-        arn = $1
-      end
-      parse_arn(arn)[:account_id]
-    end
-
-    # For creating things like AWS keypairs exclusively
-    @@chef_default_lock = Mutex.new
-
     def machine_for(machine_spec, machine_options, instance = nil)
       instance ||= instance_for(machine_spec)
 
@@ -871,7 +885,7 @@ EOD
       # These are hardcoded for now - only 1 machine at a time
       bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type
-      image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(aws_config.region)
+      image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(region)
       bootstrap_options[:image_id] = image_id
       bootstrap_options.delete(:key_path)
       if !bootstrap_options[:key_name]
@@ -948,7 +962,7 @@ EOD
       end
 
       Chef::Log.debug "AWS Bootstrap options: #{bootstrap_options.inspect}"
-      bootstrap_options
+      deep_symbolize_keys(bootstrap_options)
     end
 
     def default_ssh_username
@@ -1274,6 +1288,7 @@ EOD
       convergence_options = Cheffish::MergedConfig.new(
         machine_options[:convergence_options] || {},
         ohai_hints: { 'ec2' => '' })
+      convergence_options=deep_symbolize_keys(convergence_options)
 
       # Defaults
       if !machine_spec.reference

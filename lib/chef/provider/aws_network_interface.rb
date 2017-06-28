@@ -33,9 +33,10 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def create_aws_object
     eni = nil
     converge_by "create new #{new_resource} in #{region}" do
-      eni = new_resource.driver.ec2_resource.create_network_interface(options)
-      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceID::NotFound) do
-        eni.tags['Name'] = new_resource.name
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+      eni = ec2_resource.create_network_interface({ subnet_id: new_resource.subnet })
+      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound) do
+        ec2_resource.create_tags(resources: [eni.id], tags: [{ key: "Name", value: new_resource.name }])
       end
       eni
     end
@@ -65,20 +66,21 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
         converge_by "set #{new_resource} description to #{new_resource.description}" do
           eni.client.modify_network_interface_attribute(:network_interface_id => eni.network_interface_id,
                                                         :description => {
-                                                            :value => new_resource.description
-                                                        })
+                                                            :value => new_resource.description })
         end
       end
     end
 
     if options.has_key?(:security_groups)
-      groups = new_resource.security_groups.map { |sg|
-        Chef::Resource::AwsSecurityGroup.get_aws_object(sg, resource: new_resource)
-      }
-      if groups.sort != eni.security_groups.sort
+      groups = new_resource.security_groups
+      eni_security_groups = []
+      eni.groups.each do |group|
+        eni_security_groups.push(group.group_id)
+      end
+
+      if groups.sort != eni_security_groups.sort
         converge_by "set #{new_resource} security groups to #{groups}" do
-          eni.set_security_groups(groups)
-          eni
+          eni.client.modify_network_interface_attribute(:network_interface_id => eni.network_interface_id, :groups => groups)
         end
       end
     end
@@ -87,7 +89,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def destroy_aws_object(eni)
-    detach(eni) if eni.status == :in_use
+    detach(eni) if eni.status == "in-use"
     delete(eni)
   end
 
@@ -116,18 +118,18 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def update_eni(eni)
-    status = eni.status
+    status = new_resource.driver.ec2_resource.network_interface(eni.id).status
     #
     # If we were told to attach the network interface to a machine, do so
     #
     if expected_instance.is_a?(::Aws::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
-      when :available
+      when "available"
         attach(eni)
-      when :in_use
+      when "in-use"
         # We don't want to attempt to reattach to the same instance or device index
         attachment = current_attachment(eni)
-        if attachment.instance.id != expected_instance.id || (options[:device_index] && attachment.device_index != new_resource.device_index)
+        if attachment.instance_id != expected_instance.id || (options[:device_index] && attachment.device_index != new_resource.device_index)
           detach(eni)
           attach(eni)
         end
@@ -144,7 +146,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
       case status
       when nil
         Chef::Log.warn NetworkInterfaceNotFoundError.new(new_resource)
-      when :in_use
+      when "in-use"
         detach(eni)
       end
     end
@@ -152,10 +154,9 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def detach(eni)
-    attachment   = current_attachment(eni)
-    instance     = attachment.instance
+    attachment = current_attachment(eni)
 
-    converge_by "detach #{new_resource} from #{instance.id}" do
+    converge_by "detach #{new_resource} from #{attachment.instance_id}" do
       eni.detach
     end
 
@@ -167,7 +168,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
 
   def attach(eni)
     converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.id})" do
-      eni.attach(expected_instance.id, options)
+      eni.attach(instance_id: expected_instance.id, device_index: options[:device_index])
     end
 
     converge_by "wait for #{new_resource} to attach" do
@@ -187,13 +188,20 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
 
     converge_by "wait for #{new_resource} in #{region} to delete" do
       log_callback = proc {
-        Chef::Log.info('waiting for network interface to delete...')
+        Chef::Log.info("waiting for network interface to delete...")
       }
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
-        raise NetworkInterfaceStatusTimeoutError.new(new_resource, 'exists', 'deleted') if eni.exists?
+        raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if exists?(eni)
       end
       eni
     end
+  end
+
+  def exists?(eni)
+    result = new_resource.driver.ec2_resource.network_interface(eni.id) if eni.id
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound
+    return false
   end
 end

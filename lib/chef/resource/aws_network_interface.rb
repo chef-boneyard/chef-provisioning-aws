@@ -31,6 +31,12 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2_resource.network_interface(id) if id
-    result && result.exists? ? result : nil
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound
+    return false
   end
 end

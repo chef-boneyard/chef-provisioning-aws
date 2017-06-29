@@ -100,8 +100,9 @@ module AWSDriver
             options[name] = [options[name]].flatten.map { |value| aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options) }
           end
         else
-          if aws_option_handlers[name]
-            options[name] = aws_option_handlers[name].get_aws_object_id(value, **handler_options)
+          handler_name = name.to_sym
+          if aws_option_handlers[handler_name]
+            options[handler_name] = aws_option_handlers[handler_name].get_aws_object_id(value, **handler_options)
           end
         end
       end

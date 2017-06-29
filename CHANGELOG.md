@@ -1,7 +1,18 @@
 # Change Log
 
-## [2.2.0](https://github.com/chef/chef-provisioning-aws/tree/2.2.0) (2017-03-14)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.1.0...2.2.0)
+## [2.2.1](https://github.com/chef/chef-provisioning-aws/tree/2.2.1) (2017-06-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.0...2.2.1)
+
+**Closed issues:**
+
+- machine\_batch fails while machine alone resouce works fine [\#533](https://github.com/chef/chef-provisioning-aws/issues/533)
+
+**Merged pull requests:**
+
+- correctly symbolize bootstrap\_options, making chef13 go again [\#532](https://github.com/chef/chef-provisioning-aws/pull/532) ([jjlimepoint](https://github.com/jjlimepoint))
+
+## [v2.2.0](https://github.com/chef/chef-provisioning-aws/tree/v2.2.0) (2017-03-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.1.0...v2.2.0)
 
 **Merged pull requests:**
 

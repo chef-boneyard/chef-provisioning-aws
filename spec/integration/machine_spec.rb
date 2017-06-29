@@ -36,6 +36,33 @@ describe Chef::Resource::Machine do
         ).and be_idempotent
       end
 
+      it "machine with options specified as node options allocates a machine", :super_slow do
+        expect_recipe {
+          machine 'test_machine' do
+            node.default['aws_options'] = {
+              bootstrap_options: {
+                key_name: 'test_key_pair',
+                instance_type: 'm3.medium',
+                # Need an array of hashes to test out a bug fix
+                network_interfaces: [
+                  {
+                    # Cannot set associate_public_ip_address and network_interface_id
+                    # network_interface_id: "eth0",
+                    device_index: 0,
+                    subnet_id: test_public_subnet.aws_object.id,
+                    delete_on_termination: true,
+                    groups: [test_security_group.aws_object.id],
+                  }
+                ]
+              }
+            }
+            machine_options node['aws_options']
+            action :allocate
+          end
+        }.to create_an_aws_instance('test_machine'
+        ).and be_idempotent
+      end
+
       it "machine with few options converges a machine", :super_slow do
         expect_recipe {
           machine 'test_machine' do

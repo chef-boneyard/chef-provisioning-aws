@@ -21,10 +21,10 @@ end
 
 def all_options_domain(name)
   aws_elasticsearch_domain name do
-    instance_type "m3.medium.elasticsearch"
+    instance_type "m4.large.elasticsearch"
     instance_count 2
     dedicated_master_enabled true
-    dedicated_master_type "m3.medium.elasticsearch"
+    dedicated_master_type "m4.large.elasticsearch"
     dedicated_master_count 2
     zone_awareness_enabled true
     ebs_enabled true
@@ -43,10 +43,10 @@ describe Chef::Resource::AwsElasticsearchDomain do
   let(:all_options_result) do
     {created: true,
      elasticsearch_cluster_config: {
-       instance_type: "m3.medium.elasticsearch",
+       instance_type: "m4.large.elasticsearch",
        instance_count: 2,
        dedicated_master_enabled: true,
-       dedicated_master_type: "m3.medium.elasticsearch",
+       dedicated_master_type: "m4.large.elasticsearch",
        zone_awareness_enabled: true
      },
      ebs_options: {
@@ -82,7 +82,10 @@ describe Chef::Resource::AwsElasticsearchDomain do
       end
 
       context "with an existing elasticsearch domain" do
-        aws_elasticsearch_domain "test-#{time}-2"
+        aws_elasticsearch_domain "test-#{time}-2" do
+          ebs_enabled true
+          volume_size 35
+        end
 
         it "can update all options" do
           expect_recipe {

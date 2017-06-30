@@ -19,6 +19,7 @@ before_script:
   - mkdir -p /home/travis/.chef
   - . ./tools/travis_env.sh
 script:
+- bundle update
 - bundle exec rake build
 - bundle exec rake $RAKE_TASK
 notifications:

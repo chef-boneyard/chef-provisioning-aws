@@ -36,7 +36,7 @@ describe Chef::Resource::AwsRdsInstance do
       end
 
       aws_rds_parameter_group "test-db-parameter-group" do
-        db_parameter_group_family "postgres9.5"
+        db_parameter_group_family "postgres9.6"
         description "testing provisioning"
         parameters [{:parameter_name => "max_connections", :parameter_value => "250", :apply_method => "pending-reboot"}]
       end

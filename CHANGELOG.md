@@ -1,7 +1,14 @@
 # Change Log
 
-## [2.2.1](https://github.com/chef/chef-provisioning-aws/tree/2.2.1) (2017-06-27)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.0...2.2.1)
+## [2.2.2](https://github.com/chef/chef-provisioning-aws/tree/2.2.2) (2017-06-30)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.1...2.2.2)
+
+**Merged pull requests:**
+
+- Deep symbolize keys correctly when they are node attributes [\#538](https://github.com/chef/chef-provisioning-aws/pull/538) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v2.2.1](https://github.com/chef/chef-provisioning-aws/tree/v2.2.1) (2017-06-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.0...v2.2.1)
 
 **Closed issues:**
 

@@ -257,6 +257,8 @@ module AWSDriver
     def deep_symbolize_keys(hash_like)
       # Process arrays first...
       if hash_like.is_a?(Array)
+        # Node attributes are an ImmutableArray so lets convert them to an array first
+        hash_like = hash_like.to_a
         hash_like.length.times do |e|
           hash_like[e]=deep_symbolize_keys(hash_like[e]) if hash_like[e].respond_to?(:values) or hash_like[e].is_a?(Array)
         end

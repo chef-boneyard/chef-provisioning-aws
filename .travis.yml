@@ -1,7 +1,6 @@
 sudo: false
 language: ruby
 rvm:
-  - 2.2.5
   - 2.3.1
 env:
   global:
@@ -16,19 +15,11 @@ env:
   # machine_image is a special snowflake - they take so long to run we need to give them their own builder
   - RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::eu-west-1
 
-matrix:
-  exclude:
-  - rvm: 2.2.5
-    env: RAKE_TASK="travis[integration]" AWS_TRAVIS_DRIVER=aws::us-west-2
-  - rvm: 2.2.5
-    env: RAKE_TASK="travis[super_slow]" AWS_TRAVIS_DRIVER=aws::us-west-1
-  - rvm: 2.2.5
-    env: RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::eu-west-1
-
 before_script:
   - mkdir -p /home/travis/.chef
   - . ./tools/travis_env.sh
 script:
+- bundle update
 - bundle exec rake build
 - bundle exec rake $RAKE_TASK
 notifications:

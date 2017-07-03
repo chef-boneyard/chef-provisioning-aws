@@ -192,16 +192,11 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
       }
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
-        raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if exists?(eni)
+        result = new_resource.driver.ec2_resource.network_interface(eni.id) if eni.id
+		raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if exists?(result)
       end
       eni
     end
   end
 
-  def exists?(eni)
-    result = new_resource.driver.ec2_resource.network_interface(eni.id) if eni.id
-    return true if result.data
-  rescue ::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound
-    return false
-  end
 end

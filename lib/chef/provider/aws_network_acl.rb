@@ -24,8 +24,8 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
       Chef::Log.debug("VPC: #{options[:vpc_id]}")
 
       network_acl = new_resource.driver.ec2_resource.create_network_acl(options)
-      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkAclID::NotFound) do
-        network_acl.tags['Name'] = new_resource.name
+      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkAclIDNotFound) do
+        network_acl.create_tags({tags: [{key: "Name", value: new_resource.name}]})
       end
       network_acl
     end
@@ -125,8 +125,8 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
 
   def entry_to_hash(entry)
     options = [
-      :rule_number, :action, :protocol, :cidr_block, :egress,
-      :port_range, :icmp_code, :icmp_type
+      :rule_number, :rule_action, :protocol, :cidr_block, :egress,
+      :port_range, :icmp_type_code
     ]
     entry_hash = {}
     options.each { |option| entry_hash.merge!(option => entry.send(option.to_sym)) }

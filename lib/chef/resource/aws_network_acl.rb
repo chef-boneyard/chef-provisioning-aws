@@ -51,13 +51,13 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2_resource.network_acl(id) if id
-    begin
-      # network_acls don't have an `exists?` method so have to query an attribute
-      result.vpc_id
-      result
-    rescue ::Aws::EC2::Errors::InvalidNetworkAclID::NotFound
-      nil
-    end
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidNetworkAclIDNotFound
+    return false
   end
 
 end

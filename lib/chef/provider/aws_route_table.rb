@@ -135,10 +135,10 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   def get_route_target(vpc, route_target)
     case route_target
     when :internet_gateway
-      route_target = { internet_gateway: vpc.internet_gateways.first.id }
-      if !route_target[:internet_gateway]
-        raise "VPC #{new_resource.vpc} (#{vpc.id}) does not have an internet gateway to route to!  Use `internet_gateway true` on the VPC itself to create one."
+      if vpc.internet_gateways.first.nil?
+        raise "VPC #{new_resource.vpc} (#{vpc.id}) does not have an internet gateway to route to! Use `internet_gateway true` on the VPC itself to create one."
       end
+      route_target = { internet_gateway: vpc.internet_gateways.first.id }
     when /^igw-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsInternetGateway, ::Aws::EC2::InternetGateway
       route_target = { internet_gateway: route_target }
     when /^nat-[A-Fa-f0-9]{17}$/, Chef::Resource::AwsNatGateway, ::Aws::EC2::NatGateway

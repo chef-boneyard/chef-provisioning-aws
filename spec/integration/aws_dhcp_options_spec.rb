@@ -13,13 +13,13 @@ describe "AwsDhcpOptions" do
             netbios_name_servers %w(8.8.8.8 8.8.4.4)
             netbios_node_type    2
           end
-        }.to create_an_aws_dhcp_options('test-dhcp-options', configuration: {
-          domain_name: 'example.com',
-          domain_name_servers: %w(8.8.8.8 8.8.4.4),
-          ntp_servers: %w(8.8.8.8 8.8.4.4),
-          netbios_name_servers: %w(8.8.8.8 8.8.4.4),
-          netbios_node_type: 2
-        }).and be_idempotent
+        }.to create_an_aws_dhcp_options('test-dhcp-options', dhcp_configurations: [
+          {:key=>"domain-name", :values=>[{:value=>"example.com"}]},
+          {:key=>"domain-name-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]},
+          {:key=>"ntp-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]}, 
+          {:key=>"netbios-node-type", :values=>[{:value=>"2"}]}, 
+          {:key=>"netbios-name-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]}
+        ]).and be_idempotent
       end
 
       it "creates aws_dhcp_options tags" do

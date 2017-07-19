@@ -94,13 +94,21 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
     # Actually update the rules (remove, add)
     #
     update_rules(desired_rules, sg.ip_permissions,
-
       authorize: proc do |port_range, protocol, actors|
         names = actors.map { |a| a.is_a?(Hash) ? a[:group_id] : a }
         converge_by "authorize #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
           names.each do |iprange|
            begin
             if iprange.include?('-')
+              # user_id_group_pairs allows to add inbound rules for source security group
+              sg.authorize_ingress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  user_id_group_pairs: actors
+                }]
+              })
 =begin
               sg.authorize_ingress({
                 group
@@ -139,6 +147,15 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
           names.each do |iprange|
            begin
             if iprange.include?('-')
+              # user_id_group_pairs allows to revoke inbound rules for source security group
+              sg.revoke_ingress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  user_id_group_pairs: actors
+                }]
+              })
 =begin
               sg.revoke_ingress({
                 group
@@ -284,11 +301,12 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   def update_rules(desired_rules, actual_rules_list, authorize: nil, revoke: nil)
     actual_rules = {}
     actual_rules_list.each do |rule|
+      rule = Hash[rule.each_pair.to_a]
       port_range = {
         port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
-      rule[:user_id_group_pairs].map! { |h| h.select{|x| x != :group_name } } if rule[:user_id_group_pairs]
+      rule[:user_id_group_pairs].map! { |h| Hash[h.each_pair.to_a].select{|x| x != :group_name} }
       add_rule(actual_rules, [ port_range ], rule[:user_id_group_pairs]) if rule[:user_id_group_pairs]
       add_rule(actual_rules, [ port_range ], rule[:ip_ranges].map { |r| r[:cidr_ip] }) if rule[:ip_ranges]
     end

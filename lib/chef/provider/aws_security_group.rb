@@ -226,6 +226,14 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
           names.each do |iprange|
            begin
             if iprange.include?('-')
+              sg.authorize_egress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  user_id_group_pairs: actors
+                }]
+              })
 =begin
               sg.authorize_egress({
                 group
@@ -264,6 +272,14 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
           names.each do |iprange|
            begin
             if iprange.include?('-')
+              sg.revoke_egress({
+                ip_permissions: [{
+                  ip_protocol: protocol,
+                  from_port: port_range.first,
+                  to_port: port_range.last,
+                  user_id_group_pairs: actors
+                }]
+              })
 =begin
               sg.revoke_egress({
                 group

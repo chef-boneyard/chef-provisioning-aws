@@ -25,7 +25,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
           Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? "is" : "is not"} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
         end
       end
-      new_resource.driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
+      new_resource.driver.ec2.allocate_address vpc: new_resource.associate_to_vpc
     end
   end
 
@@ -45,7 +45,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
       end
     end
     converge_by "delete Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
-      elastic_ip.delete
+      elastic_ip.drop_while
     end
   end
 

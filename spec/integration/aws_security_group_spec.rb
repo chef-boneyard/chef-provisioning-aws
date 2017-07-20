@@ -9,18 +9,38 @@ describe Chef::Resource::AwsSecurityGroup do
     with_aws "without a VPC" do
 
       it "aws_security_group 'test_sg' with no attributes works" do
+        ip_permissions_egress_mock_obj = Aws::EC2::Types::IpPermission.new(ip_protocol: "-1",
+          ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "0.0.0.0/0")],
+          ipv_6_ranges: [],
+          prefix_list_ids: [],
+          user_id_group_pairs: [])
+
         expect_recipe {
           aws_security_group 'test_sg' do
           end
         }.to create_an_aws_security_group('test_sg',
           description:                'test_sg',
-          vpc_id:                     default_vpc.id,
-          ip_permissions_list:        [],
-          ip_permissions_list_egress: [{:groups=>[], :ip_ranges=>[{:cidr_ip=>"0.0.0.0/0"}], :ip_protocol=>"-1"}]
+          vpc_id:                     default_vpc.vpc_id,
+          ip_permissions:        [],
+          ip_permissions_egress: [ip_permissions_egress_mock_obj]
         ).and be_idempotent
       end
 
       it "can reference a security group by name or id" do
+        ip_permissions_mock_obj = Aws::EC2::Types::IpPermission.new(from_port: 22, ip_protocol: "tcp",
+          ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "0.0.0.0/0")],
+          ipv_6_ranges: [],
+          to_port: 22,
+          prefix_list_ids: [],
+          user_id_group_pairs: [])
+
+        ip_permissions_egress_mock_obj = Aws::EC2::Types::IpPermission.new(from_port: 22, ip_protocol: "tcp",
+          ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "0.0.0.0/0")],
+          ipv_6_ranges: [],
+          to_port: 22,
+          prefix_list_ids: [],
+          user_id_group_pairs: [])
+
         expect_recipe {
           sg = aws_security_group 'test_sg'
           sg.run_action(:create)
@@ -34,26 +54,21 @@ describe Chef::Resource::AwsSecurityGroup do
           end
         }.to create_an_aws_security_group('test_sg',
           description:                'test_sg',
-          vpc_id:                     default_vpc.id,
-          ip_permissions_list: [
-            { groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}],  ip_protocol: "tcp", from_port: 22, to_port: 22},
-          ],
-          ip_permissions_list_egress: [
-            {groups: [], ip_ranges: [{cidr_ip: "0.0.0.0/0"}], ip_protocol: "tcp", from_port: 22, to_port: 22 }
-          ]
-
+          vpc_id:                     default_vpc.vpc_id,
+          ip_permissions: [ip_permissions_mock_obj],
+          ip_permissions_egress: [ip_permissions_egress_mock_obj]
         ).and be_idempotent
       end
 
       it "raises an error trying to reference a security group by an unknown id" do
         expect_converge {
           aws_security_group 'sg-12345678'
-        }.to raise_error(RuntimeError, /Chef::Resource::AwsSecurityGroup\[sg-12345678\] does not exist!/)
+        }.to raise_error(Aws::EC2::Errors::InvalidGroupNotFound, /The security group\[sg-12345678\] does not exist/)
         expect_converge {
           aws_security_group 'test_sg' do
             security_group_id 'sg-12345678'
           end
-        }.to raise_error(RuntimeError, /Chef::Resource::AwsSecurityGroup\[sg-12345678\] does not exist!/)
+        }.to raise_error(Aws::EC2::Errors::InvalidGroupNotFound, /The security group\[sg-12345678\] does not exist/)
       end
 
       it "creates aws_security_group tags" do
@@ -116,14 +131,19 @@ describe Chef::Resource::AwsSecurityGroup do
       end
 
       it "aws_security_group 'test_sg' with no attributes works" do
+        ip_permissions_egress_mock_obj = Aws::EC2::Types::IpPermission.new(ip_protocol: "-1",
+          ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "0.0.0.0/0")],
+          ipv_6_ranges: [],
+          prefix_list_ids: [],
+          user_id_group_pairs: [])
         expect_recipe {
           aws_security_group 'test_sg' do
             vpc 'test_vpc'
           end
         }.to create_an_aws_security_group('test_sg',
           vpc_id:                     test_vpc.aws_object.id,
-          ip_permissions_list:        [],
-          ip_permissions_list_egress: [{:groups=>[], :ip_ranges=>[{:cidr_ip=>"0.0.0.0/0"}], :ip_protocol=>"-1"}]
+          ip_permissions:        [],
+          ip_permissions_egress: [ip_permissions_egress_mock_obj]
         ).and be_idempotent
       end
 

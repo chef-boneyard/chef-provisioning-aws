@@ -30,8 +30,8 @@ module AWSSupport
     before :all do
       driver = self.driver
       recipe do
-        driver.ec2.vpcs.with_tag('Name', 'test_vpc').each do |vpc|
-          aws_vpc vpc do
+        driver.ec2.describe_vpcs({filters: [{name: "tag-value", values: ["test_vpc"]}]})[:vpcs].each do |vpc|
+          aws_vpc vpc.vpc_id do
             action :purge
           end
         end
@@ -55,6 +55,7 @@ module AWSSupport
     end
 
     before :context do
+
       image = driver.ec2.images.filter('name', 'test_machine_image').first
       image.delete if image
 
@@ -253,7 +254,7 @@ module AWSSupport
     end
 
     def default_vpc
-      @default_vpc ||= driver.ec2.vpcs.filter('isDefault', 'true').first
+      @default_vpc ||= driver.ec2.describe_vpcs({filters: [{name: "isDefault", values: ["true"]}]})[:vpcs].first
     end
 
     def driver

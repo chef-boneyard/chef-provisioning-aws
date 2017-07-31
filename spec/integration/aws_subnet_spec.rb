@@ -43,13 +43,13 @@ describe Chef::Resource::AwsSubnet do
             network_acl 'test_network_acl'
           end
         }.to create_an_aws_subnet('test_subnet',
-          :vpc_id => test_vpc.aws_object.id,
-          :cidr_block => '10.0.0.0/24',
-          :availability_zone => az
+          vpc_id: test_vpc.aws_object.id,
+          cidr_block: '10.0.0.0/24',
+          availability_zone: az
         ).and match_an_aws_subnet('test_subnet',
-          :subnet_id => driver.ec2_client.describe_route_tables(:filters=>[{:name=>"route-table-id",:values=>[rt]}]).route_tables[0].associations[0].subnet_id
+          subnet_id: driver.ec2_client.describe_route_tables(filters: [{name: "route-table-id", values: [rt]}]).route_tables[0].associations[0].subnet_id
         ).and match_an_aws_subnet('test_subnet',
-          :subnet_id => driver.ec2_client.describe_network_acls(:filters=>[{:name=>"network-acl-id",:values=>[na]}]).network_acls[0].associations[0].subnet_id
+          subnet_id: driver.ec2_client.describe_network_acls(filters: [{name: "network-acl-id", values: [na]}]).network_acls[0].associations[0].subnet_id
         ).and be_idempotent
       end
 

@@ -29,7 +29,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if !cidr_block
       cidr_block = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
     end
-    options = { :vpc_id => new_resource.vpc, :cidr_block => cidr_block }
+    options = { vpc_id: new_resource.vpc, cidr_block: cidr_block }
     options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
     options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(options, resource: new_resource)
 
@@ -118,43 +118,46 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_route_table(subnet)
-    current_route_table_association = subnet.client.describe_route_tables(:filters=>[{:name=>"vpc-id",:values=>[subnet.vpc.id]}]).route_tables
+    current_route_table_association = subnet.client.describe_route_tables(filters: [{name: "vpc-id", values: [subnet.vpc.id]}]).route_tables
     route_table_entry = nil
     do_break = false
-    current_route_table_association.each { |route_tbl|
+    # Below snippet gives the entry of route_table who is associated with current subnet either by matching its 
+    # subnet_id or with a default subnet (i.e by checking association.main == true & in that case
+    # association.subnet_id is nil)
+    current_route_table_association.each do |route_tbl|
       if !route_tbl.associations.empty?
-        route_tbl.associations.each {|r|
+        route_tbl.associations.each do |r|
           if r.subnet_id == subnet.id
             route_table_entry = r
             do_break = true
             break
-          elsif r.subnet_id.nil? and r.main == true
+          elsif r.subnet_id.nil? && r.main == true
             route_table_entry = r
           end
-        }
+        end
         break if do_break
       end
-     }
+    end
     if new_resource.route_table == :default_to_main
       if !route_table_entry.main
         converge_by "reset route table of subnet #{new_resource.name} to the VPC default" do
-          subnet.client.disassociate_route_table(:association_id=>route_table_entry.route_table_association_id)
+          subnet.client.disassociate_route_table(association_id: route_table_entry.route_table_association_id)
         end
       end
     else
       route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.route_table, resource: new_resource)
-      if route_table_entry.main and route_table_entry.subnet_id.nil?
+      if route_table_entry.main && route_table_entry.subnet_id.nil?
         # Even if the user sets the route table explicitly to the main route table,
         # we have work to do here: we need to make the relationship explicit so that
         # it won't be changed when the main route table of the VPC changes.
         converge_by "set route table of subnet #{new_resource.name} to #{new_resource.route_table}" do
-          subnet.client.associate_route_table(:route_table_id=>route_table.id,:subnet_id=>subnet.id)
+          subnet.client.associate_route_table(route_table_id: route_table.id, subnet_id: subnet.id)
         end
       elsif route_table_entry.route_table_id != route_table.id
         # The route table is different now.  Change it.
         converge_by "change route table of subnet #{new_resource.name} to #{new_resource.route_table} (was #{route_table_entry.route_table_id})" do
-          subnet.client.disassociate_route_table(:association_id=>route_table_entry.route_table_association_id) if route_table_entry.main == false
-          subnet.client.associate_route_table(:route_table_id=>route_table.id,:subnet_id=>subnet.id)
+          subnet.client.disassociate_route_table(association_id: route_table_entry.route_table_association_id) if route_table_entry.main == false
+          subnet.client.associate_route_table(route_table_id: route_table.id, subnet_id: subnet.id)
         end
       end
     end
@@ -164,26 +167,13 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.network_acl
       network_acl_id =
         AWSResource.lookup_options({ network_acl: new_resource.network_acl }, resource: new_resource)[:network_acl]
-      current_network_acl_association = subnet.client.describe_network_acls(:filters=>[{:name=>"vpc-id",:values=>[subnet.vpc.id]}]).network_acls
-      subnet_network_acl_id = nil
-      subnet_network_acl_association_id = nil
-      do_break = false
-      current_network_acl_association.each { |net_acl|
-        if !net_acl.associations.empty?
-          net_acl.associations.each { |a|
-          if a.subnet_id == subnet.id
-            subnet_network_acl_id = a.network_acl_id
-            subnet_network_acl_association_id = a.network_acl_association_id
-            do_break = true
-            break
-          end
-          }
-        end
-        break if do_break
-      }
-      if subnet_network_acl_id != network_acl_id
+      # Below snippet gives the entry of network_acl who is associated with current subnet by matching its subnet_id
+      network_acl_association = subnet.client.describe_network_acls(filters: [{name: "vpc-id", values: [subnet.vpc.id]}, {name: "association.subnet-id", values: [subnet.id]}]).network_acls.first.associations
+      current_network_acl_association = network_acl_association.find {|r| r.subnet_id == subnet.id}
+
+      if current_network_acl_association.network_acl_id != network_acl_id && !current_network_acl_association.empty?
         converge_by "update network ACL of subnet #{new_resource.name} to #{new_resource.network_acl}" do
-          subnet.client.replace_network_acl_association(:association_id=>subnet_network_acl_association_id,:network_acl_id=>network_acl_id)
+          subnet.client.replace_network_acl_association(association_id: current_network_acl_association.network_acl_association_id, network_acl_id: network_acl_id)
         end
       end
     end

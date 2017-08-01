@@ -169,9 +169,9 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         AWSResource.lookup_options({ network_acl: new_resource.network_acl }, resource: new_resource)[:network_acl]
       # Below snippet gives the entry of network_acl who is associated with current subnet by matching its subnet_id
       network_acl_association = subnet.client.describe_network_acls(filters: [{name: "vpc-id", values: [subnet.vpc.id]}, {name: "association.subnet-id", values: [subnet.id]}]).network_acls.first.associations
-      current_network_acl_association = network_acl_association.find {|r| r.subnet_id == subnet.id}
+      current_network_acl_association = network_acl_association.find { |r| r.subnet_id == subnet.id } unless network_acl_association.empty?
 
-      if current_network_acl_association.network_acl_id != network_acl_id && !current_network_acl_association.empty?
+      if current_network_acl_association.network_acl_id != network_acl_id && !current_network_acl_association.nil?
         converge_by "update network ACL of subnet #{new_resource.name} to #{new_resource.network_acl}" do
           subnet.client.replace_network_acl_association(association_id: current_network_acl_association.network_acl_association_id, network_acl_id: network_acl_id)
         end

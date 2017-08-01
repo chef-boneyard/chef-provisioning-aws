@@ -31,7 +31,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_aws_object(elastic_ip)
     if !new_resource.associate_to_vpc.nil?
-      if !!new_resource.associate_to_vpc != !!(elastic_ip.domain == 'vpc')
+      if new_resource.associate_to_vpc != (elastic_ip.domain == 'vpc')
         raise "#{new_resource.to_s}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{(elastic_ip.domain == 'vpc')}.  Cannot be modified!"
       end
     end
@@ -77,7 +77,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     # If we were told to set the association to false, disassociate it.
     #
     else
-      if !(elastic_ip.association_id==nil)
+      if !(elastic_ip.association_id == nil)
         converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
           new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
         end

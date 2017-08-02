@@ -115,6 +115,7 @@ describe Chef::Resource::AwsSecurityGroup do
       purge_all
       setup_public_vpc
 
+      # TODO Uncomment and test spec once the load balancer resource is fixed as per version 2
       # load_balancer "testloadbalancer" do
       #   load_balancer_options({
       #     subnets: ["test_public_subnet"],
@@ -133,6 +134,145 @@ describe Chef::Resource::AwsSecurityGroup do
           ip_permissions_egress: [set_ip_pemissions_mock_object(ip_protocol: "-1", ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "0.0.0.0/0")])]
         ).and be_idempotent
       end
+
+      it "adds inbound and outbound_rules for source security_group " do
+        expect_recipe {
+          aws_security_group 'test_sg' do
+            vpc 'test_vpc'
+            inbound_rules(
+              'test_security_group' => 1200,
+              test_security_group.aws_object.id => 1201,
+              test_security_group.aws_object => 1202,
+              test_security_group => 1203,
+              {group_name: 'test_security_group'} => 1204,
+              {security_group: 'test_security_group'} => 1205
+            )
+            outbound_rules(
+              1200 => 'test_security_group',
+              1201 => test_security_group.aws_object.id,
+              1202 => test_security_group.aws_object,
+              1203 => test_security_group,
+              1204 => {group_name: 'test_security_group'},
+              1205 => {security_group: 'test_security_group'}
+            )
+          end
+        }.to create_an_aws_security_group('test_sg',
+            vpc_id: test_vpc.aws_object.id,
+            ip_permissions: [
+                              set_ip_pemissions_mock_object(from_port: 1204, to_port: 1204, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1201, to_port: 1201, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1200, to_port: 1200, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1203, to_port: 1203, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1202, to_port: 1202, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1205, to_port: 1205, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                           ],
+            ip_permissions_egress: [
+                              set_ip_pemissions_mock_object(from_port: 1204, to_port: 1204, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1201, to_port: 1201, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1200, to_port: 1200, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1203, to_port: 1203, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1202, to_port: 1202, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1205, to_port: 1205, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ]
+        ).and be_idempotent
+      end
+
+      it "adds inbound and outbound_rules for source security_group specified in hash " do
+        expect_recipe {
+          aws_security_group 'test_sg' do
+            vpc 'test_vpc'
+            inbound_rules([
+              { port: 1206, sources: 'test_security_group' },
+              { port: 1207, sources: test_security_group.aws_object.id },
+              { port: 1208, sources: test_security_group.aws_object },
+              { port: 1209, sources: test_security_group },
+              { port: 1210, sources: {group_name: 'test_security_group'} },
+              { port: 1211, sources: {security_group: 'test_security_group'} }
+            ])
+            outbound_rules([
+              { port: 1206, destinations: 'test_security_group' },
+              { port: 1207, destinations: test_security_group.aws_object.id },
+              { port: 1208, destinations: test_security_group.aws_object },
+              { port: 1209, destinations: test_security_group },
+              { port: 1210, destinations: {group_name: 'test_security_group'} },
+              { port: 1211, destinations: {security_group: 'test_security_group'} }
+            ])
+          end
+        }.to create_an_aws_security_group('test_sg',
+            vpc_id: test_vpc.aws_object.id,
+            ip_permissions: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1209, to_port: 1209, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1211, to_port: 1211, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1210, to_port: 1210, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1208, to_port: 1208, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                           ],
+            ip_permissions_egress: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1209, to_port: 1209, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1211, to_port: 1211, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1210, to_port: 1210, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1208, to_port: 1208, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ]
+        ).and be_idempotent
+      end
+
+
+
+      # TODO : ADD when load balancer resource is fixed as per version 2
+            # it "adds inbound and outbound_rules for source load_balancer" do
+      #   expect_recipe {
+      #     aws_security_group 'test_sg' do
+      #       vpc 'test_vpc'
+      #       inbound_rules(
+      #         testloadbalancer.aws_object => 1206,
+      #         {load_balancer: 'testloadbalancer'} => 1207,
+      #       )
+      #       outbound_rules(
+      #         1206 => testloadbalancer.aws_object,
+      #         1207 => {load_balancer: 'testloadbalancer'},
+      #       )
+      #     end
+      #   }.to create_an_aws_security_group('test_sg',
+      #       vpc_id: test_vpc.aws_object.id,
+      #       ip_permissions: [
+      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+      #                       ],
+      #       ip_permissions_egress: [
+      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+      #                       ]
+      #   ).and be_idempotent
+      # end
+
+      # it "adds inbound and outbound_rules for source load_balancer specified in hash" do
+      #   expect_recipe {
+      #     aws_security_group 'test_sg' do
+      #       vpc 'test_vpc'
+      #       inbound_rules([
+      #         { port: 1206, sources: testloadbalancer.aws_object },
+      #         { port: 1207, sources: {load_balancer: 'testloadbalancer'}}
+      #       ])
+      #       outbound_rules([
+      #         { port: 1206, destinations: testloadbalancer.aws_object },
+      #         { port: 1207, destinations: {load_balancer: 'testloadbalancer'}}
+      #       ])
+      #     end
+      #   }.to create_an_aws_security_group('test_sg',
+      #       vpc_id: test_vpc.aws_object.id,
+      #       ip_permissions: [
+      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+      #                       ],
+      #       ip_permissions_egress: [
+      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+      #                       ]
+      #   ).and be_idempotent
+      # end
 
       it "can specify rules as a mapping from source/destination to port and protocol" do
         expect_recipe {          
@@ -225,24 +365,25 @@ describe Chef::Resource::AwsSecurityGroup do
                               set_ip_pemissions_mock_object(from_port: 1125, to_port: 1125, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1025, to_port: 1025, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1012, to_port: 1012, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.11/32")], ip_protocol: "tcp"),
-                              # set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.7/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.16/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.17/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.21/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.27/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.30/32")], ip_protocol: "tcp"),
-                              set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.16/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.17/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.21/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.27/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.30/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.7/32")], ip_protocol: "tcp"),
+                              set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.7/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.16/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.17/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.21/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.27/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.30/32")], ip_protocol: "tcp"),
+                              # Note: Sometimes response ip_ranges array sequence changes and test fails
+                              # set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.16/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.17/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.21/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.27/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.30/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.7/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: -1, to_port: -1, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.9/32")], ip_protocol: "icmp"),
                               set_ip_pemissions_mock_object(from_port: 1117, to_port: 1117, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.14/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1014, to_port: 1014, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.13/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.15/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.25/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.26/32")], ip_protocol: "icmp"),
                               set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.20/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.28/32")], ip_protocol: "udp"),
                               set_ip_pemissions_mock_object(from_port: 1013, to_port: 1013, ip_ranges: [ Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.12/32")], ip_protocol: "tcp"),
-                              # set_ip_pemissions_mock_object(ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.1/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.2/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.3/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.4/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.5/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.6/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.10/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.18/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.19/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.29/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.31/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.32/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.33/32")], ip_protocol: "-1"),
-                              set_ip_pemissions_mock_object(ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.1/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.10/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.18/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.19/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.2/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.29/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.3/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.31/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.32/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.33/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.4/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.5/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.6/32")], ip_protocol: "-1"),                              
+                              set_ip_pemissions_mock_object(ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.1/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.2/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.3/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.4/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.5/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.6/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.10/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.18/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.19/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.29/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.31/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.32/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.33/32")], ip_protocol: "-1"),
+                              # Note: Sometimes response ip_ranges array sequence changes and test fails
+                              # set_ip_pemissions_mock_object(ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.1/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.10/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.18/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.19/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.2/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.29/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.3/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.31/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.32/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.33/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.4/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.5/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.6/32")], ip_protocol: "-1"),                              
                               set_ip_pemissions_mock_object(from_port: 1016, to_port: 1016, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.14/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1024, to_port: 1024, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1, to_port: 2, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.34/32")], ip_protocol: "icmp"),
                               set_ip_pemissions_mock_object(from_port: 1015, to_port: 1015, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.14/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1021, to_port: 1023, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.23/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1020, to_port: 1020, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.22/32")], ip_protocol: "tcp"),
-                              set_ip_pemissions_mock_object(from_port: 0, to_port: 65535, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.8/32")], ip_protocol: "udp")                              
-                              
+                              set_ip_pemissions_mock_object(from_port: 0, to_port: 65535, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.8/32")], ip_protocol: "udp")
                             ],
             ip_permissions_egress: [
                                     set_ip_pemissions_mock_object(from_port: 1125, to_port: 1125, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.58/32")], ip_protocol: "tcp"),
@@ -265,59 +406,6 @@ describe Chef::Resource::AwsSecurityGroup do
                                     set_ip_pemissions_mock_object(from_port: 0, to_port: 65535, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.41/32")], ip_protocol: "udp")
                                    ] 
           ).and be_idempotent
-
-        #     inbound_rules(        
-        #       'test_security_group' => 1200,
-        #       test_security_group.aws_object.id => 1201,
-        #       test_security_group.aws_object => 1202,
-        #       test_security_group => 1203,
-        #       # cannot get the ID from the v1 api object
-        #       #testloadbalancer.aws_object.id => 1205,
-        #       testloadbalancer.aws_object => 1206,
-        #       # Cannot specify a LoadBalancer resource, only AwsLoadBalancer
-        #       #testloadbalancer => 1207,
-        #       {group_name: 'test_security_group'} => 1208,
-        #       {load_balancer: 'testloadbalancer'} => 1209,
-        #       {security_group: 'test_security_group'} => 1210,
-        #     )
-        #     outbound_rules(        
-        #       1200 => 'test_security_group',
-        #       1201 => test_security_group.aws_object.id,
-        #       1202 => test_security_group.aws_object,
-        #       1203 => test_security_group,
-        #       # cannot get the ID from the v1 api object
-        #       #1205 => testloadbalancer.aws_object.id,
-        #       1206 => testloadbalancer.aws_object,
-        #       # Cannot specify a LoadBalancer resource, only AwsLoadBalancer
-        #       #1207 => testloadbalancer,
-        #       1208 => {group_name: 'test_security_group'},
-        #       1209 => {load_balancer: 'testloadbalancer'},
-        #       1210 => {security_group: 'test_security_group'},
-        #     )
-        #   end
-        # }.to create_an_aws_security_group('test_sg',
-        #   vpc_id: test_vpc.aws_object.id,
-        #   ip_permissions_list: Set[        
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1200, :to_port=>1200},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1201, :to_port=>1201},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1202, :to_port=>1202},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1203, :to_port=>1203},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1206, :to_port=>1206},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1208, :to_port=>1208},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1209, :to_port=>1209},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1210, :to_port=>1210}
-        #   ],
-        #   ip_permissions_list_egress: Set[        
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1200, :to_port=>1200},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1201, :to_port=>1201},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1202, :to_port=>1202},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1203, :to_port=>1203},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1206, :to_port=>1206},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1208, :to_port=>1208},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1209, :to_port=>1209},
-        #     {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1210, :to_port=>1210}
-        #   ]
-        # ).and be_idempotent
       end      
 
       it "can specify rules as a hash" do
@@ -367,18 +455,6 @@ describe Chef::Resource::AwsSecurityGroup do
               { sources: "10.0.0.#{counter}/32", port_range: :"-1" },
               { sources: ["10.0.0.#{counter}/32", "10.0.0.#{counter}/32"], port_range: :all },
               { sources: "10.0.0.#{counter}/32", port_range: 1..2, protocol: :icmp }
-              # { sources: 'test_security_group', port: 1200 },
-              # { sources: test_security_group.aws_object.id, port: 1201 },
-              # { sources: test_security_group.aws_object, port: 1202 },
-              # { sources: test_security_group, port: 1203 },
-              # # cannot get the ID from the v1 api object
-              # #testloadbalancer.aws_object.id => 1205,
-              # { sources: testloadbalancer.aws_object, port: 1206 },
-              # # Cannot specify a LoadBalancer resource, only AwsLoadBalancer
-              # #testloadbalancer => 1207,
-              # { sources: {group_name: 'test_security_group'}, port: 1208 },
-              # { sources: {load_balancer: 'testloadbalancer'}, port: 1209 },
-              # { sources: {security_group: 'test_security_group'}, port: 1210 },
             ])
             outbound_rules([
               { port_range: -1..-1, protocol: -1, destinations: "10.0.0.#{counter}/32" },
@@ -415,18 +491,6 @@ describe Chef::Resource::AwsSecurityGroup do
               { port_range: -1, destinations: "10.0.0.#{counter}/32" },
               { port_range: :"-1", destinations: "10.0.0.#{counter}/32" },
               { port_range: :all, destinations: ["10.0.0.#{counter}/32", "10.0.0.#{counter}/32"] },
-              # { port: 1200, destinations: 'test_security_group' },
-              # { port: 1201, destinations: test_security_group.aws_object.id },
-              # { port: 1202, destinations: test_security_group.aws_object },
-              # { port: 1203, destinations: test_security_group },
-              # # cannot get the ID from the v1 api object
-              # #{ port: 1205, destinations: testloadbalancer.aws_object.id },
-              # { port: 1206, destinations: testloadbalancer.aws_object },
-              # # Cannot specify a LoadBalancer resource, only AwsLoadBalancer
-              # #{ port: 1207, destinations: testloadbalancer },
-              # { port: 1208, destinations: {group_name: 'test_security_group'} },
-              # { port: 1209, destinations: {load_balancer: 'testloadbalancer'} },
-              # { port: 1210, destinations: {security_group: 'test_security_group'} },
             ])
           end
         }.to create_an_aws_security_group('test_sg',
@@ -435,6 +499,7 @@ describe Chef::Resource::AwsSecurityGroup do
                               set_ip_pemissions_mock_object(from_port: 1125, to_port: 1125, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1025, to_port: 1025, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1012, to_port: 1012, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.11/32")], ip_protocol: "tcp"),
+                              # Note: Sometimes response ip_ranges array sequence changes and test fails
                               set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.7/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.16/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.17/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.21/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.27/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.29/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.30/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: -1, to_port: -1, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.9/32")], ip_protocol: "icmp"),
                               set_ip_pemissions_mock_object(from_port: 1117, to_port: 1117, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.14/32")], ip_protocol: "tcp"),
@@ -442,6 +507,7 @@ describe Chef::Resource::AwsSecurityGroup do
                               set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.15/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.25/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.26/32")], ip_protocol: "icmp"),
                               set_ip_pemissions_mock_object(from_port: 0, to_port: 0, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.20/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.28/32")], ip_protocol: "udp"),
                               set_ip_pemissions_mock_object(from_port: 1013, to_port: 1013, ip_ranges: [ Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.12/32")], ip_protocol: "tcp"),
+                              # Note: Sometimes response ip_ranges array sequence changes and test fails
                               set_ip_pemissions_mock_object(ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.1/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.2/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.3/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.4/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.5/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.6/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.10/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.18/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.19/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.31/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.32/32"), Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.33/32")], ip_protocol: "-1"),
                               set_ip_pemissions_mock_object(from_port: 1016, to_port: 1016, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.14/32")], ip_protocol: "tcp"),
                               set_ip_pemissions_mock_object(from_port: 1024, to_port: 1024, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.24/32")], ip_protocol: "tcp"),
@@ -470,27 +536,7 @@ describe Chef::Resource::AwsSecurityGroup do
                                     set_ip_pemissions_mock_object(from_port: 1021, to_port: 1023, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.57/32")], ip_protocol: "tcp"),
                                     set_ip_pemissions_mock_object(from_port: 1020, to_port: 1020, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.56/32")], ip_protocol: "tcp"),
                                     set_ip_pemissions_mock_object(from_port: 0, to_port: 65535, ip_ranges: [Aws::EC2::Types::IpRange.new(cidr_ip: "10.0.0.41/32")], ip_protocol: "udp")
-                                   ] 
-          # ip_permissions_list: Set[    
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1200, :to_port=>1200},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1201, :to_port=>1201},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1202, :to_port=>1202},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1203, :to_port=>1203},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1206, :to_port=>1206},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1208, :to_port=>1208},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1209, :to_port=>1209},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1210, :to_port=>1210}
-          # ],
-          # ip_permissions_list_egress: Set[
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1200, :to_port=>1200},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1201, :to_port=>1201},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1202, :to_port=>1202},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1203, :to_port=>1203},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1206, :to_port=>1206},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1208, :to_port=>1208},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1209, :to_port=>1209},
-          #   {:groups=>[{:group_id=>test_security_group.aws_object.id}], :ip_ranges=>[], :ip_protocol=>"tcp", :from_port=>1210, :to_port=>1210}
-          # ]
+                                   ]
         ).and be_idempotent
       end
     end

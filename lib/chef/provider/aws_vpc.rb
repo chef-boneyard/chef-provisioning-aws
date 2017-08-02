@@ -120,6 +120,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           end
         end
       end
+
       vpc.security_groups.each do |sg|
         next if sg.group_name == 'default'
         Cheffish.inline_resource(self, action) do

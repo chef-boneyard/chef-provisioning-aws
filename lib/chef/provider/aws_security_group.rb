@@ -423,10 +423,13 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       # The default AWS Ruby SDK form with :user_id, :group_id and :group_name forms
       if actor_spec.keys.all? { |key| [ :user_id, :group_id, :group_name ].include?(key) }
         if actor_spec.has_key?(:group_name)
-          actor_spec[:group_id] ||= vpc.security_groups.filter('group-name', actor_spec[:group_name]).first.id
+          vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: new_resource)
+          actor_spec[:group_id] ||= vpc_object.security_groups({filters: [name: "group-name", values: [actor_spec[:group_name]]]}).first.id
         end
         actor_spec[:user_id] ||= new_resource.driver.account_id
-        { user_id: actor_spec[:user_id], group_id: actor_spec[:group_id] }
+
+        # TODO : VPC peering is to be added as new feature as it got introduced in version 2. Change vpc peering option with approprate values at that time.
+        { user_id: actor_spec[:user_id], group_id: actor_spec[:group_id], peering_status: nil, vpc_id: nil,  vpc_peering_connection_id: nil }
 
       # load_balancer: <load balancer name>
       elsif actor_spec.keys == [ :load_balancer ]
@@ -475,7 +478,8 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       raise "Unexpected actor #{actor_spec} / #{actor_spec.class} in rules list"
     end
 
-    result = { user_id: result.owner_id, group_id: result.id } if result.is_a?(::Aws::EC2::SecurityGroup)
+    # TODO : VPC peering is to be added as new feature as it got introduced in version 2. Change vpc peering option with approprate values at that time.
+    result = { user_id: result.owner_id, group_id: result.id, peering_status: nil, vpc_id: nil,  vpc_peering_connection_id: nil } if result.is_a?(::Aws::EC2::SecurityGroup)
 
     [ result ].flatten
   end

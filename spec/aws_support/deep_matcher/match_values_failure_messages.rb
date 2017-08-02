@@ -110,7 +110,8 @@ module AWSSupport
           end
           op = change.action
           op = ' ' if op == '='
-          result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" }
+
+          result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" } if messages
         end
         different ? result : []
       end
@@ -165,7 +166,7 @@ module AWSSupport
         attr_reader :value
 
         def failure_messages(actual)
-          @failure_messages[actual]
+          @failure_messages[actual] if @failure_messages
         end
 
         def ==(actual)

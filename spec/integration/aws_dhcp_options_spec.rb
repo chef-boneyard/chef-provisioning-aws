@@ -14,11 +14,11 @@ describe "AwsDhcpOptions" do
             netbios_node_type    2
           end
         }.to create_an_aws_dhcp_options('test-dhcp-options', dhcp_configurations: [
-          {:key=>"domain-name", :values=>[{:value=>"example.com"}]},
-          {:key=>"domain-name-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]},
-          {:key=>"ntp-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]}, 
-          {:key=>"netbios-node-type", :values=>[{:value=>"2"}]}, 
-          {:key=>"netbios-name-servers", :values=>[{:value=>"8.8.8.8"}, {:value=>"8.8.4.4"}]}
+          {key: "domain-name", values: [{value: "example.com"}]},
+          {key: "domain-name-servers", values: [{value: "8.8.8.8"}, {value: "8.8.4.4"}]},
+          {key: "ntp-servers", values: [{value: "8.8.8.8"}, {value: "8.8.4.4"}]}, 
+          {key: "netbios-node-type", values: [{value: "2"}]}, 
+          {key: "netbios-name-servers", values: [{value: "8.8.8.8"}, {value: "8.8.4.4"}]}
         ]).and be_idempotent
       end
 

@@ -25,14 +25,14 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
           Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? "is" : "is not"} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
         end
       end
-      new_resource.driver.ec2.elastic_ips.create vpc: new_resource.associate_to_vpc
+      new_resource.driver.ec2.allocate_address vpc: new_resource.associate_to_vpc
     end
   end
 
   def update_aws_object(elastic_ip)
     if !new_resource.associate_to_vpc.nil?
-      if !!new_resource.associate_to_vpc != !!elastic_ip.vpc?
-        raise "#{new_resource.to_s}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{elastic_ip.vpc?}.  Cannot be modified!"
+      if new_resource.associate_to_vpc != (elastic_ip.domain == 'vpc')
+        raise "#{new_resource.to_s}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{(elastic_ip.domain == 'vpc')}.  Cannot be modified!"
       end
     end
   end
@@ -41,11 +41,11 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     #if it's attached to something in a vpc, disassociate first
     if elastic_ip.instance_id != nil && elastic_ip.domain == 'vpc'
       converge_by "dissociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
-        elastic_ip.disassociate
+        new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
       end
     end
     converge_by "delete Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
-      elastic_ip.delete
+      new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
     end
   end
 
@@ -69,7 +69,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     if desired_instance.is_a?(::Aws::EC2::Instance) || desired_instance.is_a?(::Aws::EC2::Instance)
       if desired_instance.id != elastic_ip.instance_id
         converge_by "associate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) with #{new_resource.machine} (#{desired_instance.id})" do
-          elastic_ip.associate instance: desired_instance.id
+          new_resource.driver.ec2.associate_address instance_id: desired_instance.id, allocation_id: elastic_ip.allocation_id
         end
       end
 
@@ -77,9 +77,9 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     # If we were told to set the association to false, disassociate it.
     #
     else
-      if elastic_ip.associated?
+      if !(elastic_ip.association_id == nil)
         converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
-          aws_object.disassociate
+          new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
         end
       end
     end

@@ -130,7 +130,11 @@ module AWSSupport
 
           # Grab the actual value from the object
           begin
-            actual_value = actual_object.send(expected_key)
+            if expected_key.to_s == "dhcp_configurations"
+              actual_value = actual_object.data.to_h[expected_key]
+            else
+              actual_value = actual_object.send(expected_key)
+            end
           rescue NoMethodError
             if !actual_value.respond_to?(expected_key)
               result << "#{identifier || "object"}.send(#{expected_key.inspect}) is missing, expected value #{description_of(expected_value)}"

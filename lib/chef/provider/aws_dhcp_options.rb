@@ -19,7 +19,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
   end
 
   def create_dhcp_options options
-    options = options.map{|k,v| {key: k.to_s.gsub('_', '-'), values: Array(v)}}
+    options = options.map{|k,v| {key: k.to_s.gsub('_', '-'), values: Array(v).map(&:to_s)}}
     ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
     dhcp_options = ec2_resource.create_dhcp_options({dhcp_configurations: options})
     retry_with_backoff(::Aws::EC2::Errors::InvalidDhcpOptionIDNotFound) do
@@ -31,7 +31,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
   def update_aws_object(dhcp_options)
     # Verify unmodifiable attributes of existing dhcp_options
     config = dhcp_options.data.to_h[:dhcp_configurations].map{|a|{a[:key].gsub('-', '_').to_sym => a[:values].map{|k|k[:value]} }}.reduce Hash.new, :merge
-    differing_options = desired_options.select { |name, value| config[name] != Array(value) }
+    differing_options = desired_options.select { |name, value| config[name] != Array(value).map(&:to_s) }
     if !differing_options.empty?
       old_dhcp_options = dhcp_options
       # Report what we are trying to change ...

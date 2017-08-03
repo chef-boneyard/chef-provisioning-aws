@@ -901,7 +901,7 @@ EOD
     end
 
     def iam
-      @iam ||= ::Aws::IAM.new(config: aws_config)
+      @iam ||= ::Aws::IAM::Client.new(aws_config)
     end
 
     def rds
@@ -942,7 +942,7 @@ EOD
     def account_id
       begin
         # We've got an AWS account root credential or an IAM admin with access rights
-        current_user = iam.client.get_user
+        current_user = iam.get_user
         arn = current_user[:user][:arn]
       rescue ::Aws::IAM::Errors::AccessDenied => e
         # If we don't have access, the error message still tells us our account ID and user ...

@@ -44,7 +44,7 @@ module AWSSupport
   end
 
   def setup_public_vpc
-     aws_vpc 'test_vpc' do
+    aws_vpc 'test_vpc' do
       cidr_block '10.0.0.0/16'
       internet_gateway true
       enable_dns_hostnames true

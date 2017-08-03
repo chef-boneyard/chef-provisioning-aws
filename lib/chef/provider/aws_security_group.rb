@@ -317,12 +317,12 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   def update_rules(desired_rules, actual_rules_list, authorize: nil, revoke: nil)
     actual_rules = {}
     actual_rules_list.each do |rule|
-      rule = Hash[rule.each_pair.to_a]
+      rule = rule.to_h
       port_range = {
         port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
-      rule[:user_id_group_pairs].map! { |h| Hash[h.each_pair.to_a].select{|x| x != :group_name} }
+      rule[:user_id_group_pairs].map! { |h| h.select { |x| x != :group_name} }
       add_rule(actual_rules, [ port_range ], rule[:user_id_group_pairs]) if rule[:user_id_group_pairs]
       add_rule(actual_rules, [ port_range ], rule[:ip_ranges].map { |r| r[:cidr_ip] }) if rule[:ip_ranges]
     end
@@ -428,8 +428,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         end
         actor_spec[:user_id] ||= new_resource.driver.account_id
 
-        # TODO : VPC peering is to be added as new feature as it got introduced in version 2. Change vpc peering option with approprate values at that time.
-        { user_id: actor_spec[:user_id], group_id: actor_spec[:group_id], peering_status: nil, vpc_id: nil,  vpc_peering_connection_id: nil }
+        { user_id: actor_spec[:user_id], group_id: actor_spec[:group_id] }
 
       # load_balancer: <load balancer name>
       elsif actor_spec.keys == [ :load_balancer ]
@@ -478,8 +477,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       raise "Unexpected actor #{actor_spec} / #{actor_spec.class} in rules list"
     end
 
-    # TODO : VPC peering is to be added as new feature as it got introduced in version 2. Change vpc peering option with approprate values at that time.
-    result = { user_id: result.owner_id, group_id: result.id, peering_status: nil, vpc_id: nil,  vpc_peering_connection_id: nil } if result.is_a?(::Aws::EC2::SecurityGroup)
+    result = { user_id: result.owner_id, group_id: result.id } if result.is_a?(::Aws::EC2::SecurityGroup)
 
     [ result ].flatten
   end

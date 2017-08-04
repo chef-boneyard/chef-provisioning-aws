@@ -31,21 +31,21 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_aws_object(elastic_ip)
     if !new_resource.associate_to_vpc.nil?
-      if new_resource.associate_to_vpc != (elastic_ip.domain == 'vpc')
-        raise "#{new_resource.to_s}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{(elastic_ip.domain == 'vpc')}.  Cannot be modified!"
+      if new_resource.associate_to_vpc != (elastic_ip.domain == "vpc")
+        raise "#{new_resource}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{(elastic_ip.domain == 'vpc')}.  Cannot be modified!"
       end
     end
   end
 
   def destroy_aws_object(elastic_ip)
     #if it's attached to something in a vpc, disassociate first
-    if elastic_ip.instance_id != nil && elastic_ip.domain == 'vpc'
+    if !elastic_ip.instance_id.nil? && elastic_ip.domain == "vpc"
       converge_by "dissociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
         new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
       end
     end
     converge_by "delete Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) in #{region}" do
-      new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
+      new_resource.driver.ec2.release_address allocation_id: elastic_ip.allocation_id
     end
   end
 
@@ -77,13 +77,12 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     # If we were told to set the association to false, disassociate it.
     #
     else
-      if !(elastic_ip.association_id == nil)
+      if !(elastic_ip.association_id.nil?)
         converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
           new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
         end
       end
     end
-
   end
 
 end

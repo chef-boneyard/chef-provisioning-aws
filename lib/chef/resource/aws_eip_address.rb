@@ -12,11 +12,11 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
   # Like other aws_id_attributes, this is read-only - you cannot provide it and expect
   # aws to honor it
   attribute :public_ip, kind_of: String, aws_id_attribute: true,
-    default: lazy { name =~ /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/ ? name : nil }
+                        default: lazy { name =~ /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/ ? name : nil }
 
   def aws_object
     driver, public_ip = get_driver_and_id
-    result = driver.ec2.describe_addresses.addresses.find{ |b| b.public_ip == public_ip }
+    result = driver.ec2.describe_addresses.addresses.find { |b| b.public_ip == public_ip }
     result && !result.empty? ? result : nil
   end
 

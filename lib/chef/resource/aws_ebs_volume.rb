@@ -31,7 +31,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   
   def exists?(result)
     return true if result.data
-  rescue ::Aws::EC2::Errors::InvalidVolumeIDNotFound
+  rescue ::Aws::EC2::Errors::InvalidVolumeNotFound
     return false
   end
 end

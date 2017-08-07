@@ -10,7 +10,7 @@ describe Chef::Resource::AwsEbsVolume do
         expect_recipe {
           aws_ebs_volume "test_volume"
         }.to create_an_aws_ebs_volume('test_volume',
-          :size => 8
+          size: 8
         ).and be_idempotent
       end
 

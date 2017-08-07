@@ -334,12 +334,12 @@ module AWSDriver
 
         # Update security groups
         if lb_options[:security_groups]
-          current = actual_elb.security_group_ids
+          current = actual_elb.security_groups
           desired = lb_options[:security_groups]
           if current != desired
             perform_action.call("  updating security groups to #{desired.to_a}") do
-              elb.client.apply_security_groups_to_load_balancer(
-                load_balancer_name: actual_elb.name,
+              elb_client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.load_balancer_name,
                 security_groups: desired.to_a
               )
             end

@@ -7,13 +7,17 @@ describe Chef::Resource::AwsNatGateway do
   when_the_chef_12_server 'exists', organization: 'foo', server_scope: :context do
     with_aws 'with a VPC' do
       purge_all
-      setup_public_vpc
 
-      aws_network_interface 'test_network_interface' do
-        subnet 'test_public_subnet'
+      aws_vpc "test_vpc" do
+        cidr_block "10.0.0.0/24"
+        internet_gateway true
       end
 
-      aws_eip_address 'test_eip'
+      aws_subnet "test_public_subnet" do
+        vpc "test_vpc"
+      end
+
+      aws_eip_address "test_eip"
 
       describe 'action :create' do #, :super_slow do
         it 'creates an aws_nat_gateway in the specified subnet' do

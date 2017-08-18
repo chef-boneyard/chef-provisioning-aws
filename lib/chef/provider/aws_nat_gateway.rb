@@ -29,7 +29,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
       }
 
       nat_gateway = new_resource.driver.ec2_resource.create_nat_gateway(options)
-      wait_for_state(nat_gateway, ['available'])
+      wait_for_state(nat_gateway, :available)
       nat_gateway
     end
   end
@@ -51,7 +51,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
   def destroy_aws_object(nat_gateway)
     converge_by "delete nat gateway #{new_resource.name} in region #{region} for subnet #{nat_gateway.subnet_id}" do
       nat_gateway.delete
-      wait_for_state(nat_gateway, ['deleted'])
+      wait_for_state(nat_gateway, :deleted)
     end
   end
 end

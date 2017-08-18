@@ -40,7 +40,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     volume = nil
     converge_by "create #{new_resource} in #{region}" do
       volume = new_resource.driver.ec2_resource.create_volume(initial_options)
-      retry_with_backoff(::Aws::EC2::Errors::InvalidVolumeIDNotFound) do
+      retry_with_backoff(::Aws::EC2::Errors::InvalidVolumeNotFound) do
         new_resource.driver.ec2_resource.create_tags(resources: [volume.volume_id],tags: [{key: "Name", value: new_resource.name}])
       end
       volume
@@ -63,9 +63,9 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
         raise "#{new_resource}.size is #{new_resource.size}, but actual volume has size set to #{volume.size}.  Cannot be modified!"
       end
     end
-    if initial_options.has_key?(:snapshot)
-      if initial_options[:snapshot] != volume.snapshot.id
-        raise "#{new_resource}.snapshot is #{new_resource.snapshot}, but actual volume has snapshot set to #{volume.snapshot.id}.  Cannot be modified!"
+    if initial_options.has_key?(:snapshot_id)
+      if initial_options[:snapshot_id] != volume.snapshot_id
+        raise "#{new_resource}.snapshot is #{new_resource.snapshot}, but actual volume has snapshot set to #{volume.snapshot_id}.  Cannot be modified!"
       end
     end
     if initial_options.has_key?(:iops)
@@ -74,7 +74,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       end
     end
     if initial_options.has_key?(:volume_type)
-      if initial_options[:volume_type] != volume.type
+      if initial_options[:volume_type] != volume.volume_type
         raise "#{new_resource}.volume_type is #{new_resource.volume_type}, but actual volume has type set to #{volume.type}.  Cannot be modified!"
       end
     end
@@ -86,7 +86,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(volume)
-    detach(volume) if volume.state == :in_use
+    detach(volume) if volume.state == "in-use"
     delete(volume)
   end
 
@@ -119,20 +119,20 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_attachment(volume)
-    status = volume.state
+    status = new_resource.driver.ec2_resource.volume(volume.id).state
     #
     # If we were told to attach the volume to a machine, do so
     #
     if expected_instance.is_a?(::Aws::EC2::Instance) || expected_instance.is_a?(::Aws::EC2::Instance)
       case status
-      when :in_use
+      when "in-use"
         # We don't want to attempt to reattach to the same instance and device
         attachment = current_attachment(volume)
-        if attachment.instance.id != expected_instance.id || attachment.device != new_resource.device
+        if attachment.instance_id != expected_instance.id || attachment.device != new_resource.device
           detach(volume)
           attach(volume)
         end
-      when :available
+      when "available"
         attach(volume)
       when nil
         raise VolumeNotFoundError.new(new_resource)
@@ -147,7 +147,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       case status
       when nil
         Chef::Log.warn VolumeNotFoundError.new(new_resource)
-      when :in_use
+      when "in-use"
         detach(volume)
       end
     end
@@ -155,24 +155,24 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def wait_for_volume_status(volume, expected_status)
-    initial_status = volume.state
     log_callback = proc {
       Chef::Log.info("waiting for #{new_resource} status to change to #{expected_status}...")
     }
 
     Retryable.retryable(:tries => 120, :sleep => 2, :on => VolumeStatusTimeoutError, :ensure => log_callback) do
-      volume = new_resource.driver.ec2_resource.volume(volume.id)
-      raise VolumeStatusTimeoutError.new(new_resource, initial_status, expected_status) if volume.state.to_s != expected_status.to_s
+      status = new_resource.driver.ec2_resource.volume(volume.id).state
+      expected_status = "in-use" if expected_status.to_s.eql?("in_use")
+      raise VolumeStatusTimeoutError.new(new_resource, status, expected_status) if status != expected_status.to_s
     end
   end
 
   def detach(volume)
     attachment = current_attachment(volume)
-    instance = attachment.instance
+    instance = attachment.instance_id
     device   = attachment.device
 
-    converge_by "detach #{new_resource} from #{new_resource.machine} (#{instance.instance_id})" do
-      volume.detach_from(instance, device)
+    converge_by "detach #{new_resource} from #{new_resource.machine} (#{instance})" do
+      volume.detach_from_instance(instance_id: instance, device: device)
     end
 
     converge_by "wait for #{new_resource} to detach" do
@@ -183,7 +183,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
   def attach(volume)
     converge_by "attach #{new_resource} to #{new_resource.machine} (#{expected_instance.instance_id}) to device #{new_resource.device}" do
-      volume.attach_to(expected_instance, new_resource.device)
+      volume.attach_to_instance(instance_id: expected_instance.id, device: new_resource.device)
     end
 
     converge_by "wait for #{new_resource} to attach" do
@@ -207,7 +207,8 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
       }
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => VolumeStatusTimeoutError, :ensure => log_callback) do
-        raise VolumeStatusTimeoutError.new(new_resource, 'exists', 'deleted')
+        result = new_resource.driver.ec2_resource.volume(volume.id) if volume.id
+        raise VolumeStatusTimeoutError.new(new_resource, "exists", "deleted") if new_resource.exists?(result)
       end
       volume
     end

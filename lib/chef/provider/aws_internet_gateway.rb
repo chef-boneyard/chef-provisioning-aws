@@ -37,7 +37,10 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
     if new_resource.vpc
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource)
-      if current_vpc != desired_vpc
+      current_vpc_id = current_vpc.vpc_id unless current_vpc.nil?
+      desired_vpc_id = desired_vpc.vpc_id unless desired_vpc.nil?
+      if current_vpc_id != desired_vpc_id
+        detach_vpc(internet_gateway)
         attach_vpc(desired_vpc, internet_gateway)
       end
     end
@@ -72,7 +75,8 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
   def detach_vpc(internet_gateway)
     ec2_resource = new_resource.driver.ec2.describe_internet_gateways(:internet_gateway_ids=>[internet_gateway.id])
-    vpc_id = ec2_resource.internet_gateways.first.attachments.first.vpc_id
+    vpcid = ec2_resource.internet_gateways.first.attachments.first
+    vpc_id = vpcid.vpc_id unless vpcid.nil?
     if vpc_id
       converge_by "detach vpc #{vpc_id} from internet gateway #{internet_gateway.id}" do
         internet_gateway.detach_from_vpc(vpc_id: vpc_id)

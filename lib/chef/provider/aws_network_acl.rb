@@ -83,6 +83,9 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
         # Anything unhandled will be added
         desired_rules.delete(desired_rule)
 
+        # Converting matching_rule [:rule_action] and [:port_range] to symbol & hash to match correctly with desired_rule
+        matching_rule[:rule_action] = matching_rule[:rule_action].to_sym unless matching_rule[:rule_action].nil?
+        matching_rule[:port_range] = matching_rule[:port_range].to_hash unless matching_rule[:port_range].nil?
         if matching_rule.merge(desired_rule) != matching_rule
           # Replace anything with a matching rule number but different attributes
           replace_rules << desired_rule
@@ -115,7 +118,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   def remove_rules(network_acl, rules)
     rules.each do |rule|
       action_handler.report_progress "  remove #{rule_direction(rule)} rule #{rule[:rule_number]}"
-      network_acl.delete_entry(rule_direction(rule).to_sym, rule[:rule_number])
+      network_acl.delete_entry(egress: rule[:egress], rule_number: rule[:rule_number])
     end
   end
 

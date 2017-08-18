@@ -6,29 +6,35 @@ describe "AwsNetworkInterface" do
 
       context "setting up public VPC" do
 
+        purge_all
         setup_public_vpc
 
-        it "creates an aws_network_interface resource with maximum attributes", :super_slow do
-          expect_recipe {
-            machine "test_machine" do
-              machine_options bootstrap_options: {
-                subnet_id: 'test_public_subnet',
-                security_group_ids: ['test_security_group']
-              }
-              action :ready
-            end
+        context "with machines", :super_slow do
 
-            aws_network_interface 'test_network_interface' do
-              subnet 'test_public_subnet'
-              private_ip_address '10.0.0.25'
-              description "test_network_interface"
-              security_groups ['test_security_group']
-              machine "test_machine"
-              device_index 1
-            end
-          }.to create_an_aws_instance('test_machine'
-          ).and create_an_aws_network_interface('test_network_interface'
-          ).and be_idempotent
+          machine "test_machine" do
+            machine_options bootstrap_options: {
+              subnet_id: 'test_public_subnet',
+              security_group_ids: ['test_security_group']
+            }
+            action :ready
+          end
+
+          it "creates an aws_network_interface resource with maximum attributes" do
+            expect_recipe {
+              sub_id = test_public_subnet.aws_object.id
+              sg_id = test_security_group.aws_object.id
+              machine_id = test_machine.aws_object.id
+              aws_network_interface 'test_network_interface' do
+                subnet sub_id
+                private_ip_address '10.0.0.25'
+                description "test_network_interface"
+                security_groups [sg_id]
+                machine machine_id
+                device_index 1
+              end
+            }.to create_an_aws_network_interface('test_network_interface'
+            ).and be_idempotent
+          end
         end
 
         it "creates aws_network_interface tags" do

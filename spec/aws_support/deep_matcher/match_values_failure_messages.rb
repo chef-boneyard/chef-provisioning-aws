@@ -64,7 +64,6 @@ module AWSSupport
 
       def match_hashes_failure_messages(expected_hash, actual_hash, identifier)
         result = []
-
         expected_hash.all? do |expected_key, expected_value|
           missing_value = false
           actual_value = actual_hash.fetch(expected_key) do
@@ -118,7 +117,6 @@ module AWSSupport
 
       def match_hash_and_object_failure_messages(expected_hash, actual_object, identifier)
         result = []
-
         expected_hash.all? do |expected_key, expected_value|
           # 'a.b.c' => 1 -> { a: { b: { c: 1 }}}
           names = expected_key.to_s.split('.')
@@ -133,6 +131,12 @@ module AWSSupport
           begin
             if expected_key.to_s == "dhcp_configurations"
               actual_value = actual_object.data.to_h[expected_key]
+            elsif expected_key.to_s == "internet_gateways_entries"
+              actual_value = actual_object.internet_gateways.entries.first
+            elsif expected_key.to_s == "routetables_entries_routes"
+              entries = []
+              actual_object.route_tables.entries.first.routes.each { |r| entries << r.data.to_h }
+              actual_value = entries
             else
               actual_value = actual_object.send(expected_key)
             end

@@ -16,7 +16,7 @@ class AWSTagger
   def_delegators :@tagging_strategy, :desired_tags, :current_tags, :set_tags, :delete_tags
 
   def converge_tags
-    if desired_tags.nil?
+    if desired_tags.nil? || desired_tags.empty?
       Chef::Log.debug "aws_tags not provided, nothing to converge"
       return
     end

@@ -275,13 +275,13 @@ class AWSProvider < Chef::Provider::LWRPBase
         yield(aws_object) if block_given?
         if aws_object.class.to_s.eql?("Aws::EC2::Vpc")
           vpc = new_resource.driver.ec2.describe_vpcs(vpc_ids: [aws_object.vpc_id]).vpcs
-          current_response = '[:'+vpc[0].state+']'
+          current_response = "[:#{vpc[0].state}]"
         elsif aws_object.class.to_s.eql?("Aws::EC2::NetworkInterface")
           result = new_resource.driver.ec2_resource.network_interface(aws_object.id)
-          current_response = '[:'+result.status+']'
+          current_response = "[:#{result.status}]"
           current_response = "[:in_use]" if current_response.eql?("[:in-use]")
         elsif aws_object.class.to_s.eql?("Aws::EC2::NatGateway")
-          current_response = "[:" + aws_object.state + "]"
+          current_response = "[:#{aws_object.state}]"
         end
         Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
         unless expected_responses.to_s.include?(current_response)

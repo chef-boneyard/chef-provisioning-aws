@@ -129,11 +129,12 @@ module AWSSupport
 
           # Grab the actual value from the object
           begin
-            if expected_key.to_s == "dhcp_configurations"
+            case expected_key.to_s
+            when "dhcp_configurations"
               actual_value = actual_object.data.to_h[expected_key]
-            elsif expected_key.to_s == "internet_gateways_entries"
+            when "internet_gateways_entries"
               actual_value = actual_object.internet_gateways.entries.first
-            elsif expected_key.to_s == "routetables_entries_routes"
+            when "routetables_entries_routes"
               entries = []
               actual_object.route_tables.entries.first.routes.each { |r| entries << r.data.to_h }
               actual_value = entries

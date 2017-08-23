@@ -42,16 +42,16 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    options = { }
+    options = {}
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
     options[:cidr_block] = new_resource.cidr_block
 
     converge_by "create VPC #{new_resource.name} in #{region}" do
-      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2) 
-      vpc = ec2_resource.create_vpc({cidr_block: new_resource.cidr_block, instance_tenancy: options[:instance_tenancy]})
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+      vpc = ec2_resource.create_vpc({ cidr_block: new_resource.cidr_block, instance_tenancy: options[:instance_tenancy] })
       wait_for_state(vpc, [:available])
       retry_with_backoff(::Aws::EC2::Errors::InvalidVpcIDNotFound) do
-        ec2_resource.create_tags(resources: [vpc.vpc_id],tags: [{key: "Name", value: new_resource.name}])
+        ec2_resource.create_tags(resources: [vpc.vpc_id], tags: [{ key: "Name", value: new_resource.name }])
       end
       vpc
     end
@@ -73,8 +73,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       #SDK V2
       nat_gateways = new_resource.driver.ec2_client.describe_nat_gateways({
           :filter => [
-              { name: 'vpc-id', values: [vpc.id] },
-              { name: 'state', values: ['available', 'pending'] }
+              { name: "vpc-id", values: [vpc.id] },
+              { name: "state", values: ["available", "pending"] },
           ]
       }).nat_gateways
 
@@ -122,7 +122,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       end
 
       vpc.security_groups.each do |sg|
-        next if sg.group_name == 'default'
+        next if sg.group_name == "default"
         Cheffish.inline_resource(self, action) do
           aws_security_group sg do
             action :purge
@@ -154,9 +154,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
             :filters => [
                 {
                     :name => filter,
-                    :values => [vpc.id]
-                }
-            ]
+                    :values => [vpc.id],
+                },
+            ],
         }).vpc_peering_connections
       end
 
@@ -177,7 +177,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     if ig
       Cheffish.inline_resource(self, action) do
         aws_internet_gateway ig do
-          ig_tag = ig.tags.find{|i|i.key=='OwnedByVPC'}
+          ig_tag = ig.tags.find { |i| i.key == "OwnedByVPC" }
           ig_vpc = ig_tag.value unless ig_tag.nil?
           if ig_vpc == vpc.id
             action :purge
@@ -244,7 +244,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         elsif current_ig != new_ig
           Cheffish.inline_resource(self, action) do
             aws_internet_gateway current_ig do
-              ig_tag = current_ig.tags.find{|i|i.key=='OwnedByVPC'}
+              ig_tag = current_ig.tags.find { |i| i.key == "OwnedByVPC" }
               ig_vpc = ig_tag.value unless ig_tag.nil?
               if ig_vpc == vpc.id
                 action :destroy
@@ -276,7 +276,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         if current_ig
           Cheffish.inline_resource(self, action) do
             aws_internet_gateway current_ig do
-              ig_tag = current_ig.tags.find{|i|i.key=='OwnedByVPC'}
+              ig_tag = current_ig.tags.find { |i| i.key == "OwnedByVPC" }
               ig_vpc = ig_tag.value unless ig_tag.nil?
               if ig_vpc == vpc.id
                 action :destroy
@@ -307,7 +307,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         end
       end
     end
-    current_route_table = main_route_table if current_route_table.nil?
+    current_route_table ||= main_route_table
     if current_route_table.route_table_id != desired_route_table.id
       if main_route_table.nil?
         raise "No main route table association found for #{new_resource.to_s} current main route table. error!  Probably a race condition."

@@ -35,8 +35,8 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     converge_by "create new #{new_resource} in #{region}" do
       ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
       # we require all the parameter from options except :device_index so deleted & then passed.
-      option1 = options.dup.tap { |h| h.delete(:device_index) }
-      eni = ec2_resource.create_network_interface(option1)
+      option_without_device_index = options.dup.tap { |h| h.delete(:device_index) }
+      eni = ec2_resource.create_network_interface(option_without_device_index)
       retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound) do
         ec2_resource.create_tags(resources: [eni.id], tags: [{ key: "Name", value: new_resource.name }])
       end

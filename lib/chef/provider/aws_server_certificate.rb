@@ -10,12 +10,11 @@ class Chef::Provider::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSP
   def create_aws_object
     converge_by "create server certificate #{new_resource.name}" do
       opts = {
-        :name => new_resource.name,
+        :server_certificate_name => new_resource.name,
         :certificate_body => new_resource.certificate_body,
-        :private_key => new_resource.private_key
-      }
+        :private_key => new_resource.private_key      }
       opts[:certificate_chain] = new_resource.certificate_chain if new_resource.certificate_chain
-      new_resource.driver.iam.server_certificates.upload(**opts)
+      new_resource.driver.iam.upload_server_certificate(opts)
     end
   end
 

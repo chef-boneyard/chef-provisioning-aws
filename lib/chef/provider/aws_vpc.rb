@@ -42,23 +42,23 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   protected
 
   def create_aws_object
-    options = { }
+    options = {}
     options[:instance_tenancy] = new_resource.instance_tenancy if new_resource.instance_tenancy
     options[:cidr_block] = new_resource.cidr_block
 
     converge_by "create VPC #{new_resource.name} in #{region}" do
-      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2) 
-      vpc = ec2_resource.create_vpc({cidr_block: new_resource.cidr_block, instance_tenancy: options[:instance_tenancy]})
+      ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
+      vpc = ec2_resource.create_vpc({ cidr_block: new_resource.cidr_block, instance_tenancy: options[:instance_tenancy] })
       wait_for_state(vpc, [:available])
       retry_with_backoff(::Aws::EC2::Errors::InvalidVpcIDNotFound) do
-        ec2_resource.create_tags(resources: [vpc.vpc_id],tags: [{key: "Name", value: new_resource.name}])
+        ec2_resource.create_tags(resources: [vpc.vpc_id], tags: [{ key: "Name", value: new_resource.name }])
       end
       vpc
     end
   end
 
   def update_aws_object(vpc)
-    if new_resource.instance_tenancy && new_resource.instance_tenancy != vpc.instance_tenancy
+    if new_resource.instance_tenancy && new_resource.instance_tenancy.to_s != vpc.instance_tenancy
       raise "Tenancy of VPC #{new_resource.name} is #{vpc.instance_tenancy}, but desired tenancy is #{new_resource.instance_tenancy}.  Instance tenancy of VPCs cannot be changed!"
     end
     if new_resource.cidr_block && new_resource.cidr_block != vpc.cidr_block
@@ -73,8 +73,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       #SDK V2
       nat_gateways = new_resource.driver.ec2_client.describe_nat_gateways({
           :filter => [
-              { name: 'vpc-id', values: [vpc.id] },
-              { name: 'state', values: ['available', 'pending'] }
+              { name: "vpc-id", values: [vpc.id] },
+              { name: "state", values: ["available", "pending"] },
           ]
       }).nat_gateways
 
@@ -122,7 +122,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       end
 
       vpc.security_groups.each do |sg|
-        next if sg.group_name == 'default'
+        next if sg.group_name == "default"
         Cheffish.inline_resource(self, action) do
           aws_security_group sg do
             action :purge
@@ -154,9 +154,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
             :filters => [
                 {
                     :name => filter,
-                    :values => [vpc.id]
-                }
-            ]
+                    :values => [vpc.id],
+                },
+            ],
         }).vpc_peering_connections
       end
 
@@ -177,8 +177,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     if ig
       Cheffish.inline_resource(self, action) do
         aws_internet_gateway ig do
-          ig_tag = ig.tags.find{|i|i.key=='OwnedByVPC'}.value
-          if ig_tag == vpc.id
+          ig_tag = ig.tags.find { |i| i.key == "OwnedByVPC" }
+          ig_vpc = ig_tag.value unless ig_tag.nil?
+          if ig_vpc == vpc.id
             action :purge
           else
             action :detach
@@ -243,7 +244,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
         elsif current_ig != new_ig
           Cheffish.inline_resource(self, action) do
             aws_internet_gateway current_ig do
-              if current_ig.tags['OwnedByVPC'] == vpc.id
+              ig_tag = current_ig.tags.find { |i| i.key == "OwnedByVPC" }
+              ig_vpc = ig_tag.value unless ig_tag.nil?
+              if ig_vpc == vpc.id
                 action :destroy
               else
                 action :detach
@@ -272,8 +275,10 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       when false
         if current_ig
           Cheffish.inline_resource(self, action) do
-            aws_internet_gateway current_ig.id do
-              if current_ig.tags['OwnedByVPC'] == vpc.id
+            aws_internet_gateway current_ig do
+              ig_tag = current_ig.tags.find { |i| i.key == "OwnedByVPC" }
+              ig_vpc = ig_tag.value unless ig_tag.nil?
+              if ig_vpc == vpc.id
                 action :destroy
               else
                 action :detach
@@ -288,15 +293,28 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_main_route_table(vpc)
     desired_route_table = Chef::Resource::AwsRouteTable.get_aws_object(new_resource.main_route_table, resource: new_resource)
-    current_route_table = vpc.route_tables.main_route_table
-    if current_route_table.id != desired_route_table.id
-      main_association = current_route_table.associations.select { |a| a.main? }.first
-      if !main_association
-        raise "No main route table association found for #{new_resource.to_s} current main route table #{current_route_table.id}: error!  Probably a race condition."
+    main_route_table = nil
+    current_route_table = nil
+    # Below snippet gives the entry of main_route_table and current_route_table entry who is associated with current vpc.It is an replacement of "vpc.route_tables.main_route_table"
+    vpc.route_tables.entries.each do |entry|
+      if !entry.associations.empty?
+        entry.associations.each do |r|
+          if r.main == true
+            main_route_table = r
+          elsif r.main == false
+            current_route_table = r
+          end
+        end
       end
-      converge_by "change main route table for #{new_resource.to_s} to #{desired_route_table.id} (was #{current_route_table.id})" do
+    end
+    current_route_table ||= main_route_table
+    if current_route_table.route_table_id != desired_route_table.id
+      if main_route_table.nil?
+        raise "No main route table association found for #{new_resource.to_s} current main route table. error!  Probably a race condition."
+      end
+      converge_by "change main route table for #{new_resource.to_s} to #{desired_route_table.id} (was #{current_route_table.route_table_id})" do
         vpc.client.replace_route_table_association(
-          association_id: main_association.id,
+          association_id: main_route_table.id,
           route_table_id: desired_route_table.id
         )
       end
@@ -308,12 +326,16 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     # If no route table is provided and we fetch the current main one from AWS,
     # there is no guarantee that is the 'default' route table created when
     # creating the VPC
-    main_route_table ||= vpc.route_tables.main_route_table
+    main_route_table = nil
+    # Below snippet gives the entry of main_route_table entry who is associated with current vpc.It is an replacement of "vpc.route_tables.main_route_table"
+    vpc.route_tables.entries.each do |entry|
+      main_route_table = entry.associations.find { |r| r.main == true } unless entry.associations.empty?
+    end
     main_routes = new_resource.main_routes
     current_driver = self.new_resource.driver
     current_chef_server = self.new_resource.chef_server
     Cheffish.inline_resource(self, action) do
-      aws_route_table main_route_table.id do
+      aws_route_table main_route_table.route_table_id do
         vpc vpc
         routes main_routes
         driver current_driver
@@ -326,7 +348,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   def update_dhcp_options(vpc)
     dhcp_options = vpc.dhcp_options
     desired_dhcp_options = Chef::Resource::AwsDhcpOptions.get_aws_object(new_resource.dhcp_options, resource: new_resource)
-    if dhcp_options != desired_dhcp_options
+    if dhcp_options.id != desired_dhcp_options.id
       converge_by "change DHCP options for #{new_resource.to_s} to #{new_resource.dhcp_options} (#{desired_dhcp_options.id}) - was #{dhcp_options.id}" do
         vpc.associate_dhcp_options({
           dhcp_options_id: desired_dhcp_options.id, # required

@@ -34,7 +34,9 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
     eni = nil
     converge_by "create new #{new_resource} in #{region}" do
       ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
-      eni = ec2_resource.create_network_interface({ subnet_id: new_resource.subnet })
+      # we require all the parameter from options except :device_index so deleted & then passed.
+      option_without_device_index = options.dup.tap { |h| h.delete(:device_index) }
+      eni = ec2_resource.create_network_interface(option_without_device_index)
       retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound) do
         ec2_resource.create_tags(resources: [eni.id], tags: [{ key: "Name", value: new_resource.name }])
       end
@@ -48,8 +50,8 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def update_aws_object(eni)
-    if options.has_key?(:subnet)
-      if Chef::Resource::AwsSubnet.get_aws_object(options[:subnet], resource: new_resource) != eni.subnet
+    if options.has_key?(:subnet_id)
+      if Chef::Resource::AwsSubnet.get_aws_object(options[:subnet_id], resource: new_resource).id != eni.subnet.id
         raise "#{new_resource} subnet is #{new_resource.subnet}, but actual network interface has subnet set to #{eni.subnet_id}.  Cannot be modified!"
       end
     end
@@ -71,7 +73,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
       end
     end
 
-    if options.has_key?(:security_groups)
+    if options.has_key?(:groups)
       groups = new_resource.security_groups
       eni_security_groups = []
       eni.groups.each do |group|
@@ -107,10 +109,10 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def options
     @options ||= begin
       options = {}
-      options[:subnet] = new_resource.subnet if !new_resource.subnet.nil?
+      options[:subnet_id] = new_resource.subnet if !new_resource.subnet.nil?
       options[:private_ip_address] = new_resource.private_ip_address if !new_resource.private_ip_address.nil?
       options[:description] = new_resource.description if !new_resource.description.nil?
-      options[:security_groups] = new_resource.security_groups if !new_resource.security_groups.nil?
+      options[:groups] = new_resource.security_groups if !new_resource.security_groups.nil?
       options[:device_index] = new_resource.device_index if !new_resource.device_index.nil?
 
       AWSResource.lookup_options(options, resource: new_resource)

@@ -10,7 +10,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     image_id = Chef::Resource::AwsImage.get_aws_object_id(new_resource.image, resource: new_resource)
     instance_type = new_resource.instance_type || new_resource.driver.default_instance_type
     options = AWSResource.lookup_options(new_resource.options || options, resource: new_resource)
-    options[:launch_configuration_name] = new_resource.name if !new_resource.name.nil?
+    options[:launch_configuration_name] = new_resource.name if new_resource.name
     options[:image_id] = image_id
     options[:instance_type] = instance_type
 

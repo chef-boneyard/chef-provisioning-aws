@@ -51,7 +51,6 @@ describe Chef::Resource::AwsS3Bucket do
         end
 
         it "removes all aws_s3_bucket tags" do
-          pending
 
           expect_recipe {
             aws_s3_bucket bucket_name do
@@ -70,7 +69,7 @@ describe Chef::Resource::AwsS3Bucket do
 
         ruby_block "upload s3 object" do
           block do
-            ::Aws::S3.new.buckets[bucket_name].objects["test-object"].write("test-content")
+            ::Aws::S3::Resource.new(driver.s3_client).buckets.find { |b| b.name == bucket_name }.object("test-object").put( { body: "test-content" } )
           end
         end
       }

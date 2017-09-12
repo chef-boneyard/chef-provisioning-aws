@@ -11,9 +11,8 @@ class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSR
 
   def aws_object
     begin
-      cert = driver.iam.server_certificates[name]
-      # this will trigger a ::Aws::IAM::Errors::NoSuchEntity if the cert does not exist
-      cert.arn
+      cert = ::Aws::IAM::ServerCertificate.new(name,{client: driver.iam} )
+      cert.data
       cert
     rescue ::Aws::IAM::Errors::NoSuchEntity
       nil

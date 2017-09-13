@@ -12,7 +12,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
     def aws_tagger
       @aws_tagger ||= begin
         rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
-          new_resource.driver.rds.client,
+          new_resource.driver.rds,
           construct_arn(new_resource),
           new_resource.aws_tags
         )
@@ -31,7 +31,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
         rds_type = new_resource.rds_tagging_type
         # Taken from example on https://forums.aws.amazon.com/thread.jspa?threadID=108012
         account_id = begin
-          u = new_resource.driver.iam.client.get_user
+          u = new_resource.driver.iam.get_user
           # We've got an AWS account root credential or an IAM admin with access rights
           u[:user][:arn].match('^arn:aws:iam::([0-9]{12}):.*$')[1]
         rescue ::Aws::IAM::Errors::AccessDenied => e

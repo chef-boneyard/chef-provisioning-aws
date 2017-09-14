@@ -150,6 +150,19 @@ describe Chef::Provisioning::AWSDriver::Credentials do
       %w(work_iam personal).each do |profile|
         it "loads the '#{profile}' profile from a separate config files" do
           ENV['AWS_DEFAULT_PROFILE'] = profile
+          ENV['AWS_SHARED_CREDENTIALS_FILE'] = credential_ini_file.path
+          ENV['AWS_CONFIG_FILE'] = config_ini_file.path
+
+          expect(described_class.new.default)
+            .to eq(send("#{profile}_credentials"))
+        end
+      end
+    end
+
+    context 'backwards compatibility for AWS_CREDENTIAL_FILE env var' do
+      %w(work_iam personal).each do |profile|
+        it "loads the '#{profile}' profile from a separate config files" do
+          ENV['AWS_DEFAULT_PROFILE'] = profile
           ENV['AWS_CREDENTIAL_FILE'] = credential_ini_file.path
           ENV['AWS_CONFIG_FILE'] = config_ini_file.path
 

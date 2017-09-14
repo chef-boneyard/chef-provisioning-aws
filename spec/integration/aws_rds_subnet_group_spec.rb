@@ -11,11 +11,11 @@ describe Chef::Resource::AwsRdsSubnetGroup do
       #region = ENV['AWS_TEST_DRIVER'][5..-1]
 
       azs = []
-      driver.ec2.availability_zones.each do |az|
+      driver.ec2.describe_availability_zones.availability_zones.each do |az|
         azs << az
       end
-      az_1 = azs[0].name
-      az_2 = azs[1].name
+      az_1 = azs[0].zone_name
+      az_2 = azs[1].zone_name
 
       aws_vpc "test_vpc" do
         cidr_block '10.0.0.0/24'
@@ -78,12 +78,12 @@ describe Chef::Resource::AwsRdsSubnetGroup do
             aws_rds_subnet_group "test-db-subnet-group" do
               description "some_description"
               subnets ["test_subnet", test_subnet_2.aws_object.id]
-              aws_tags key1: "value2", key2: nil
+              aws_tags key1: "value2", key2: ''
             end
           }.to have_aws_rds_subnet_group_tags("test-db-subnet-group",
             {
               'key1' => 'value2',
-              'key2' => nil
+              'key2' => ''
             }
           ).and be_idempotent
         end

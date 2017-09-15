@@ -14,16 +14,18 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
       options = desired_options.dup
       options[:min_size] ||= 1
       options[:max_size] ||= 1
+      options[:auto_scaling_group_name] = new_resource.name
+      options[:launch_configuration_name] = new_resource.launch_configuration if new_resource.launch_configuration
+      options[:load_balancer_names] = new_resource.load_balancers if new_resource.load_balancers
 
-      aws_obj = new_resource.driver.auto_scaling.groups.create(
-        new_resource.name, options)
+      aws_obj = new_resource.driver.auto_scaling_resource.create_group(options)
 
       new_resource.scaling_policies.each do |policy_name, policy|
-        aws_obj.scaling_policies.put(policy_name.to_s, policy)
+        aws_obj.put_scaling_policy(policy_name: policy_name, adjustment_type: policy[:adjustment_type], scaling_adjustment: policy[:scaling_adjustment])
       end
 
       new_resource.notification_configurations.each do |config|
-        aws_obj.notification_configurations.create(config)
+        aws_obj.client.put_notification_configuration(auto_scaling_group_name: aws_obj.name, topic_arn: config[:topic], notification_types: config[:types])
       end
 
       aws_obj
@@ -36,14 +38,15 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
 
   def destroy_aws_object(group)
     converge_by "delete Auto Scaling group #{new_resource.name} in #{region}" do
-      group.delete!
+      group.delete(force_delete: true)
+      group.wait_until_not_exists
     end
   end
 
   def desired_options
     @desired_options ||= begin
       options = new_resource.options.dup
-      %w(launch_configuration min_size max_size availability_zones desired_capacity load_balancers).each do |var|
+      %w( min_size max_size availability_zones desired_capacity ).each do |var|
         var = var.to_sym
         value = new_resource.public_send(var)
         options[var] = value if value

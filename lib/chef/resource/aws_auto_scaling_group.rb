@@ -17,7 +17,7 @@ class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSRe
   attribute :scaling_policies,            kind_of: Hash,    default: {}
 
   def aws_object
-    result = driver.auto_scaling.groups[name]
+    result = driver.auto_scaling_resource.group(name)
     result && result.exists? ? result : nil
   end
 end

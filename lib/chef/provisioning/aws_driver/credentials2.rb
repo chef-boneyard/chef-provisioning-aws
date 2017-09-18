@@ -27,7 +27,11 @@ module AWSDriver
     # can be loaded successfully.
     def get_credentials
       # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment
-      shared_creds = ::Aws::SharedCredentials.new(:profile_name => profile_name, :path => ENV["AWS_CONFIG_FILE"])
+      credentials_file = ENV.fetch('AWS_SHARED_CREDENTIALS_FILE', ENV['AWS_CONFIG_FILE'])
+      shared_creds = ::Aws::SharedCredentials.new(
+        :profile_name => profile_name,
+        :path => credentials_file
+      )
       instance_profile_creds = ::Aws::InstanceProfileCredentials.new(:retries => 1)
 
       if ENV["AWS_ACCESS_KEY_ID"] && ENV["AWS_SECRET_ACCESS_KEY"]

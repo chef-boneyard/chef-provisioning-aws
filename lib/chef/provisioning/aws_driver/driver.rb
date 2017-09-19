@@ -204,7 +204,7 @@ module AWSDriver
     end
 
     def sns
-      @sns ||= AWS::SNS.new(config: aws_config)
+      @sns ||= Aws::SNS::Client.new(config: aws_config)
     end
 
     def sqs
@@ -913,7 +913,7 @@ EOD
     end
 
     def sns
-      @sns ||= ::Aws::SNS.new(config: aws_config)
+      @sns ||= ::Aws::SNS::Client.new(aws_config)
     end
 
     def sqs

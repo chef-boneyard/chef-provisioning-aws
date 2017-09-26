@@ -14,7 +14,7 @@ class Chef::Provider::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSP
         :certificate_body => new_resource.certificate_body,
         :private_key => new_resource.private_key      }
       opts[:certificate_chain] = new_resource.certificate_chain if new_resource.certificate_chain
-      new_resource.driver.iam.upload_server_certificate(opts)
+      new_resource.driver.iam.upload_server_certificate(**opts)
     end
   end
 

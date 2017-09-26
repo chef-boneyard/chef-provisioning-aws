@@ -196,7 +196,7 @@ module AWSDriver
     end
 
     def rds
-      @rds ||= AWS::RDS.new(config: aws_config)
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
     end
 
     def s3
@@ -905,7 +905,7 @@ EOD
     end
 
     def rds
-      @rds ||= ::Aws::RDS.new(config: aws_config)
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
     end
 
     def s3_client

@@ -84,6 +84,6 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
   end
 
   def driver
-    new_resource.driver.rds.client
+    new_resource.driver.rds
   end
 end

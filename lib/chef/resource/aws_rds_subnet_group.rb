@@ -15,8 +15,7 @@ class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSR
             coerce: proc { |v| [v].flatten }
 
   def aws_object
-    driver.rds.client
-      .describe_db_subnet_groups(db_subnet_group_name: name)[:db_subnet_groups].first
+    driver.rds.describe_db_subnet_groups(db_subnet_group_name: name)[:db_subnet_groups].first
   rescue ::Aws::RDS::Errors::DBSubnetGroupNotFoundFault
     # triggered by describe_db_subnet_groups when the group can't
     # be found

@@ -8,7 +8,7 @@ class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
 
   def aws_object
     begin
-      driver.sqs.queues.named(name)
+      driver.sqs.get_queue_url(queue_name: name)
     rescue ::Aws::SQS::Errors::NonExistentQueue
       nil
     end

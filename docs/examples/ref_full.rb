@@ -184,8 +184,10 @@ aws_s3_bucket 'ref-s3-bucket' do
   options({ :acl => 'private' })
 end
 
+# Options can be given from attribute parameter value.
+# Link :docs.aws.amazon.com/sdkforruby/api/Aws/SQS/Client.html#attributes
 aws_sqs_queue 'ref-sqs-queue' do
-  options({ :delay_seconds => 1 })
+  options({ :DelaySeconds => "1", :ReceiveMessageWaitTimeSeconds => "1" })
 end
 
 aws_sns_topic 'ref-sns-topic' do

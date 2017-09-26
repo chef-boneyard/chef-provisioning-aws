@@ -208,7 +208,7 @@ module AWSDriver
     end
 
     def sqs
-      @sqs ||= AWS::SQS.new(config: aws_config)
+      @sqs ||= AWS::SQS::Client.new(config: aws_config)
     end
 
     def auto_scaling
@@ -917,7 +917,7 @@ EOD
     end
 
     def sqs
-      @sqs ||= ::Aws::SQS.new(config: aws_config)
+      @sqs ||= ::Aws::SQS::Client.new(aws_config)
     end
 
     def auto_scaling

@@ -68,5 +68,4 @@ load_balancer "test-elb" do
        }
       end
     )
-  end
 end

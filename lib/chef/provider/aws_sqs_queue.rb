@@ -4,7 +4,7 @@ class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_sqs_queue
   
   def create_aws_object
-    options = AWSResource.lookup_options(new_resource.options || options, resource: new_resource)
+    options = AWSResource.lookup_options(new_resource.options || {}, resource: new_resource)
     option_sqs = {}
     option_sqs[:queue_name] = new_resource.name if new_resource.name
     option_sqs[:attributes] = options

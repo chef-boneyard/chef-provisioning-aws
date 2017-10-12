@@ -39,34 +39,33 @@ end
 
 load_balancer "test-elb" do
   machines (1..num_instances).map { |inst| "my-machine-#{inst}" }
-    load_balancer_options(
-      lazy do
+  load_balancer_options(
+    lazy do
+      {
+        listeners: [{
+          port: 80,
+          protocol: :http,
+          instance_port: 80,
+          instance_protocol: :http
+        },
         {
-          listeners: [{
-            port: 80,
-            protocol: :http,
-            instance_port: 80,
-            instance_protocol: :http
-          },
-          {
-            port: 443,
-            protocol: :https,
-            instance_port: 443,
-            instance_protocol: :https,
-            ssl_certificate_id: cert.aws_object.arn
-          }],
-          health_check: {
-            healthy_threshold:    2,
-            unhealthy_threshold:  4,
-            interval:             12,
-            timeout:              5,
-            target:               "HTTP:80/"
-          },
-          scheme: "internal",
-          subnets: "subnet-1234567",
-          security_groups: "test-sg"
-       }
-      end
-    )
-  end
+          port: 443,
+          protocol: :https,
+          instance_port: 443,
+          instance_protocol: :https,
+          ssl_certificate_id: cert.aws_object.arn
+        }],
+        health_check: {
+          healthy_threshold:    2,
+          unhealthy_threshold:  4,
+          interval:             12,
+          timeout:              5,
+          target:               "HTTP:80/"
+        },
+        scheme: "internal",
+        subnets: "subnet-1234567",
+        security_groups: "test-sg"
+      }
+    end
+  )
 end

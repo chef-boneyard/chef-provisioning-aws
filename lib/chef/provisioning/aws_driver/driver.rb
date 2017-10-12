@@ -294,7 +294,13 @@ module AWSDriver
       if !actual_elb || !actual_elb.exists?
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
-          lb_options[:subnets] = machine_specs.map { |s| ec2.instances[s.reference['instance_id']].subnet }.uniq
+          # Use Subnets only if not using Classic VPC (since there is no VPC available)
+          ec2_instances = machine_spec.map { |s| ec2.instances[s.reference['instance_id']] }
+          if ec2_instances.any?{ |e| e.vpc }
+              lb_options[:subnets] = ec2_instances.map{ |s| e.subnet }.uniq
+          else
+              lb_options[:availability_zones] = ec2_instances.map { |s| e.availability_zone }.uniq
+          end
         end
 
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
@@ -378,7 +384,8 @@ module AWSDriver
               ]
               default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
               if default_subnet.size != 1
-                raise "Could not find default subnet in availability zone #{zone}"
+                # We could not find default subnet in availability zone, most likely using Classic VPC
+                next
               end
               default_subnet = default_subnet[0]
               desired_subnets_zones[default_subnet[:subnet_id]] = zone

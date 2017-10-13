@@ -10,7 +10,7 @@ end
 class Chef::Resource::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type ::AWS::Elasticsearch::Domain
+  aws_sdk_type ::Aws::CloudSearchDomain
 
   attribute :domain_name, kind_of: String, name_attribute: true
 

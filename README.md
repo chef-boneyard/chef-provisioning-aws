@@ -305,7 +305,7 @@ The `AWSProvider` class will automatically try to call `converge_tags` when runn
 def aws_tagger
   @aws_tagger ||= begin
     rds_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::RDS.new(
-      new_resource.driver.rds.client,
+      new_resource.driver.rds,
       construct_arn(new_resource),
       new_resource.aws_tags
     )

@@ -3,7 +3,7 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::AutoScaling::Group
+  aws_sdk_type ::Aws::AutoScaling::AutoScalingGroup
 
   attribute :name,                        kind_of: String,  name_attribute: true
   attribute :options,                     kind_of: Hash,    default: {}
@@ -17,7 +17,7 @@ class Chef::Resource::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSRe
   attribute :scaling_policies,            kind_of: Hash,    default: {}
 
   def aws_object
-    result = driver.auto_scaling.groups[name]
+    result = driver.auto_scaling_resource.group(name)
     result && result.exists? ? result : nil
   end
 end

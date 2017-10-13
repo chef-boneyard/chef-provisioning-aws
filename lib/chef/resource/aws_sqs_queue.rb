@@ -1,15 +1,15 @@
 require 'chef/provisioning/aws_driver/aws_resource'
 
 class Chef::Resource::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSResource
-  aws_sdk_type AWS::SQS::Queue
+  aws_sdk_type ::Aws::SQS::Queue
 
   attribute :name,    kind_of: String, name_attribute: true
   attribute :options, kind_of: Hash
 
   def aws_object
     begin
-      driver.sqs.queues.named(name)
-    rescue AWS::SQS::Errors::NonExistentQueue
+      driver.sqs.get_queue_url(queue_name: name)
+    rescue ::Aws::SQS::Errors::NonExistentQueue
       nil
     end
   end

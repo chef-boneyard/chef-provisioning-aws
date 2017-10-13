@@ -260,7 +260,7 @@ describe Chef::Resource::Machine do
               group_name: "agroup",
               strategy: "cluster"
             })
-          rescue Aws::EC2::Errors::InvalidPlacementGroupDuplicate
+          rescue ::Aws::EC2::Errors::InvalidPlacementGroupDuplicate
             # We don't need to create it because it already exists
           end
         }

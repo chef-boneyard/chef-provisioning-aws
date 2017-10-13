@@ -5,7 +5,7 @@ require 'chef/resource/aws_security_group'
 # @see See http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_replication_group-instance_method
 class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::AWSResource
   # Note: There isn't actually an SDK class for Elasticache.
-  aws_sdk_type AWS::ElastiCache
+  aws_sdk_type ::Aws::ElastiCache
 
   # See http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_replication_group-instance_method
   # for information on possible values for each attribute. Values are passed
@@ -56,7 +56,7 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
   #
   # @param
   attribute :security_groups,
-            kind_of: [ String, Array, AwsSecurityGroup, AWS::EC2::SecurityGroup ],
+            kind_of: [ String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup ],
             required: true,
             coerce: proc { |v| [v].flatten }
 
@@ -72,7 +72,7 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
       driver.elasticache
         .describe_replication_groups(replication_group_id: group_name)
         .data[:replication_groups].first
-    rescue AWS::ElastiCache::Errors::ReplicationGroupNotFoundFault
+    rescue ::Aws::ElastiCache::Errors::ReplicationGroupNotFoundFault
       nil
     end
   end

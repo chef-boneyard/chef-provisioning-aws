@@ -27,13 +27,12 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 #
 class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
-  aws_sdk_type AWS::EC2::VPC,
+  aws_sdk_type ::Aws::EC2::Vpc,
                id: :id,
                option_names: [:vpc, :vpc_id, :peer_vpc_id]
 
   require 'chef/resource/aws_dhcp_options'
   require 'chef/resource/aws_route_table'
-
   #
   # The name of this VPC.
   #
@@ -69,7 +68,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #   detach if not.
   # - You may specify the AWS ID of an actual Internet Gateway
   #
-  attribute :internet_gateway#, kind_of: [ String, AWS::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
+  attribute :internet_gateway#, kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
 
   #
   # The main route table.
@@ -105,7 +104,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   # The DHCP options for this VPC.
   #
-  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, AWS::EC2::DHCPOptions, String ]
+  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, ::Aws::EC2::DhcpOptions, String ]
 
   #
   # Indicates whether the DNS resolution is supported for the VPC. If this
@@ -134,7 +133,14 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.vpcs[id] if id
-    result && result.exists? ? result : nil
+    ec2_resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = ec2_resource.vpc(id) if id
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidVpcIDNotFound
+    return false
   end
 end

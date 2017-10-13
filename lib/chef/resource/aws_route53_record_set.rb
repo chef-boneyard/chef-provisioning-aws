@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-class Aws::Route53::Types::ResourceRecordSet
+class ::Aws::Route53::Types::ResourceRecordSet
   # removing AWS's trailing dots may not be the best thing, but otherwise our job gets much harder.
   def aws_key
     "#{name.sub(/\.$/, '')}"

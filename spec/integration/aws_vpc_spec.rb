@@ -16,9 +16,9 @@ describe Chef::Resource::AwsVpc do
             end
           }.to create_an_aws_vpc('test_vpc',
             cidr_block: '10.0.0.0/24',
-            instance_tenancy: :default,
-            state: :available,
-            internet_gateway: nil
+            instance_tenancy: "default",
+            state: "available",
+            internet_gateways_entries: nil
           ).and be_idempotent
         end
 
@@ -30,9 +30,9 @@ describe Chef::Resource::AwsVpc do
             end
           }.to create_an_aws_vpc('test_vpc_2',
             cidr_block: '10.0.0.0/24',
-            instance_tenancy: :default,
-            state: :available,
-            internet_gateway: nil
+            instance_tenancy: "default",
+            state: "available",
+            internet_gateways_entries: nil
           ).and have_aws_vpc_tags('test_vpc_2',
                                   {"foo" => "bar"}
           ).and be_idempotent
@@ -51,20 +51,24 @@ describe Chef::Resource::AwsVpc do
             end
           }.to create_an_aws_vpc('test_vpc',
             cidr_block:       '10.0.0.0/24',
-            instance_tenancy: :dedicated,
+            instance_tenancy: "dedicated",
             dhcp_options_id:  test_dhcp_options.aws_object.id,
-            state:            :available,
-            "route_tables.main_route_table.routes" => [
+            state:            "available",
+            routetables_entries_routes: [
               {
                 destination_cidr_block: '10.0.0.0/24',
-                target: { id: 'local' }
+                gateway_id: 'local',
+                origin: 'CreateRouteTable',
+                state: 'active'
               },
               {
                 destination_cidr_block: '0.0.0.0/0',
-                target: an_instance_of(AWS::EC2::InternetGateway)
+                gateway_id: (/igw-\w+/),
+                origin: 'CreateRoute',
+                state: 'active'
               }
             ],
-            internet_gateway: an_instance_of(AWS::EC2::InternetGateway)
+            internet_gateways_entries: an_instance_of(::Aws::EC2::InternetGateway)
           ).and be_idempotent
         end
       end
@@ -84,30 +88,32 @@ describe Chef::Resource::AwsVpc do
           aws_route_table 'test_route_table' do
             vpc 'test_vpc'
           end
-
           it "aws_vpc can update the main_route_table to it" do
             expect_recipe {
               aws_vpc 'test_vpc' do
                 main_route_table 'test_route_table'
               end
             }.to update_an_aws_vpc('test_vpc',
-              "route_tables.main_route_table.id" => test_route_table.aws_object.id
+              vpc_id: test_route_table.aws_object.vpc_id
             ).and be_idempotent
           end
 
           # Clean up the main route table association so we can cleanly delete
           before :each do
-            @old_main = test_vpc.aws_object.route_tables.main_route_table
+            main_route_table = test_vpc.aws_object.route_tables.entries.first.associations.first
+            @old_main = nil
+            unless main_route_table.nil?
+              @old_main = main_route_table.route_table_id if main_route_table.main == true
+            end
           end
           after :each do
-            new_main = test_vpc.aws_object.route_tables.main_route_table
+            new_main_route_table = test_vpc.aws_object.route_tables.entries.first.associations.first
+            unless new_main_route_table.nil?
+              new_main = new_main_route_table.route_table_id if new_main_route_table.main == true
+            end
+            @old_main = test_vpc.aws_object.route_tables.entries[1].id if @old_main.nil?
             if new_main != @old_main
-              main_association = new_main.associations.select { |a| a.main? }.first
-              if main_association
-                test_vpc.aws_object.client.replace_route_table_association(
-                  association_id: main_association.id,
-                  route_table_id: @old_main.id)
-              end
+                test_vpc.aws_object.client.replace_route_table_association(association_id: new_main_route_table.id,route_table_id: @old_main)
             end
           end
         end
@@ -165,7 +171,7 @@ describe Chef::Resource::AwsVpc do
         expect_converge {
           aws_vpc 'test_vpc' do
           end
-        }.to raise_error(AWS::Core::OptionGrammar::FormatError, /expected string value for option cidr_block/)
+        }.to raise_error(::ArgumentError, /missing required parameter params\[:cidr_block\]/)
       end
 
       context "When having two VPC's and a peering connection between them" do

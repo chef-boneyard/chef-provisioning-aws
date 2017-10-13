@@ -269,7 +269,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 }
               end
-            }.to raise_error(Aws::Route53::Errors::InvalidChangeBatch, /Tried to delete.*the values provided do not match the current values/)
+            }.to raise_error(::Aws::Route53::Errors::InvalidChangeBatch, /Tried to delete.*the values provided do not match the current values/)
           end
 
           it "uses the resource name as the :rr_name" do

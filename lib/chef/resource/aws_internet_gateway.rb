@@ -12,7 +12,7 @@
 class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::InternetGateway, id: :id
+  aws_sdk_type ::Aws::EC2::InternetGateway, id: :id
 
   require 'chef/resource/aws_vpc'
 
@@ -34,7 +34,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, AWS::EC2::VPC ]
+  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
 
   attribute :internet_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^igw-[a-f0-9]{8}$/ ? name : nil
@@ -42,7 +42,14 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.internet_gateways[id] if id
-    result && result.exists? ? result : nil
+    ec2_resource = ::Aws::EC2::Resource.new(driver.ec2)
+    result = ec2_resource.internet_gateway(id) if id
+    result && exists?(result) ? result : nil
+  end
+
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidInternetGatewayIDNotFound
+    return false
   end
 end

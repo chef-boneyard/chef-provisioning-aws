@@ -9,17 +9,14 @@ describe Chef::Resource::AwsNatGateway do
       purge_all
       setup_public_vpc
 
-      aws_network_interface 'test_network_interface' do
-        subnet 'test_public_subnet'
-      end
-
-      aws_eip_address 'test_eip'
+      aws_eip_address "test_eip"
 
       describe 'action :create' do #, :super_slow do
         it 'creates an aws_nat_gateway in the specified subnet' do
           expect_recipe {
+            sub_id = test_public_subnet.aws_object.id
             aws_nat_gateway 'test_nat_gateway' do
-              subnet 'test_public_subnet'
+              subnet sub_id
               eip_address 'test_eip'
             end
           }.to create_an_aws_nat_gateway('test_nat_gateway',

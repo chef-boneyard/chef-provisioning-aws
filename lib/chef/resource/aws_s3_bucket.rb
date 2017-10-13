@@ -3,7 +3,7 @@ require 'chef/provisioning/aws_driver/aws_resource'
 class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::S3::Bucket, id: :name
+  aws_sdk_type ::Aws::S3::Bucket, id: :name
 
   attribute :name, :kind_of => String, :name_attribute => true
   attribute :options, :kind_of => Hash, :default => {}
@@ -12,7 +12,8 @@ class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   attribute :recursive_delete, :kind_of => [TrueClass, FalseClass], :default => false
 
   def aws_object
-    result = driver.s3.buckets[name]
+    resource = ::Aws::S3::Resource.new(driver.s3_client)
+    result = resource.buckets.find{|b| b.name==name}
     result && result.exists? ? result : nil
   end
 end

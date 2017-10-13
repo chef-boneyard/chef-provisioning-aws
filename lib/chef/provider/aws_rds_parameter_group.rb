@@ -122,6 +122,6 @@ class Chef::Provider::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSP
   end
   
   def driver
-    new_resource.driver.rds.client
+    new_resource.driver.rds
   end
 end

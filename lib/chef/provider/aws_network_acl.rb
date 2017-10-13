@@ -18,14 +18,14 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   def create_aws_object
     converge_by "create network ACL #{new_resource.name} in #{region}" do
       options = {}
-      options[:vpc] = new_resource.vpc if new_resource.vpc
+      options[:vpc_id] = new_resource.vpc if new_resource.vpc
       options = AWSResource.lookup_options(options, resource: new_resource)
 
-      Chef::Log.debug("VPC: #{options[:vpc]}")
+      Chef::Log.debug("VPC: #{options[:vpc_id]}")
 
-      network_acl = new_resource.driver.ec2.network_acls.create(options)
-      retry_with_backoff(AWS::EC2::Errors::InvalidNetworkAclID::NotFound) do
-        network_acl.tags['Name'] = new_resource.name
+      network_acl = new_resource.driver.ec2_resource.create_network_acl(options)
+      retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkAclIDNotFound) do
+        network_acl.create_tags({tags: [{key: "Name", value: new_resource.name}]})
       end
       network_acl
     end
@@ -83,6 +83,9 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
         # Anything unhandled will be added
         desired_rules.delete(desired_rule)
 
+        # Converting matching_rule [:rule_action] and [:port_range] to symbol & hash to match correctly with desired_rule
+        matching_rule[:rule_action] = matching_rule[:rule_action].to_sym unless matching_rule[:rule_action].nil?
+        matching_rule[:port_range] = matching_rule[:port_range].to_hash unless matching_rule[:port_range].nil?
         if matching_rule.merge(desired_rule) != matching_rule
           # Replace anything with a matching rule number but different attributes
           replace_rules << desired_rule
@@ -115,7 +118,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   def remove_rules(network_acl, rules)
     rules.each do |rule|
       action_handler.report_progress "  remove #{rule_direction(rule)} rule #{rule[:rule_number]}"
-      network_acl.delete_entry(rule_direction(rule).to_sym, rule[:rule_number])
+      network_acl.delete_entry(egress: rule[:egress], rule_number: rule[:rule_number])
     end
   end
 
@@ -125,8 +128,8 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
 
   def entry_to_hash(entry)
     options = [
-      :rule_number, :action, :protocol, :cidr_block, :egress,
-      :port_range, :icmp_code, :icmp_type
+      :rule_number, :rule_action, :protocol, :cidr_block, :egress,
+      :port_range, :icmp_type_code
     ]
     entry_hash = {}
     options.each { |option| entry_hash.merge!(option => entry.send(option.to_sym)) }

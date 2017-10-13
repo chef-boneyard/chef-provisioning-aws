@@ -20,14 +20,13 @@ require 'chef/provisioning/aws_driver/credentials2'
 require 'chef/provisioning/aws_driver/aws_tagger'
 
 require 'yaml'
-require 'aws-sdk-v1'
 require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
 require 'base64'
 
 # loads the entire aws-sdk
-AWS.eager_autoload!
+Aws.eager_autoload!
 AWS_V2_SERVICES = {
   "EC2" => "ec2",
   "Route53" => "route53",
@@ -112,11 +111,11 @@ module AWSDriver
       region = nil if region && region.empty?
 
       credentials = profile_name ? aws_credentials[profile_name] : aws_credentials.default
-      @aws_config = AWS.config(
+      @aws_config = Aws.config.update(
         access_key_id:     credentials[:aws_access_key_id],
         secret_access_key: credentials[:aws_secret_access_key],
         region: region || credentials[:region],
-        proxy_uri: credentials[:proxy_uri] || nil,
+        http_proxy: credentials[:proxy_uri] || nil,
         session_token: credentials[:aws_session_token] || nil,
         logger: Chef::Log.logger
       )
@@ -197,7 +196,7 @@ module AWSDriver
     end
 
     def rds
-      @rds ||= AWS::RDS.new(config: aws_config)
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
     end
 
     def s3
@@ -205,11 +204,11 @@ module AWSDriver
     end
 
     def sns
-      @sns ||= AWS::SNS.new(config: aws_config)
+      @sns ||= Aws::SNS::Client.new(config: aws_config)
     end
 
     def sqs
-      @sqs ||= AWS::SQS.new(config: aws_config)
+      @sqs ||= AWS::SQS::Client.new(config: aws_config)
     end
 
     def auto_scaling
@@ -291,10 +290,10 @@ module AWSDriver
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb || !actual_elb.exists?
+      if !actual_elb
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
-          lb_options[:subnets] = machine_specs.map { |s| ec2.instances[s.reference['instance_id']].subnet }.uniq
+          lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instances[s.reference['instance_id']].subnet }.uniq
         end
 
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
@@ -309,8 +308,9 @@ module AWSDriver
 
         action_handler.perform_action updates do
           # IAM says the server certificate exists, but ELB throws this error
-          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(AWS::ELB::Errors::CertificateNotFound) do
-            actual_elb = elb.load_balancers.create(lb_spec.name, lb_options)
+          Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ElasticLoadBalancing::Errors::CertificateNotFound) do
+            lb_options[:load_balancer_name]=lb_spec.name
+            actual_elb = elb.create_load_balancer(lb_options)
           end
 
           lb_spec.reference = {
@@ -334,12 +334,12 @@ module AWSDriver
 
         # Update security groups
         if lb_options[:security_groups]
-          current = actual_elb.security_group_ids
+          current = actual_elb.security_groups
           desired = lb_options[:security_groups]
           if current != desired
             perform_action.call("  updating security groups to #{desired.to_a}") do
-              elb.client.apply_security_groups_to_load_balancer(
-                load_balancer_name: actual_elb.name,
+              elb_client.apply_security_groups_to_load_balancer(
+                load_balancer_name: actual_elb.load_balancer_name,
                 security_groups: desired.to_a
               )
             end
@@ -362,7 +362,7 @@ module AWSDriver
           # an unecessary ones
           actual_zones_subnets = {}
           actual_elb.subnets.each do |subnet|
-            actual_zones_subnets[subnet.id] = subnet.availability_zone.name
+            actual_zones_subnets[subnet] = Chef::Resource::AwsSubnet.get_aws_object(subnet, driver: self).availability_zone
           end
 
           # Only 1 of subnet or AZ will be populated b/c of our check earlier
@@ -376,7 +376,7 @@ module AWSDriver
                 {:name => 'availabilityZone', :values => [zone]},
                 {:name => 'defaultForAz', :values => ['true']}
               ]
-              default_subnet = ec2.client.describe_subnets(:filters => filters)[:subnet_set]
+              default_subnet = ec2_client.describe_subnets(:filters => filters)[:subnets]
               if default_subnet.size != 1
                 raise "Could not find default subnet in availability zone #{zone}"
               end
@@ -385,7 +385,7 @@ module AWSDriver
             end
           end
           unless lb_options[:subnets].nil? || lb_options[:subnets].empty?
-            subnet_query = ec2.client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnet_set]
+            subnet_query = ec2_client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnets]
             # AWS raises an error on an unknown subnet, but not an unknown AZ
             subnet_query.each do |subnet|
               zone = subnet[:availability_zone].downcase
@@ -405,7 +405,7 @@ module AWSDriver
                   load_balancer_name: actual_elb.name,
                   subnets: attach_subnets
                 )
-              rescue AWS::ELB::Errors::InvalidConfigurationRequest => e
+              rescue ::Aws::ElasticLoadBalancing::Errors::InvalidConfigurationRequest => e
                 Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
@@ -433,7 +433,7 @@ module AWSDriver
         # Update listeners - THIS IS NOT ATOMIC
         if lb_options[:listeners]
           add_listeners = {}
-          lb_options[:listeners].each { |l| add_listeners[l[:port]] = l }
+          lb_options[:listeners].each { |l| add_listeners[l[:load_balancer_port]] = l }
           actual_elb.listeners.each do |listener|
             desired_listener = add_listeners.delete(listener.port)
             if desired_listener
@@ -470,7 +470,7 @@ module AWSDriver
             end
           end
           add_listeners.values.each do |listener|
-            updates = [ "  add listener #{listener[:port]}" ]
+            updates = [ "  add listener #{listener[:load_balanacer_port]}" ]
             updates << "    set protocol to #{listener[:protocol].inspect}"
             updates << "    set instance port to #{listener[:instance_port].inspect}"
             updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
@@ -640,10 +640,10 @@ module AWSDriver
       return if lb_spec == nil
 
       actual_elb = load_balancer_for(lb_spec)
-      if actual_elb && actual_elb.exists?
+      if actual_elb
         # Remove ELB from AWS
         action_handler.perform_action "Deleting EC2 ELB #{lb_spec.id}" do
-          actual_elb.delete
+          elb.delete_load_balancer({load_balancer_name: actual_elb.load_balancer_name })
         end
       end
 
@@ -868,6 +868,96 @@ EOD
       strategy.cleanup_convergence(action_handler, machine_spec)
     end
 
+    def cloudsearch(api_version="20130101")
+      @cloudsearch ||= {}
+      @cloudsearch[api_version] ||= ::Aws::CloudSearch::Client.const_get("V#{api_version}").new
+      @cloudsearch[api_version]
+    end
+
+    def ec2
+      @ec2 ||= ::Aws::EC2::Client.new(aws_config)
+    end
+
+    AWS_V2_SERVICES.each do |load_name, short_name|
+      class_eval <<-META
+
+      def #{short_name}_client
+        @#{short_name}_client ||= ::Aws::#{load_name}::Client.new(**aws_config_2)
+      end
+
+      def #{short_name}_resource
+        @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
+      end
+
+      META
+    end
+
+    def elb
+      @elb ||= ::Aws::ElasticLoadBalancing::Client.new(aws_config)
+    end
+
+    def elasticache
+      @elasticache ||= ::Aws::ElastiCache::Client.new(config: aws_config)
+    end
+
+    def iam
+      @iam ||= ::Aws::IAM::Client.new(aws_config)
+    end
+
+    def rds
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
+    end
+
+    def s3_client
+      @s3 ||= ::Aws::S3::Client.new( aws_config)
+    end
+
+    def sns
+      @sns ||= ::Aws::SNS::Client.new(aws_config)
+    end
+
+    def sqs
+      @sqs ||= ::Aws::SQS::Client.new(aws_config)
+    end
+
+    def auto_scaling
+      @auto_scaling ||= ::Aws::AutoScaling.new(config: aws_config)
+    end
+
+    def build_arn(partition: 'aws', service: nil, region: aws_config[:region], account_id: self.account_id, resource: nil)
+      "arn:#{partition}:#{service}:#{region}:#{account_id}:#{resource}"
+    end
+
+    def parse_arn(arn)
+      parts = arn.split(':', 6)
+      {
+        partition: parts[1],
+        service: parts[2],
+        region: parts[3],
+        account_id: parts[4],
+        resource: parts[5]
+      }
+    end
+
+    def account_id
+      begin
+        # We've got an AWS account root credential or an IAM admin with access rights
+        current_user = iam.get_user
+        arn = current_user[:user][:arn]
+      rescue ::Aws::IAM::Errors::AccessDenied => e
+        # If we don't have access, the error message still tells us our account ID and user ...
+        # https://forums.aws.amazon.com/thread.jspa?messageID=394344
+        if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
+          raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
+        end
+        arn = $1
+      end
+      parse_arn(arn)[:account_id]
+    end
+
+    # For creating things like AWS keypairs exclusively
+    @@chef_default_lock = Mutex.new
+
     def machine_for(machine_spec, machine_options, instance = nil)
       instance ||= instance_for(machine_spec)
 
@@ -982,9 +1072,9 @@ EOD
     def keypair_for(bootstrap_options)
       if bootstrap_options[:key_name]
         keypair_name = bootstrap_options[:key_name]
-        actual_key_pair = ec2.key_pairs[keypair_name]
+        actual_key_pair = ec2_resource.key_pair(keypair_name)
         if !actual_key_pair.exists?
-          ec2.key_pairs.create(keypair_name)
+          ec2_resource.key_pairs.create(keypair_name)
         end
         actual_key_pair
       end
@@ -1367,7 +1457,7 @@ EOD
       instance ||= instance_for(machine_spec)
       sleep_time = 10
       transport = transport_for(machine_spec, machine_options, instance)
-      unless transport.available?
+      unless instance.state.name.eql?("running")
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
           max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
@@ -1487,7 +1577,7 @@ EOD
     def converge_elb_tags(aws_object, tags, action_handler)
       elb_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::ELB.new(
         elb_client,
-        aws_object.name,
+        aws_object,
         tags
       )
       aws_tagger = Chef::Provisioning::AWSDriver::AWSTagger.new(elb_strategy, action_handler)
@@ -1553,7 +1643,7 @@ EOD
           from.delete(:instance_port)
           from.delete(:instance_protocol)
           to = get_listener(to)
-          to.delete(:port)
+          to.delete(:load_balancer_port)
           to.delete(:protocol)
           to.merge(from)
         end
@@ -1573,21 +1663,21 @@ EOD
       when Hash
         result.merge!(listener)
       when Array
-        result[:port] = listener[0] if listener.size >= 1
+        result[:load_balancer_port] = listener[0] if listener.size >= 1
         result[:protocol] = listener[1] if listener.size >= 2
       when Symbol,String
         result[:protocol] = listener
       when Integer
-        result[:port] = listener
+        result[:load_balancer_port] = listener
       else
         raise "Invalid listener #{listener}"
       end
 
       # If either port or protocol are set, set the other
-      if result[:port] && !result[:protocol]
-        result[:protocol] = PROTOCOL_DEFAULTS[result[:port]]
-      elsif result[:protocol] && !result[:port]
-        result[:port] = PORT_DEFAULTS[result[:protocol]]
+      if result[:load_balancer_port] && !result[:protocol]
+        result[:protocol] = PROTOCOL_DEFAULTS[result[:load_balancer_port]]
+      elsif result[:protocol] && !result[:load_balancer_port]
+        result[:load_balancer_port] = PORT_DEFAULTS[result[:protocol]]
       end
       if result[:instance_port] && !result[:instance_protocol]
         result[:instance_protocol] = PROTOCOL_DEFAULTS[result[:instance_port]]
@@ -1596,7 +1686,7 @@ EOD
       end
 
       # If instance_port is still unset, copy port/protocol over
-      result[:instance_port] ||= result[:port]
+      result[:instance_port] ||= result[:load_balancer_port]
       result[:instance_protocol] ||= result[:protocol]
 
       result

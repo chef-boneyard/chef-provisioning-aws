@@ -4,11 +4,11 @@ require 'chef/resource/aws_instance'
 class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type AWS::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
+  aws_sdk_type ::Aws::EC2::Volume, backcompat_data_bag_name: 'ebs_volumes'
 
   attribute :name,    kind_of: String, name_attribute: true
 
-  attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, AWS::EC2::Instance, ::Aws::EC2::Instance ]
+  attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, ::Aws::EC2::Instance, ::Aws::EC2::Instance ]
 
   attribute :availability_zone, kind_of: String, default: 'a'
   attribute :size,              kind_of: Integer, default: 8
@@ -25,7 +25,13 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   def aws_object
     driver, id = get_driver_and_id
-    result = driver.ec2.volumes[id] if id
-    result && result.exists? && ![:deleted, :deleting].include?(result.status) ? result : nil
+    result = driver.ec2_resource.volume(id) if id
+    result && exists?(result) && ![:deleted, :deleting].include?(result.state) ? result : nil
+  end
+  
+  def exists?(result)
+    return true if result.data
+  rescue ::Aws::EC2::Errors::InvalidVolumeNotFound
+    return false
   end
 end

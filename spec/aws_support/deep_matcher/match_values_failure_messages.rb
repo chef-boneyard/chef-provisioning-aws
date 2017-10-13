@@ -64,7 +64,6 @@ module AWSSupport
 
       def match_hashes_failure_messages(expected_hash, actual_hash, identifier)
         result = []
-
         expected_hash.all? do |expected_key, expected_value|
           missing_value = false
           actual_value = actual_hash.fetch(expected_key) do
@@ -110,14 +109,14 @@ module AWSSupport
           end
           op = change.action
           op = ' ' if op == '='
-          result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" }
+
+          result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" } if messages
         end
         different ? result : []
       end
 
       def match_hash_and_object_failure_messages(expected_hash, actual_object, identifier)
         result = []
-
         expected_hash.all? do |expected_key, expected_value|
           # 'a.b.c' => 1 -> { a: { b: { c: 1 }}}
           names = expected_key.to_s.split('.')
@@ -130,7 +129,18 @@ module AWSSupport
 
           # Grab the actual value from the object
           begin
-            actual_value = actual_object.send(expected_key)
+            case expected_key.to_s
+            when "dhcp_configurations"
+              actual_value = actual_object.data.to_h[expected_key]
+            when "internet_gateways_entries"
+              actual_value = actual_object.internet_gateways.entries.first
+            when "routetables_entries_routes"
+              entries = []
+              actual_object.route_tables.entries.first.routes.each { |r| entries << r.data.to_h }
+              actual_value = entries
+            else
+              actual_value = actual_object.send(expected_key)
+            end
           rescue NoMethodError
             if !actual_value.respond_to?(expected_key)
               result << "#{identifier || "object"}.send(#{expected_key.inspect}) is missing, expected value #{description_of(expected_value)}"
@@ -161,7 +171,7 @@ module AWSSupport
         attr_reader :value
 
         def failure_messages(actual)
-          @failure_messages[actual]
+          @failure_messages[actual] if @failure_messages
         end
 
         def ==(actual)

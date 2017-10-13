@@ -16,7 +16,7 @@ class AWSTagger
   def_delegators :@tagging_strategy, :desired_tags, :current_tags, :set_tags, :delete_tags
 
   def converge_tags
-    if desired_tags.nil?
+    if desired_tags.nil? || desired_tags.empty?
       Chef::Log.debug "aws_tags not provided, nothing to converge"
       return
     end
@@ -37,7 +37,7 @@ class AWSTagger
     Retryable.retryable(
       :tries => 20,
       :sleep => lambda { |n| [2**n, 10].min },
-      :on => [AWS::Errors::Base, Aws::Errors::ServiceError,]
+      :on => [::Aws::EC2::Errors, Aws::S3::Errors, ::Aws::S3::Errors::ServiceError,]
     ) do |retries, exception|
       if retries > 0
         Chef::Log.info "Retrying the tagging, previous try failed with #{exception.inspect}"

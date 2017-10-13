@@ -20,7 +20,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   #
   # Save the ID of this object to Chef.
   #
-  # @param aws_object [AWS::EC2::Core] The AWS object containing the ID.
+  # @param aws_object [::Aws::EC2::Core] The AWS object containing the ID.
   # @param action_handler [Chef::Provisioning::ActionHandler] The action handler,
   #        which handles progress reporting, update reporting ("little green text")
   #        and dry run.

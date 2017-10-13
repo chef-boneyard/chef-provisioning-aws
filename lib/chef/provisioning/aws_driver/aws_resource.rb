@@ -1,4 +1,4 @@
-require 'aws'
+require 'aws-sdk'
 require 'chef/provisioning/aws_driver/super_lwrp'
 require 'chef/provisioning/chef_managed_entry_store'
 # Enough resources will eventually require this that we put 1 require in here
@@ -87,7 +87,7 @@ module AWSDriver
     # `AWSResource.lookup_options` will translate each ID with
     # `AwsSubnet.get_aws_object('subnet1')`, which supports Chef names
     # (`mysubnet`) as well as AWS subnet Ids (`subnet-1234abcd`) or AWS objects
-    # (`AWS::EC2::Subnet`).
+    # (`::Aws::EC2::Subnet`).
     #
     # Keys that represent non-AWS-objects (such as `timeout`) are left alone.
     #

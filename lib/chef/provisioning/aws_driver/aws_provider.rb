@@ -29,7 +29,7 @@ class AWSProvider < Chef::Provider::LWRPBase
   end
 
   def region
-    new_resource.driver.region
+    new_resource.driver.aws_config[:region]
   end
 
   #
@@ -273,9 +273,18 @@ class AWSProvider < Chef::Provider::LWRPBase
       Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       begin
         yield(aws_object) if block_given?
-        current_response = aws_object.send(query_method)
+        if aws_object.class.to_s.eql?("Aws::EC2::Vpc")
+          vpc = new_resource.driver.ec2.describe_vpcs(vpc_ids: [aws_object.vpc_id]).vpcs
+          current_response = "[:#{vpc[0].state}]"
+        elsif aws_object.class.to_s.eql?("Aws::EC2::NetworkInterface")
+          result = new_resource.driver.ec2_resource.network_interface(aws_object.id)
+          current_response = "[:#{result.status}]"
+          current_response = "[:in_use]" if current_response.eql?("[:in-use]")
+        elsif aws_object.class.to_s.eql?("Aws::EC2::NatGateway")
+          current_response = "[:#{aws_object.state}]"
+        end
         Chef::Log.debug("Current response in wait_for from [#{query_method}] is #{current_response}")
-        unless expected_responses.include?(current_response)
+        unless expected_responses.to_s.include?(current_response)
           raise StatusTimeoutError.new(aws_object, current_response, expected_responses)
         end
       rescue *acceptable_errors

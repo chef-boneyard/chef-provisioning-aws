@@ -45,7 +45,7 @@ describe Chef::Resource::LoadBalancer do
                   :protocol => :https,
                   :instance_port => 81,
                   :instance_protocol => :http,
-                  :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                  :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
                 }
               ],
               subnets: ["test_public_subnet"],
@@ -104,7 +104,7 @@ describe Chef::Resource::LoadBalancer do
               :protocol => :https,
               :instance_port => 81,
               :instance_protocol => :http,
-              :server_certificate => {arn: load_balancer_cert.aws_object.arn}
+              :server_certificate => {arn: load_balancer_cert.aws_object.server_certificate_metadata.arn}
             }
           ],
           subnets: [test_public_subnet.aws_object],
@@ -184,7 +184,7 @@ describe Chef::Resource::LoadBalancer do
                 :protocol => :https,
                 :instance_port => 80,
                 :instance_protocol => :http,
-                :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
             }],
             subnets: ["test_public_subnet"],
             security_groups: ["test_security_group"],
@@ -230,14 +230,14 @@ describe Chef::Resource::LoadBalancer do
                     :protocol => :https,
                     :instance_port => 8080,
                     :instance_protocol => :http,
-                    :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                    :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
                 },
                 {
                     :port => 8443,
                     :protocol => :https,
                     :instance_port => 80,
                     :instance_protocol => :http,
-                    :ssl_certificate_id => load_balancer_cert_2.aws_object.arn
+                    :ssl_certificate_id => load_balancer_cert_2.aws_object.server_certificate_metadata.arn
                 }],
                 subnets: ["test_public_subnet2"],
                 security_groups: ["test_security_group2"],
@@ -280,14 +280,14 @@ describe Chef::Resource::LoadBalancer do
                 :protocol => :https,
                 :instance_port => 8080,
                 :instance_protocol => :http,
-                :server_certificate => {arn: load_balancer_cert.aws_object.arn}
+                :server_certificate => {arn: load_balancer_cert.aws_object.server_certificate_metadata.arn}
             },
             {
                 :port => 8443,
                 :protocol => :https,
                 :instance_port => 80,
                 :instance_protocol => :http,
-                :server_certificate => {arn: load_balancer_cert_2.aws_object.arn}
+                :server_certificate => {arn: load_balancer_cert_2.aws_object.server_certificate_metadata.arn}
             }],
             subnets: [test_public_subnet2.aws_object],
             security_groups: [test_security_group2.aws_object],

@@ -296,11 +296,11 @@ module AWSDriver
       lb_aws_tags = lb_options.delete(:aws_tags)
       health_check  = lb_options.delete(:health_check)
       sticky_sessions = lb_options.delete(:sticky_sessions)
-      lb_key_name = lb_options.delete(:key_name)
+      # lb_key_name = lb_options.delete(:key_name)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb
+      if actual_elb.nil?
         lb_options[:listeners] ||= get_listeners(:http)
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
           lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instance(s.reference['instance_id']).subnet.id }.uniq
@@ -322,6 +322,9 @@ module AWSDriver
             lb_options[:load_balancer_name]=lb_spec.name
             actual_elb = elb.create_load_balancer(lb_options)
           end
+
+          # load aws object for load balancer after create
+          actual_elb =load_balancer_for(lb_spec)
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -447,18 +450,19 @@ module AWSDriver
           actual_elb.listener_descriptions.each do |listener_description|
             listener = listener_description.listener
             desired_listener = add_listeners.delete(listener.load_balancer_port)
+
             if desired_listener
 
               # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
               # of the listener - must create a new one and delete old one
               immutable_updates = []
-              if listener.protocol != desired_listener[:protocol].to_sym.downcase
+              if listener.protocol != desired_listener[:protocol].to_s.upcase
                 immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
               end
               if listener.instance_port != desired_listener[:instance_port]
                 immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
               end
-              if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
+              if listener.instance_protocol != desired_listener[:instance_protocol].to_s.upcase
                 immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
               end
               if !immutable_updates.empty?
@@ -467,11 +471,17 @@ module AWSDriver
                   elb.create_load_balancer_listeners({ listeners: [desired_listener], load_balancer_name: actual_elb.load_balancer_name })
                   # actual_elb.listeners.create(desired_listener)
                 end
-              elsif ! server_certificate_eql?(listener.server_certificate,
+              elsif listener.ssl_certificate_id && ! server_certificate_eql?(listener.ssl_certificate_id,
                                               server_cert_from_spec(desired_listener))
                 # Server certificate is mutable - if no immutable changes required a full recreate, update cert
-                perform_action.call("    update server certificate from #{listener.server_certificate} to #{server_cert_from_spec(desired_listener)}") do
-                  listener.server_certificate = server_cert_from_spec(desired_listener)
+                perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
+                  listener.ssl_certificate_id = server_cert_from_spec(desired_listener)
+                end
+              elsif  listener.ssl_certificate_id && ! server_certificate_eql?(listener.ssl_certificate_id,
+                                                server_cert_from_spec(desired_listener))
+                # Server certificate is mutable - if no immutable changes required a full recreate, update cert
+                perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
+                  listener.ssl_certificate_id = server_cert_from_spec(desired_listener)
                 end
               end
 
@@ -482,6 +492,7 @@ module AWSDriver
               end
             end
           end
+
           add_listeners.values.each do |listener|
             updates = [ "  add listener #{listener[:load_balanacer_port]}" ]
             updates << "    set protocol to #{listener[:protocol].inspect}"
@@ -499,7 +510,7 @@ module AWSDriver
 
       # Update load balancer attributes
       if lb_attributes
-        current = elb.describe_load_balancer_attributes(load_balancer_name: actual_elb.load_balancer_name)[:load_balancer_attributes]
+        current = elb.describe_load_balancer_attributes(load_balancer_name: actual_elb.load_balancer_name)[:load_balancer_attributes].to_hash
         # Need to do a deep copy w/ Marshal load/dump to avoid overwriting current
         desired = deep_merge!(lb_attributes, Marshal.load(Marshal.dump(current)))
         if current != desired
@@ -514,7 +525,7 @@ module AWSDriver
 
       # Update the load balancer health check, as above
       if health_check
-        current = elb.describe_load_balancers(load_balancer_names: [actual_elb.load_balancer_name])[:load_balancer_descriptions][0][:health_check]
+        current = elb.describe_load_balancers(load_balancer_names: [actual_elb.load_balancer_name])[:load_balancer_descriptions][0][:health_check].to_hash
         desired = deep_merge!(health_check, Marshal.load(Marshal.dump(current)))
         if current != desired
           perform_action.call("  updating health check to #{desired.inspect}") do
@@ -630,8 +641,8 @@ module AWSDriver
     end
 
     def server_cert_to_string(cert)
-      if cert.respond_to?(:arn)
-        cert.arn
+      if cert.is_a?(Hash) && cert.has_key?(:arn)
+        cert[:arn]
       else
         cert
       end

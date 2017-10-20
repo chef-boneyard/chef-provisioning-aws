@@ -7,12 +7,11 @@ describe Chef::Resource::AwsRdsInstance do
     with_aws "with a connection to AWS, a VPC, two subnets, a db subnet group, and a db parameter group" do
 
       azs = []
-      driver.ec2.availability_zones.each do |az|
+      driver.ec2.describe_availability_zones.availability_zones.each do |az|
         azs << az
       end
-      az_1 = azs[0].name
-      az_2 = azs[1].name
-
+      az_1 = azs[0].zone_name
+      az_2 = azs[1].zone_name
       aws_vpc "test_vpc" do
         cidr_block '10.0.5.0/24'
         internet_gateway true
@@ -123,7 +122,7 @@ describe Chef::Resource::AwsRdsInstance do
         it "updates aws_rds_instance tags" do
           expect_recipe {
             aws_rds_instance "test-rds-instance-tagging-#{tagging_id}" do
-              aws_tags key1: "value2", key2: nil
+              aws_tags key1: "value1", key2: "value2"
               allocated_storage 5
               db_instance_class "db.t2.micro"
               engine "postgres"
@@ -132,8 +131,8 @@ describe Chef::Resource::AwsRdsInstance do
             end
           }.to have_aws_rds_instance_tags("test-rds-instance-tagging-#{tagging_id}",
             {
-              'key1' => 'value2',
-              'key2' => nil
+              'key1' => 'value1',
+              'key2' => 'value2'
             }
           ).and be_idempotent
         end

@@ -196,7 +196,7 @@ module AWSDriver
     end
 
     def rds
-      @rds ||= AWS::RDS.new(config: aws_config)
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
     end
 
     def s3
@@ -204,11 +204,11 @@ module AWSDriver
     end
 
     def sns
-      @sns ||= AWS::SNS.new(config: aws_config)
+      @sns ||= Aws::SNS::Client.new(config: aws_config)
     end
 
     def sqs
-      @sqs ||= AWS::SQS.new(config: aws_config)
+      @sqs ||= AWS::SQS::Client.new(config: aws_config)
     end
 
     def auto_scaling
@@ -905,7 +905,7 @@ EOD
     end
 
     def rds
-      @rds ||= ::Aws::RDS.new(config: aws_config)
+      @rds ||= ::Aws::RDS::Client.new(aws_config)
     end
 
     def s3_client
@@ -913,11 +913,11 @@ EOD
     end
 
     def sns
-      @sns ||= ::Aws::SNS.new(config: aws_config)
+      @sns ||= ::Aws::SNS::Client.new(aws_config)
     end
 
     def sqs
-      @sqs ||= ::Aws::SQS.new(config: aws_config)
+      @sqs ||= ::Aws::SQS::Client.new(aws_config)
     end
 
     def auto_scaling

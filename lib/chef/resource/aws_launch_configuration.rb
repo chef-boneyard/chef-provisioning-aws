@@ -9,7 +9,8 @@ class Chef::Resource::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   attribute :options,       kind_of: Hash,   default: {}
 
   def aws_object
-    result = driver.auto_scaling.launch_configurations[name]
-    result && result.exists? ? result : nil
+    launchconfig = ::Aws::AutoScaling::LaunchConfiguration.new(name,{client: driver.auto_scaling_client} )
+    result = launchconfig.data
+    result
   end
 end

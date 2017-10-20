@@ -10,14 +10,12 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     image_id = Chef::Resource::AwsImage.get_aws_object_id(new_resource.image, resource: new_resource)
     instance_type = new_resource.instance_type || new_resource.driver.default_instance_type
     options = AWSResource.lookup_options(new_resource.options || options, resource: new_resource)
+    options[:launch_configuration_name] = new_resource.name if new_resource.name
+    options[:image_id] = image_id
+    options[:instance_type] = instance_type
 
     converge_by "create launch configuration #{new_resource.name} in #{region}" do
-      new_resource.driver.auto_scaling.launch_configurations.create(
-        new_resource.name,
-        image_id,
-        instance_type,
-        options
-      )
+      new_resource.driver.auto_scaling_client.create_launch_configuration(options)
     end
   end
 
@@ -25,7 +23,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     if new_resource.image
       image_id = Chef::Resource::AwsImage.get_aws_object_id(new_resource.image, resource: new_resource)
       if image_id != launch_configuration.image_id
-        raise "#{new_resource.to_s}.image = #{new_resource.image} (#{image.id}), but actual launch configuration has image set to #{launch_configuration.image_id}.  Cannot be modified!"
+        raise "#{new_resource.to_s}.image = #{new_resource.image}, but actual launch configuration has image set to #{launch_configuration.image_id}.  Cannot be modified!"
       end
     end
     if new_resource.instance_type
@@ -41,7 +39,7 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
       # TODO add a timeout here.
       # TODO is InUse really a status guaranteed to go away??
       begin
-        launch_configuration.delete
+        new_resource.driver.auto_scaling_client.delete_launch_configuration(launch_configuration_name: launch_configuration.launch_configuration_name)
       rescue ::Aws::AutoScaling::Errors::ResourceInUse
         sleep 5
         retry

@@ -14,7 +14,7 @@ class Chef::Resource::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSRes
   attribute :evaluation_periods, :kind_of => Integer
   attribute :period, :kind_of => [Integer,Float], coerce: proc {|v| v.to_f}
   attribute :statistic, :kind_of => String
-  attribute :threshold, :kind_of => Integer
+  attribute :threshold, :kind_of => [Integer,Float]
   attribute :insufficient_data_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}
   attribute :ok_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}
   attribute :alarm_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}

@@ -24,7 +24,7 @@ class Chef::Resource::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSR
       parameters += more_results[:parameters]
       marker = more_results[:marker]
     end
-    # object[:parameters] = parameters
+    driver.rds.reset_db_parameter_group(db_parameter_group_name: name, parameters: parameters)
 
     object
   rescue ::Aws::RDS::Errors::DBParameterGroupNotFound

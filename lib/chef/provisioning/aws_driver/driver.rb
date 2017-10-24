@@ -24,7 +24,6 @@ require 'aws-sdk'
 require 'retryable'
 require 'ubuntu_ami'
 require 'base64'
-require 'pry'
 
 # loads the entire aws-sdk
 Aws.eager_autoload!
@@ -286,8 +285,7 @@ module AWSDriver
       # renaming lb_options[:port] to lb_options[:load_balancer_port]
       if lb_options[:listeners]
         lb_options[:listeners].each do |listener|
-          listener[:load_balancer_port] = listener[:port] if listener[:port]
-          listener.delete(:port)
+          listener[:load_balancer_port] = listener.delete(:port) if listener[:port]
         end
       end
       # We delete the attributes, tags, health check, and sticky sessions here because they are not valid in the create call
@@ -302,6 +300,7 @@ module AWSDriver
       actual_elb = load_balancer_for(lb_spec)
       if actual_elb.nil?
         lb_options[:listeners] ||= get_listeners(:http)
+
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
           lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instance(s.reference['instance_id']).subnet.id }.uniq
         end
@@ -319,12 +318,20 @@ module AWSDriver
         action_handler.perform_action updates do
           # IAM says the server certificate exists, but ELB throws this error
           Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ElasticLoadBalancing::Errors::CertificateNotFound) do
+            lb_options[:listeners].each do |listener|
+              if listener.has_key?(:server_certificate)
+                listener[:ssl_certificate_id] = listener.delete(:server_certificate)
+                listener[:ssl_certificate_id] = listener[:ssl_certificate_id][:arn]
+              end
+            end
+
             lb_options[:load_balancer_name]=lb_spec.name
             actual_elb = elb.create_load_balancer(lb_options)
           end
 
           # load aws object for load balancer after create
           actual_elb =load_balancer_for(lb_spec)
+
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -452,19 +459,21 @@ module AWSDriver
             desired_listener = add_listeners.delete(listener.load_balancer_port)
 
             if desired_listener
-
               # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
               # of the listener - must create a new one and delete old one
               immutable_updates = []
               if listener.protocol != desired_listener[:protocol].to_s.upcase
                 immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
               end
+
               if listener.instance_port != desired_listener[:instance_port]
                 immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
               end
+
               if listener.instance_protocol != desired_listener[:instance_protocol].to_s.upcase
                 immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
               end
+
               if !immutable_updates.empty?
                 perform_action.call(immutable_updates) do
                   elb.delete_load_balancer_listeners({load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port]})
@@ -475,26 +484,23 @@ module AWSDriver
                                               server_cert_from_spec(desired_listener))
                 # Server certificate is mutable - if no immutable changes required a full recreate, update cert
                 perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
-                  listener.ssl_certificate_id = server_cert_from_spec(desired_listener)
-                end
-              elsif  listener.ssl_certificate_id && ! server_certificate_eql?(listener.ssl_certificate_id,
-                                                server_cert_from_spec(desired_listener))
-                # Server certificate is mutable - if no immutable changes required a full recreate, update cert
-                perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
-                  listener.ssl_certificate_id = server_cert_from_spec(desired_listener)
+                  elb.set_load_balancer_listener_ssl_certificate({
+                    load_balancer_name: actual_elb.load_balancer_name,
+                    load_balancer_port: listener.load_balancer_port,
+                    ssl_certificate_id: server_cert_from_spec(desired_listener)
+                    })
+
                 end
               end
-
             else
               perform_action.call("  remove listener #{listener.load_balancer_port}") do
                 elb.delete_load_balancer_listeners({load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port]})
-                # listener.delete
               end
             end
           end
 
           add_listeners.values.each do |listener|
-            updates = [ "  add listener #{listener[:load_balanacer_port]}" ]
+            updates = [ "  add listener #{listener[:load_balancer_port]}" ]
             updates << "    set protocol to #{listener[:protocol].inspect}"
             updates << "    set instance port to #{listener[:instance_port].inspect}"
             updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"

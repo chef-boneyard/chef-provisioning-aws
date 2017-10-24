@@ -332,7 +332,6 @@ module AWSDriver
           # load aws object for load balancer after create
           actual_elb =load_balancer_for(lb_spec)
 
-
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
             'allocated_at' => Time.now.utc.to_s,
@@ -489,7 +488,6 @@ module AWSDriver
                     load_balancer_port: listener.load_balancer_port,
                     ssl_certificate_id: server_cert_from_spec(desired_listener)
                     })
-
                 end
               end
             else

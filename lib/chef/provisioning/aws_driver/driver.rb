@@ -294,7 +294,6 @@ module AWSDriver
       lb_aws_tags = lb_options.delete(:aws_tags)
       health_check  = lb_options.delete(:health_check)
       sticky_sessions = lb_options.delete(:sticky_sessions)
-      # lb_key_name = lb_options.delete(:key_name)
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
@@ -598,7 +597,7 @@ module AWSDriver
 
       # Update instance list, but only if there are machines specified
       if machine_specs
-        instances_to_add = 0
+        instances_to_add = []
         if actual_elb.instances
           assigned_instance_ids = actual_elb.instances.map { |i| i.instance_id }
           instances_to_add = machine_specs.select { |s| !assigned_instance_ids.include?(s.reference['instance_id']) }

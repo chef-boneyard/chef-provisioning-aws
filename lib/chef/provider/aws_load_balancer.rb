@@ -20,8 +20,8 @@ class Chef::Provider::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSProvid
   provides :aws_load_balancer
 
   def destroy_aws_object(load_balancer)
-    converge_by "delete load balancer #{new_resource.name} (#{load_balancer.name}) in #{region}" do
-      load_balancer.delete
+    converge_by "delete load balancer #{new_resource.name} (#{load_balancer.load_balancer_name}) in #{region}" do
+      new_resource.driver.elb_client.delete_load_balancer(load_balancer_name: load_balancer.load_balancer_name)
     end
   end
 end

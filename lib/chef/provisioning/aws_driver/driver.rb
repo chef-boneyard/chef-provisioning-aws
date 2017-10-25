@@ -281,6 +281,13 @@ module AWSDriver
     def allocate_load_balancer(action_handler, lb_spec, lb_options, machine_specs)
       lb_options = deep_symbolize_keys(lb_options)
       lb_options = AWSResource.lookup_options(lb_options, managed_entry_store: lb_spec.managed_entry_store, driver: self)
+
+      # renaming lb_options[:port] to lb_options[:load_balancer_port]
+      if lb_options[:listeners]
+        lb_options[:listeners].each do |listener|
+          listener[:load_balancer_port] = listener.delete(:port) if listener[:port]
+        end
+      end
       # We delete the attributes, tags, health check, and sticky sessions here because they are not valid in the create call
       # and must be applied afterward
       lb_attributes = lb_options.delete(:attributes)
@@ -290,10 +297,11 @@ module AWSDriver
 
       old_elb = nil
       actual_elb = load_balancer_for(lb_spec)
-      if !actual_elb
+      if actual_elb.nil?
         lb_options[:listeners] ||= get_listeners(:http)
+
         if !lb_options[:subnets] && !lb_options[:availability_zones] && machine_specs
-          lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instances[s.reference['instance_id']].subnet }.uniq
+          lb_options[:subnets] = machine_specs.map { |s| ec2_resource.instance(s.reference['instance_id']).subnet.id }.uniq
         end
 
         perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
@@ -309,9 +317,19 @@ module AWSDriver
         action_handler.perform_action updates do
           # IAM says the server certificate exists, but ELB throws this error
           Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ElasticLoadBalancing::Errors::CertificateNotFound) do
+            lb_options[:listeners].each do |listener|
+              if listener.has_key?(:server_certificate)
+                listener[:ssl_certificate_id] = listener.delete(:server_certificate)
+                listener[:ssl_certificate_id] = listener[:ssl_certificate_id][:arn]
+              end
+            end
+
             lb_options[:load_balancer_name]=lb_spec.name
             actual_elb = elb.create_load_balancer(lb_options)
           end
+
+          # load aws object for load balancer after create
+          actual_elb =load_balancer_for(lb_spec)
 
           lb_spec.reference = {
             'driver_version' => Chef::Provisioning::AWSDriver::VERSION,
@@ -401,8 +419,8 @@ module AWSDriver
             action += " (availability zones #{enable_zones.join(', ')})"
             perform_action.call(action) do
               begin
-                elb.client.attach_load_balancer_to_subnets(
-                  load_balancer_name: actual_elb.name,
+                elb.attach_load_balancer_to_subnets(
+                  load_balancer_name: actual_elb.load_balancer_name,
                   subnets: attach_subnets
                 )
               rescue ::Aws::ElasticLoadBalancing::Errors::InvalidConfigurationRequest => e
@@ -410,7 +428,7 @@ module AWSDriver
                     "Amazon does not have an atomic operation which allows this.  You must create a new " +
                     "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
                     "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
-                    "existing ELB named #{actual_elb.name}"
+                    "existing ELB named #{actual_elb.load_balancer_name}"
                 raise e
               end
             end
@@ -422,8 +440,8 @@ module AWSDriver
             disable_zones = (actual_zones_subnets.map {|s,z| z if detach_subnets.include?(s)}).compact
             action += " (availability zones #{disable_zones.join(', ')})"
             perform_action.call(action) do
-              elb.client.detach_load_balancer_from_subnets(
-                load_balancer_name: actual_elb.name,
+              elb.detach_load_balancer_from_subnets(
+                load_balancer_name: actual_elb.load_balancer_name,
                 subnets: detach_subnets
               )
             end
@@ -434,49 +452,58 @@ module AWSDriver
         if lb_options[:listeners]
           add_listeners = {}
           lb_options[:listeners].each { |l| add_listeners[l[:load_balancer_port]] = l }
-          actual_elb.listeners.each do |listener|
-            desired_listener = add_listeners.delete(listener.port)
-            if desired_listener
+          actual_elb.listener_descriptions.each do |listener_description|
+            listener = listener_description.listener
+            desired_listener = add_listeners.delete(listener.load_balancer_port)
 
+            if desired_listener
               # listener.(port|protocol|instance_port|instance_protocol) are immutable for the life
               # of the listener - must create a new one and delete old one
               immutable_updates = []
-              if listener.protocol != desired_listener[:protocol].to_sym.downcase
+              if listener.protocol != desired_listener[:protocol].to_s.upcase
                 immutable_updates << "    update protocol from #{listener.protocol.inspect} to #{desired_listener[:protocol].inspect}"
               end
+
               if listener.instance_port != desired_listener[:instance_port]
                 immutable_updates << "    update instance port from #{listener.instance_port.inspect} to #{desired_listener[:instance_port].inspect}"
               end
-              if listener.instance_protocol != desired_listener[:instance_protocol].to_sym.downcase
+
+              if listener.instance_protocol != desired_listener[:instance_protocol].to_s.upcase
                 immutable_updates << "    update instance protocol from #{listener.instance_protocol.inspect} to #{desired_listener[:instance_protocol].inspect}"
               end
+
               if !immutable_updates.empty?
                 perform_action.call(immutable_updates) do
-                  listener.delete
-                  actual_elb.listeners.create(desired_listener)
+                  elb.delete_load_balancer_listeners({load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port]})
+                  elb.create_load_balancer_listeners({ listeners: [desired_listener], load_balancer_name: actual_elb.load_balancer_name })
+                  # actual_elb.listeners.create(desired_listener)
                 end
-              elsif ! server_certificate_eql?(listener.server_certificate,
+              elsif listener.ssl_certificate_id && ! server_certificate_eql?(listener.ssl_certificate_id,
                                               server_cert_from_spec(desired_listener))
                 # Server certificate is mutable - if no immutable changes required a full recreate, update cert
-                perform_action.call("    update server certificate from #{listener.server_certificate} to #{server_cert_from_spec(desired_listener)}") do
-                  listener.server_certificate = server_cert_from_spec(desired_listener)
+                perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
+                  elb.set_load_balancer_listener_ssl_certificate({
+                    load_balancer_name: actual_elb.load_balancer_name,
+                    load_balancer_port: listener.load_balancer_port,
+                    ssl_certificate_id: server_cert_from_spec(desired_listener)
+                    })
                 end
               end
-
             else
-              perform_action.call("  remove listener #{listener.port}") do
-                listener.delete
+              perform_action.call("  remove listener #{listener.load_balancer_port}") do
+                elb.delete_load_balancer_listeners({load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port]})
               end
             end
           end
+
           add_listeners.values.each do |listener|
-            updates = [ "  add listener #{listener[:load_balanacer_port]}" ]
+            updates = [ "  add listener #{listener[:load_balancer_port]}" ]
             updates << "    set protocol to #{listener[:protocol].inspect}"
             updates << "    set instance port to #{listener[:instance_port].inspect}"
             updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
             updates << "    set server certificate to #{server_cert_from_spec(listener)}" if server_cert_from_spec(listener)
             perform_action.call(updates) do
-              actual_elb.listeners.create(listener)
+              elb.create_load_balancer_listeners({ listeners: [listener], load_balancer_name: actual_elb.load_balancer_name })
             end
           end
         end
@@ -486,13 +513,13 @@ module AWSDriver
 
       # Update load balancer attributes
       if lb_attributes
-        current = elb.client.describe_load_balancer_attributes(load_balancer_name: actual_elb.name)[:load_balancer_attributes]
+        current = elb.describe_load_balancer_attributes(load_balancer_name: actual_elb.load_balancer_name)[:load_balancer_attributes].to_hash
         # Need to do a deep copy w/ Marshal load/dump to avoid overwriting current
         desired = deep_merge!(lb_attributes, Marshal.load(Marshal.dump(current)))
         if current != desired
           perform_action.call("  updating attributes to #{desired.inspect}") do
-            elb.client.modify_load_balancer_attributes(
-              load_balancer_name: actual_elb.name,
+            elb.modify_load_balancer_attributes(
+              load_balancer_name: actual_elb.load_balancer_name,
               load_balancer_attributes: desired.to_hash
             )
           end
@@ -501,12 +528,12 @@ module AWSDriver
 
       # Update the load balancer health check, as above
       if health_check
-        current = elb.client.describe_load_balancers(load_balancer_names: [actual_elb.name])[:load_balancer_descriptions][0][:health_check]
+        current = elb.describe_load_balancers(load_balancer_names: [actual_elb.load_balancer_name])[:load_balancer_descriptions][0][:health_check].to_hash
         desired = deep_merge!(health_check, Marshal.load(Marshal.dump(current)))
         if current != desired
           perform_action.call("  updating health check to #{desired.inspect}") do
-            elb.client.configure_health_check(
-              load_balancer_name: actual_elb.name,
+            elb.configure_health_check(
+              load_balancer_name: actual_elb.load_balancer_name,
               health_check: desired.to_hash
             )
           end
@@ -515,8 +542,8 @@ module AWSDriver
 
       # Update the load balancer sticky sessions
       if sticky_sessions
-        policy_name = "#{actual_elb.name}-sticky-session-policy"
-        policies = elb.client.describe_load_balancer_policies(load_balancer_name: actual_elb.name)
+        policy_name = "#{actual_elb.load_balancer_name}-sticky-session-policy"
+        policies = elb.describe_load_balancer_policies(load_balancer_name: actual_elb.load_balancer_name)
 
         existing_cookie_policy = policies[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' && pd[:policy_name] == policy_name}
         existing_cookie_name = existing_cookie_policy ? (existing_cookie_policy[:policy_attribute_descriptions].detect { |pad| pad[:attribute_name] == 'CookieName' })[:attribute_value] : nil
@@ -525,20 +552,20 @@ module AWSDriver
         # Create or update the policy to have the desired cookie_name
         if existing_cookie_policy.nil?
           perform_action.call("  creating sticky sessions with cookie_name #{desired_cookie_name}") do
-            elb.client.create_app_cookie_stickiness_policy(
-              load_balancer_name: actual_elb.name,
+            elb.create_app_cookie_stickiness_policy(
+              load_balancer_name: actual_elb.load_balancer_name,
               policy_name: policy_name,
               cookie_name: desired_cookie_name
             )
           end
         elsif existing_cookie_name && existing_cookie_name != desired_cookie_name
           perform_action.call("  updating sticky sessions from cookie_name #{existing_cookie_name} to cookie_name #{desired_cookie_name}") do
-            elb.client.delete_load_balancer_policy(
-              load_balancer_name: actual_elb.name,
+            elb.delete_load_balancer_policy(
+              load_balancer_name: actual_elb.load_balancer_name,
               policy_name: policy_name
             )
-            elb.client.create_app_cookie_stickiness_policy(
-              load_balancer_name: actual_elb.name,
+            elb.create_app_cookie_stickiness_policy(
+              load_balancer_name: actual_elb.load_balancer_name,
               policy_name: policy_name,
               cookie_name: desired_cookie_name
             )
@@ -546,7 +573,7 @@ module AWSDriver
         end
 
         # Ensure the policy is attached to the appropriate listener
-        elb_description = elb.client.describe_load_balancers(load_balancer_names: [actual_elb.name])[:load_balancer_descriptions].first
+        elb_description = elb.describe_load_balancers(load_balancer_names: [actual_elb.load_balancer_name])[:load_balancer_descriptions].first
         listeners = elb_description[:listener_descriptions]
 
         sticky_sessions[:ports].each do |ss_port|
@@ -558,8 +585,8 @@ module AWSDriver
             unless policy_names.include?(policy_name)
               policy_names << policy_name
 
-              elb.client.set_load_balancer_policies_of_listener(
-                load_balancer_name: actual_elb.name,
+              elb.set_load_balancer_policies_of_listener(
+                load_balancer_name: actual_elb.load_balancer_name,
                 load_balancer_port: ss_port,
                 policy_names: policy_names
               )
@@ -570,16 +597,20 @@ module AWSDriver
 
       # Update instance list, but only if there are machines specified
       if machine_specs
-        assigned_instance_ids = actual_elb.instances.map { |i| i.instance_id }
-
-        instances_to_add = machine_specs.select { |s| !assigned_instance_ids.include?(s.reference['instance_id']) }
-        instance_ids_to_remove = assigned_instance_ids - machine_specs.map { |s| s.reference['instance_id'] }
+        instances_to_add = []
+        if actual_elb.instances
+          assigned_instance_ids = actual_elb.instances.map { |i| i.instance_id }
+          instances_to_add = machine_specs.select { |s| !assigned_instance_ids.include?(s.reference['instance_id']) }
+          instance_ids_to_remove = assigned_instance_ids - machine_specs.map { |s| s.reference['instance_id'] }
+        end
 
         if instances_to_add.size > 0
           perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
             instance_ids_to_add = instances_to_add.map { |s| s.reference['instance_id'] }
-            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.name} in region #{region}")
-            actual_elb.instances.add(instance_ids_to_add)
+            Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.load_balancer_name} in region #{region}")
+            instances_to_add.each do |instance|
+              elb.register_instances_with_load_balancer({ instances: [ { instance_id: instance.reference['instance_id'] }], load_balancer_name: actual_elb.load_balancer_name})
+            end
           end
         end
 
@@ -599,7 +630,7 @@ module AWSDriver
       # Something went wrong before we could moved instances from the old ELB to the new one
       # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
       unless old_elb.nil?
-        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.name} and #{actual_elb.name}. " +
+        Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.load_balancer_name} and #{actual_elb.load_balancer_name}. " +
         "Determine which is correct and manually clean up the other.")
       end
     end
@@ -613,8 +644,8 @@ module AWSDriver
     end
 
     def server_cert_to_string(cert)
-      if cert.respond_to?(:arn)
-        cert.arn
+      if cert.is_a?(Hash) && cert.has_key?(:arn)
+        cert[:arn]
       else
         cert
       end
@@ -1577,7 +1608,7 @@ EOD
     def converge_elb_tags(aws_object, tags, action_handler)
       elb_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::ELB.new(
         elb_client,
-        aws_object,
+        aws_object.load_balancer_name,
         tags
       )
       aws_tagger = Chef::Provisioning::AWSDriver::AWSTagger.new(elb_strategy, action_handler)

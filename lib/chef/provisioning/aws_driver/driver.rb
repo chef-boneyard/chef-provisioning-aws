@@ -159,6 +159,12 @@ module AWSDriver
       aws_config_2[:region]
     end
 
+    def cloudsearch(api_version="20130101")
+      @cloudsearch ||= {}
+      @cloudsearch[api_version] ||= Aws::CloudSearch::Client.new
+      @cloudsearch[api_version]
+    end
+    
     def self.canonicalize_url(driver_url, config)
       [ driver_url, config ]
     end
@@ -808,12 +814,6 @@ EOD
       # TODO move this into the aws_instance provider somehow
       strategy = convergence_strategy_for(machine_spec, machine_options)
       strategy.cleanup_convergence(action_handler, machine_spec)
-    end
-
-    def cloudsearch(api_version="20130101")
-      @cloudsearch ||= {}
-      @cloudsearch[api_version] ||= ::Aws::CloudSearch::Client.const_get("V#{api_version}").new
-      @cloudsearch[api_version]
     end
 
     def ec2

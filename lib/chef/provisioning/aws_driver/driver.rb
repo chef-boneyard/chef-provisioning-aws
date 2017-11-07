@@ -616,7 +616,8 @@ module AWSDriver
 
         if instance_ids_to_remove.size > 0
           perform_action.call("  remove instances #{instance_ids_to_remove}") do
-            actual_elb.instances.remove(instance_ids_to_remove)
+            instances_to_remove = Hash[instance_ids_to_remove.map {|id| [:instance_id, id]}]
+            elb.deregister_instances_from_load_balancer({ instances: [instances_to_remove], load_balancer_name: actual_elb.load_balancer_name})
           end
         end
       end

@@ -2,6 +2,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "chef"
+gem 'rb-readline'
 
 gem "chef-zero", ">= 4.0"
 gem "rspec", "~> 3.0"

@@ -311,7 +311,7 @@ describe Chef::Resource::LoadBalancer do
               })
               machines ['test_load_balancer_machine1']
             end
-          }.to create_an_aws_load_balancer('test-load-balancer', driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]) { |aws_object|
+          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
             ids = aws_object.instances.map {|i| i.instance_id}
             expect([test_load_balancer_machine1.aws_object.id]).to eq(ids)
           }.and be_idempotent
@@ -326,7 +326,7 @@ describe Chef::Resource::LoadBalancer do
               })
               machines ['test_load_balancer_machine1', test_load_balancer_machine2.aws_object.id]
             end
-          }.to create_an_aws_load_balancer('test-load-balancer', driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]) { |aws_object|
+          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
             ids = aws_object.instances.map {|i| i.instance_id}
             expect(ids.to_set).to eq([test_load_balancer_machine1.aws_object.id, test_load_balancer_machine2.aws_object.id].to_set)
           }.and be_idempotent
@@ -350,7 +350,7 @@ describe Chef::Resource::LoadBalancer do
                 })
                 machines ['test_load_balancer_machine2']
               end
-            }.to match_an_aws_load_balancer('test-load-balancer', driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]) { |aws_object|
+            }.to match_an_aws_load_balancer('test-load-balancer') { |aws_object|
               ids = aws_object.instances.map {|i| i.instance_id}
               expect([test_load_balancer_machine2.aws_object.id]).to eq(ids)
             }.and be_idempotent

@@ -23,6 +23,7 @@ module AWSSupport
         elsif Set === expected
           return match_sets_failure_messages(expected, actual, identifier)
         elsif Hash === expected
+          actual = actual.to_h if Struct === actual
           return match_hashes_failure_messages(expected, actual, identifier) if Hash === actual
           return match_hash_and_object_failure_messages(expected, actual, identifier) if MatchableObject === actual
         elsif Array === expected

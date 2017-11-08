@@ -22,6 +22,7 @@ describe Chef::Resource::AwsCacheSubnetGroup do
             subnets [ 'test_subnet' ]
           end
         }.to create_an_aws_cache_subnet_group('test-subnet-group',
+          vpc_id: test_vpc.aws_object.id,
           subnets: [
             { subnet_identifier: test_subnet.aws_object.id }
           ]

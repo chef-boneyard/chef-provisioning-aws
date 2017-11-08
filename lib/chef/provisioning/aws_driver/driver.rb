@@ -839,7 +839,7 @@ EOD
     end
 
     def elasticache
-      @elasticache ||= ::Aws::ElastiCache::Client.new(config: aws_config)
+      @elasticache ||= ::Aws::ElastiCache::Client.new(aws_config)
     end
 
     def iam

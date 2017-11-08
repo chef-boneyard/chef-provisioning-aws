@@ -46,8 +46,7 @@ describe Chef::Resource::AwsRdsParameterGroup do
                                               )
 
         expect(results.parameters).to eq([{:parameter_name => "max_connections", :parameter_value => "250", :apply_method => "pending-reboot"}])
-
-        results.aws_object[:parameters].each do |parameter|
+        results.parameters.each do |parameter|
           expect(parameter[:parameter_value]).to eq("250") if parameter[:parameter_name] == "max_connections"
         end
       end
@@ -82,7 +81,7 @@ describe Chef::Resource::AwsRdsParameterGroup do
             end
           }
           expect(results_2.parameters).to eq(updated_parameters)
-          results_2.aws_object[:parameters].each do |parameter|
+          results_2.parameters.each do |parameter|
             expect(parameter[:parameter_value]).to eq(final_max_connection_value) if parameter[:parameter_name] == "max_connections"
             expect(parameter[:parameter_value]).to eq(final_application_name_value) if parameter[:parameter_name] == "application_name"
 

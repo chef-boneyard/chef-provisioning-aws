@@ -159,10 +159,8 @@ module AWSDriver
       aws_config_2[:region]
     end
 
-    def cloudsearch(api_version="20130101")
-      @cloudsearch ||= {}
-      @cloudsearch[api_version] ||= Aws::CloudSearch::Client.new
-      @cloudsearch[api_version]
+    def cloudsearch
+      @cloudsearch ||= Aws::CloudSearch::Client.new(aws_config)
     end
     
     def self.canonicalize_url(driver_url, config)

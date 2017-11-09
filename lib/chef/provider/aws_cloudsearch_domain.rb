@@ -177,6 +177,6 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def cs_client
-    @cs_client ||= new_resource.driver.cloudsearch(new_resource.cloudsearch_api_version)
+    @cs_client ||= new_resource.driver.cloudsearch
   end
 end

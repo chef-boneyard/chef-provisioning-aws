@@ -7,7 +7,8 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
 
   def create_aws_object
     converge_by "create ElastiCache cluster #{new_resource.name} in #{region}" do
-      driver.create_cache_cluster(desired_options)
+      cache_cluster = driver.create_cache_cluster(desired_options)
+      wait_for_state(cache_cluster, :available, [], 10, 60)
     end
   end
 

@@ -54,7 +54,7 @@ module AWSSupport
 
         # We get response as a Struct for aws_cache_subnet_group resource.
         # Hence converting it into a hash.
-        aws_object = aws_object.to_hash if resource_name == :aws_cache_subnet_group
+        aws_object = aws_object.to_hash if resource_name == :aws_cache_subnet_group || resource_name == :aws_cache_cluster
 
         # Check existence
         if aws_object.nil?

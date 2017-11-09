@@ -81,7 +81,12 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
 
   def update_index_fields?(domain)
     if ! new_resource.index_fields.nil?
-      new_resource.index_fields != index_fields
+      index_fields.each do |index_field|
+        if ! new_resource.index_fields.include?(index_field.to_h[:options])
+          return true
+        end
+      end
+      false
     else
       false
     end
@@ -148,8 +153,9 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def scaling_parameters(object)
-    o = get_option(:scaling_parameters)
-    o.merge(desired_instance_type: object[:search_instance_type])
+    scaling_parameters = get_option(:scaling_parameters)
+    scaling_parameters.desired_instance_type = object[:search_instance_type]
+    scaling_parameters
   end
 
   def access_policies
@@ -157,7 +163,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def index_fields
-    cs_client.describe_index_fields(domain_name: new_resource.name)[:index_fields]
+    cs_client.describe_index_fields(domain_name: new_resource.name).index_fields
   end
 
   def get_option(option_name, key=nil)
@@ -171,6 +177,6 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
   end
 
   def cs_client
-    @cs_client ||= new_resource.driver.cloudsearch(new_resource.cloudsearch_api_version)
+    @cs_client ||= new_resource.driver.cloudsearch
   end
 end

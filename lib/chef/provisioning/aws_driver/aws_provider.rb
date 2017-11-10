@@ -15,11 +15,7 @@ class AWSProvider < Chef::Provider::LWRPBase
 
   class StatusTimeoutError < ::Timeout::Error
     def initialize(aws_object, initial_status, expected_status)
-      if aws_object.methods.include?(:id)
-        super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
-      else
-        super("timed out waiting for status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
-      end
+      super("timed out waiting for #{aws_object.id} status to change from #{initial_status.inspect} to #{expected_status.inspect}!")
     end
   end
 
@@ -273,12 +269,7 @@ class AWSProvider < Chef::Provider::LWRPBase
     sleep = opts[:sleep] || 5
 
     Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
-      if aws_object.methods.include?(:id)
-        action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
-      else
-        action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}>##{query_method} state to change to #{expected_responses.inspect}..."
-      end
-
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
       Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       begin
         yield(aws_object) if block_given?

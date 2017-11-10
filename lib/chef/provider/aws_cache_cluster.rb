@@ -1,14 +1,22 @@
 require 'chef/provisioning/aws_driver/aws_provider'
+require 'retryable'
 
 class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cache_cluster
+
+  class CacheClusterStatusTimeoutError < ::Timeout::Error
+    def initialize(new_resource, initial_status, expected_status)
+      super("timed out waiting for #{new_resource} status to change from #{initial_status} to #{expected_status}!")
+    end
+  end
 
   protected
 
   def create_aws_object
     converge_by "create ElastiCache cluster #{new_resource.name} in #{region}" do
-      cache_cluster = driver.create_cache_cluster(desired_options)
-      wait_for_state(cache_cluster, :available, [], 10, 60)
+      cluster_obj = driver.create_cache_cluster(desired_options)
+      # waiting for 10 minutes as the cache cluster takes time to become available
+      wait_for_cache_cluster_state(cluster_obj.cache_cluster, :available, 10, 60)
     end
   end
 
@@ -72,6 +80,19 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
       true
     else
       false
+    end
+  end
+
+  def wait_for_cache_cluster_state(aws_object, expected_status, tries=60, sleep=5)
+    query_method = :cache_cluster_status
+
+    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
+      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.cache_cluster_id}>##{query_method} state to change to #{expected_status}..."
+      Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
+      cache_cluster =  new_resource.driver.elasticache.describe_cache_clusters(cache_cluster_id: aws_object.cache_cluster_id)
+      status = cache_cluster.cache_clusters.first.cache_cluster_status
+      action_handler.report_progress "Current Cluster Status: #{status}"
+      raise CacheClusterStatusTimeoutError.new(aws_object, status, expected_status) if status != expected_status.to_s
     end
   end
 end

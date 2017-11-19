@@ -77,9 +77,9 @@ describe Chef::Resource::AwsCloudwatchAlarm do
               value: "bar2"
             }
           ],
-          insufficient_data_actions: [mytesttopic1.aws_object.arn],
-          ok_actions: [mytesttopic1.aws_object.arn],
-          alarm_actions: [mytesttopic1.aws_object.arn],
+          insufficient_data_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
+          ok_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
+          alarm_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
           actions_enabled: false,
           alarm_description: "description",
           unit: "Percent",
@@ -142,9 +142,9 @@ describe Chef::Resource::AwsCloudwatchAlarm do
                 value: "bar2"
               }
             ],
-            insufficient_data_actions: [mytesttopic1.aws_object.arn],
-            ok_actions: [mytesttopic1.aws_object.arn],
-            alarm_actions: [mytesttopic1.aws_object.arn],
+            insufficient_data_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
+            ok_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
+            alarm_actions: [mytesttopic1.aws_object.attributes["TopicArn"]],
             actions_enabled: false,
             alarm_description: "description",
             unit: "Percent",
@@ -217,9 +217,9 @@ describe Chef::Resource::AwsCloudwatchAlarm do
                 value: "bar3"
               }
             ],
-            insufficient_data_actions: [mytesttopic2.aws_object.arn],
-            ok_actions: Set[mytesttopic1.aws_object.arn, mytesttopic2.aws_object.arn],
-            alarm_actions: [mytesttopic2.aws_object.arn],
+            insufficient_data_actions: [mytesttopic2.aws_object.attributes["TopicArn"]],
+            ok_actions: Set[mytesttopic1.aws_object.attributes["TopicArn"], mytesttopic2.aws_object.attributes["TopicArn"]],
+            alarm_actions: [mytesttopic2.aws_object.attributes["TopicArn"]],
             actions_enabled: true,
             alarm_description: "description2",
             unit: "Bits",
@@ -245,9 +245,9 @@ describe Chef::Resource::AwsCloudwatchAlarm do
               value: "bar3"
             }
           ],
-          insufficient_data_actions: [mytesttopic2.aws_object.arn],
-          ok_actions: Set[mytesttopic1.aws_object.arn, mytesttopic2.aws_object.arn],
-          alarm_actions: [mytesttopic2.aws_object.arn],
+          insufficient_data_actions: [mytesttopic2.aws_object.attributes["TopicArn"]],
+          ok_actions: Set[mytesttopic1.aws_object.attributes["TopicArn"], mytesttopic2.aws_object.attributes["TopicArn"]],
+          alarm_actions: [mytesttopic2.aws_object.attributes["TopicArn"]],
           actions_enabled: true,
           alarm_description: "description2",
           unit: "Gigabytes",

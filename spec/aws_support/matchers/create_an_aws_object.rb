@@ -52,6 +52,10 @@ module AWSSupport
 
         example.instance_exec aws_object, &custom_matcher if custom_matcher
 
+        # We get response as a Struct for aws_cache_subnet_group resource.
+        # Hence converting it into a hash.
+        aws_object = aws_object.to_hash if resource_name == :aws_cache_subnet_group
+
         # Check existence
         if aws_object.nil?
           differences << "#{resource_name}[#{name}] was not created!"

@@ -51,7 +51,7 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
           opts[opt].map! do |action|
             if action.kind_of?(String) && !(action =~ /^arn:/)
               aws_object = Chef::Resource::AwsSnsTopic.get_aws_object(action, resource: new_resource)
-              action = aws_object.arn if aws_object
+              action = aws_object.attributes["TopicArn"] if aws_object
             end
             action
           end

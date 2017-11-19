@@ -108,20 +108,18 @@ describe Chef::Resource::AwsSecurityGroup do
           ).and be_idempotent
         end
       end
-
     end
 
     with_aws "in a VPC" do
       purge_all
       setup_public_vpc
 
-      # TODO Uncomment and test spec once the load balancer resource is fixed as per version 2
-      # load_balancer "testloadbalancer" do
-      #   load_balancer_options({
-      #     subnets: ["test_public_subnet"],
-      #     security_groups: ["test_security_group"]
-      #   })
-      # end
+      load_balancer "testloadbalancer" do
+        load_balancer_options({
+          subnets: ["test_public_subnet"],
+          security_groups: ["test_security_group"]
+        })
+      end
 
       it "aws_security_group 'test_sg' with no attributes works" do  
         expect_recipe {
@@ -219,60 +217,57 @@ describe Chef::Resource::AwsSecurityGroup do
         ).and be_idempotent
       end
 
+      it "adds inbound and outbound_rules for source load_balancer" do
+        expect_recipe {
+          aws_security_group 'test_sg' do
+            vpc 'test_vpc'
+            inbound_rules(
+              testloadbalancer.aws_object => 1206,
+              {load_balancer: 'testloadbalancer'} => 1207,
+            )
+            outbound_rules(
+              1206 => testloadbalancer.aws_object,
+              1207 => {load_balancer: 'testloadbalancer'},
+            )
+          end
+        }.to create_an_aws_security_group('test_sg',
+            vpc_id: test_vpc.aws_object.id,
+            ip_permissions: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ],
+            ip_permissions_egress: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ]
+        ).and be_idempotent
+      end
 
-
-      # TODO : ADD when load balancer resource is fixed as per version 2
-            # it "adds inbound and outbound_rules for source load_balancer" do
-      #   expect_recipe {
-      #     aws_security_group 'test_sg' do
-      #       vpc 'test_vpc'
-      #       inbound_rules(
-      #         testloadbalancer.aws_object => 1206,
-      #         {load_balancer: 'testloadbalancer'} => 1207,
-      #       )
-      #       outbound_rules(
-      #         1206 => testloadbalancer.aws_object,
-      #         1207 => {load_balancer: 'testloadbalancer'},
-      #       )
-      #     end
-      #   }.to create_an_aws_security_group('test_sg',
-      #       vpc_id: test_vpc.aws_object.id,
-      #       ip_permissions: [
-      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
-      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
-      #                       ],
-      #       ip_permissions_egress: [
-      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
-      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
-      #                       ]
-      #   ).and be_idempotent
-      # end
-
-      # it "adds inbound and outbound_rules for source load_balancer specified in hash" do
-      #   expect_recipe {
-      #     aws_security_group 'test_sg' do
-      #       vpc 'test_vpc'
-      #       inbound_rules([
-      #         { port: 1206, sources: testloadbalancer.aws_object },
-      #         { port: 1207, sources: {load_balancer: 'testloadbalancer'}}
-      #       ])
-      #       outbound_rules([
-      #         { port: 1206, destinations: testloadbalancer.aws_object },
-      #         { port: 1207, destinations: {load_balancer: 'testloadbalancer'}}
-      #       ])
-      #     end
-      #   }.to create_an_aws_security_group('test_sg',
-      #       vpc_id: test_vpc.aws_object.id,
-      #       ip_permissions: [
-      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
-      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
-      #                       ],
-      #       ip_permissions_egress: [
-      #                         set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
-      #                         set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
-      #                       ]
-      #   ).and be_idempotent
-      # end
+      it "adds inbound and outbound_rules for source load_balancer specified in hash" do
+        expect_recipe {
+          aws_security_group 'test_sg' do
+            vpc 'test_vpc'
+            inbound_rules([
+              { port: 1206, sources: testloadbalancer.aws_object },
+              { port: 1207, sources: {load_balancer: 'testloadbalancer'}}
+            ])
+            outbound_rules([
+              { port: 1206, destinations: testloadbalancer.aws_object },
+              { port: 1207, destinations: {load_balancer: 'testloadbalancer'}}
+            ])
+          end
+        }.to create_an_aws_security_group('test_sg',
+            vpc_id: test_vpc.aws_object.id,
+            ip_permissions: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ],
+            ip_permissions_egress: [
+                              set_ip_pemissions_mock_object(from_port: 1207, to_port: 1207, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)]),
+                              set_ip_pemissions_mock_object(from_port: 1206, to_port: 1206, ip_protocol: "tcp", ip_ranges: [], user_id_group_pairs: [Aws::EC2::Types::UserIdGroupPair.new(group_id: test_security_group.aws_object.id, group_name: nil, peering_status: nil, user_id: test_security_group.aws_object.owner_id, vpc_id: nil, vpc_peering_connection_id: nil)])
+                            ]
+        ).and be_idempotent
+      end
 
       it "can specify rules as a mapping from source/destination to port and protocol" do
         expect_recipe {          

@@ -45,7 +45,7 @@ describe Chef::Resource::LoadBalancer do
                   :protocol => :https,
                   :instance_port => 81,
                   :instance_protocol => :http,
-                  :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                  :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
                 }
               ],
               subnets: ["test_public_subnet"],
@@ -91,33 +91,9 @@ describe Chef::Resource::LoadBalancer do
               # availability_zones: [test_public_subnet.aws_object.availability_zone_name]
            })
           end
-        }.to create_an_aws_load_balancer('test-load-balancer', {
-          listeners: Set[
-            {
-              :port => 80,
-              :protocol => :http,
-              :instance_port => 80,
-              :instance_protocol => :http,
-            },
-            {
-              :port => 443,
-              :protocol => :https,
-              :instance_port => 81,
-              :instance_protocol => :http,
-              :server_certificate => {arn: load_balancer_cert.aws_object.arn}
-            }
-          ],
-          subnets: [test_public_subnet.aws_object],
-          security_groups: [test_security_group.aws_object],
-          health_check: {
-            target: "HTTP:80/",
-            interval: 10,
-            timeout: 5,
-            unhealthy_threshold: 2,
-            healthy_threshold: 2
-          },
-          scheme: "internal"
-        }).and be_idempotent
+        }.to create_an_aws_load_balancer('test-load-balancer',
+          driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]
+        ).and be_idempotent
         expect(
           driver.elb_client.describe_load_balancer_attributes(load_balancer_name: "test-load-balancer").to_h
         ).to eq(load_balancer_attributes: {
@@ -184,7 +160,7 @@ describe Chef::Resource::LoadBalancer do
                 :protocol => :https,
                 :instance_port => 80,
                 :instance_protocol => :http,
-                :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
             }],
             subnets: ["test_public_subnet"],
             security_groups: ["test_security_group"],
@@ -230,14 +206,14 @@ describe Chef::Resource::LoadBalancer do
                     :protocol => :https,
                     :instance_port => 8080,
                     :instance_protocol => :http,
-                    :ssl_certificate_id => load_balancer_cert.aws_object.arn
+                    :ssl_certificate_id => load_balancer_cert.aws_object.server_certificate_metadata.arn
                 },
                 {
                     :port => 8443,
                     :protocol => :https,
                     :instance_port => 80,
                     :instance_protocol => :http,
-                    :ssl_certificate_id => load_balancer_cert_2.aws_object.arn
+                    :ssl_certificate_id => load_balancer_cert_2.aws_object.server_certificate_metadata.arn
                 }],
                 subnets: ["test_public_subnet2"],
                 security_groups: ["test_security_group2"],
@@ -274,32 +250,7 @@ describe Chef::Resource::LoadBalancer do
                 }
              })
             end
-          }.to update_an_aws_load_balancer('test-load-balancer', {
-            listeners: [{
-                :port => 443,
-                :protocol => :https,
-                :instance_port => 8080,
-                :instance_protocol => :http,
-                :server_certificate => {arn: load_balancer_cert.aws_object.arn}
-            },
-            {
-                :port => 8443,
-                :protocol => :https,
-                :instance_port => 80,
-                :instance_protocol => :http,
-                :server_certificate => {arn: load_balancer_cert_2.aws_object.arn}
-            }],
-            subnets: [test_public_subnet2.aws_object],
-            security_groups: [test_security_group2.aws_object],
-            health_check: {
-              target: "HTTP:8080/",
-              interval: 15,
-              timeout: 4,
-              unhealthy_threshold: 3,
-              healthy_threshold: 3
-            },
-            scheme: "internal"
-          }).and be_idempotent
+          }.to update_an_aws_load_balancer('test-load-balancer', driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]).and be_idempotent
 
           expect(
             driver.elb_client.describe_load_balancer_attributes(load_balancer_name: "test-load-balancer").to_h
@@ -360,9 +311,10 @@ describe Chef::Resource::LoadBalancer do
               })
               machines ['test_load_balancer_machine1']
             end
-          }.to create_an_aws_load_balancer('test-load-balancer',
-            :instances => [{id: test_load_balancer_machine1.aws_object.id}]
-          ).and be_idempotent
+          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
+            ids = aws_object.instances.map {|i| i.instance_id}
+            expect([test_load_balancer_machine1.aws_object.id]).to eq(ids)
+          }.and be_idempotent
         end
 
         it "can reference machines by name or id" do
@@ -375,8 +327,7 @@ describe Chef::Resource::LoadBalancer do
               machines ['test_load_balancer_machine1', test_load_balancer_machine2.aws_object.id]
             end
           }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
-            instances = aws_object.instances
-            ids = instances.map {|i| i.id}
+            ids = aws_object.instances.map {|i| i.instance_id}
             expect(ids.to_set).to eq([test_load_balancer_machine1.aws_object.id, test_load_balancer_machine2.aws_object.id].to_set)
           }.and be_idempotent
         end
@@ -399,9 +350,10 @@ describe Chef::Resource::LoadBalancer do
                 })
                 machines ['test_load_balancer_machine2']
               end
-            }.to match_an_aws_load_balancer('test-load-balancer',
-              :instances => [{id: test_load_balancer_machine2.aws_object.id}]
-            ).and be_idempotent
+            }.to match_an_aws_load_balancer('test-load-balancer') { |aws_object|
+              ids = aws_object.instances.map {|i| i.instance_id}
+              expect([test_load_balancer_machine2.aws_object.id]).to eq(ids)
+            }.and be_idempotent
           end
         end
       end
@@ -427,7 +379,8 @@ describe Chef::Resource::LoadBalancer do
             aws_tags key1: "value"
             load_balancer_options subnets: ["test_public_subnet"]
           end
-        }.to create_an_aws_load_balancer('test-load-balancer')
+        }.to create_an_aws_load_balancer('test-load-balancer',
+          driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0])
         .and have_aws_load_balancer_tags('test-load-balancer',
           {
             'key1' => 'value'

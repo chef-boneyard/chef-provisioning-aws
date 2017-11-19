@@ -43,4 +43,10 @@ class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSR
   def aws_object
     driver.cloudsearch.describe_domains(domain_names: [name])[:domain_status_list].find {|d| !d[:deleted] }
   end
+
+  def cloudsearch_api_version(arg=nil)
+    unless arg.nil?
+      Chef::Log.warn("The ':cloudsearch_api_version' has been deprecated since it has been removed in AWS SDK version 2.")
+    end
+  end
 end

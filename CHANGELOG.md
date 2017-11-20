@@ -1,7 +1,30 @@
 # Change Log
 
-## [2.2.2](https://github.com/chef/chef-provisioning-aws/tree/2.2.2) (2017-06-30)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.1...2.2.2)
+## [3.0.0](https://github.com/chef/chef-provisioning-aws/tree/3.0.0) (2017-11-20)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.2...3.0.0)
+
+**Merged pull requests:**
+
+- Fix for bootstrap\_options included in knife.rb [\#554](https://github.com/chef/chef-provisioning-aws/pull/554) ([ndobson](https://github.com/ndobson))
+- \[MSYS-701\] Migrating aws\_cache\_subnet\_group resource from V1 to V2 [\#551](https://github.com/chef/chef-provisioning-aws/pull/551) ([NimishaS](https://github.com/NimishaS))
+- Removed earlier version methods which got duplicated in v2 code merge [\#550](https://github.com/chef/chef-provisioning-aws/pull/550) ([Vasu1105](https://github.com/Vasu1105))
+- \[MSYS-700\] Migrate aws\_cloudsearch\_domain from v1 to v2 [\#549](https://github.com/chef/chef-provisioning-aws/pull/549) ([Vasu1105](https://github.com/Vasu1105))
+- \[MSYS-698\] Empty tags are not working [\#548](https://github.com/chef/chef-provisioning-aws/pull/548) ([harikesh-kolekar](https://github.com/harikesh-kolekar))
+- Uncommented load balancer specs for aws\_security\_group [\#547](https://github.com/chef/chef-provisioning-aws/pull/547) ([Vasu1105](https://github.com/Vasu1105))
+- Fix for failing specs [\#546](https://github.com/chef/chef-provisioning-aws/pull/546) ([Vasu1105](https://github.com/Vasu1105))
+- Fixing load\_balancer deregister and tests [\#545](https://github.com/chef/chef-provisioning-aws/pull/545) ([tyler-ball](https://github.com/tyler-ball))
+- MSYS-689 aws\_cloudwatch\_alarm resource: Migrate from AWS SDK V1 to V2 [\#544](https://github.com/chef/chef-provisioning-aws/pull/544) ([piyushawasthi](https://github.com/piyushawasthi))
+- 3.0 rc1 [\#543](https://github.com/chef/chef-provisioning-aws/pull/543) ([thommay](https://github.com/thommay))
+- MSYS-669: Migrate aws\_rds\_parameter\_group  from AWS SDK V1 to V2 [\#542](https://github.com/chef/chef-provisioning-aws/pull/542) ([piyushawasthi](https://github.com/piyushawasthi))
+- \[MSYS-658\] Updating chef provisioning AWS load balancer resource as per version 2 changes [\#541](https://github.com/chef/chef-provisioning-aws/pull/541) ([Vasu1105](https://github.com/Vasu1105))
+- Fixed 'load\_balancer.rb' syntax error on line 71 [\#540](https://github.com/chef/chef-provisioning-aws/pull/540) ([lovejoey11](https://github.com/lovejoey11))
+- \[Do not merge\]Update chef-provisioning-aws to use AWS SDK v2 [\#530](https://github.com/chef/chef-provisioning-aws/pull/530) ([harikesh-kolekar](https://github.com/harikesh-kolekar))
+- update aws\_cloudwatch\_alarm to support float thresholds [\#527](https://github.com/chef/chef-provisioning-aws/pull/527) ([keen99](https://github.com/keen99))
+- Fixes bug preventing disassociating eips. [\#524](https://github.com/chef/chef-provisioning-aws/pull/524) ([msonnabaum](https://github.com/msonnabaum))
+- Fixed the credentials file environment variable name. [\#522](https://github.com/chef/chef-provisioning-aws/pull/522) ([msonnabaum](https://github.com/msonnabaum))
+
+## [v2.2.2](https://github.com/chef/chef-provisioning-aws/tree/v2.2.2) (2017-06-30)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.1...v2.2.2)
 
 **Merged pull requests:**
 

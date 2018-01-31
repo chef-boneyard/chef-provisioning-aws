@@ -914,6 +914,9 @@ EOD
 
     def bootstrap_options_for(action_handler, machine_spec, machine_options)
       bootstrap_options = deep_symbolize_keys(machine_options[:bootstrap_options])
+      if bootstrap_options==nil
+        bootstrap_options=Hash({})
+      end
       # These are hardcoded for now - only 1 machine at a time
       bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
       bootstrap_options[:instance_type] ||= default_instance_type

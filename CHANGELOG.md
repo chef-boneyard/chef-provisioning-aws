@@ -1,11 +1,31 @@
 # Change Log
 
-## [3.0.0](https://github.com/chef/chef-provisioning-aws/tree/3.0.0) (2017-11-20)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.2...3.0.0)
+## [3.0.1](https://github.com/chef/chef-provisioning-aws/tree/3.0.1) (2018-02-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0...3.0.1)
 
 **Merged pull requests:**
 
+- Fix case where machine\_options is not specified [\#561](https://github.com/chef/chef-provisioning-aws/pull/561) ([jjlimepoint](https://github.com/jjlimepoint))
+- \[MSYS-705\] Adding integration testcases for aws\_cache\_cluster resource [\#553](https://github.com/chef/chef-provisioning-aws/pull/553) ([NimishaS](https://github.com/NimishaS))
+- Fix load balancer test failures [\#552](https://github.com/chef/chef-provisioning-aws/pull/552) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v3.0.0](https://github.com/chef/chef-provisioning-aws/tree/v3.0.0) (2017-11-20)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0.pre.rc2...v3.0.0)
+
+**Merged pull requests:**
+
+- release 3.0 [\#556](https://github.com/chef/chef-provisioning-aws/pull/556) ([thommay](https://github.com/thommay))
 - Fix for bootstrap\_options included in knife.rb [\#554](https://github.com/chef/chef-provisioning-aws/pull/554) ([ndobson](https://github.com/ndobson))
+
+## [v3.0.0.pre.rc2](https://github.com/chef/chef-provisioning-aws/tree/v3.0.0.pre.rc2) (2017-11-09)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v2.2.2...v3.0.0.pre.rc2)
+
+**Closed issues:**
+
+- Error when using a lazy attribute in bootstrap options [\#531](https://github.com/chef/chef-provisioning-aws/issues/531)
+
+**Merged pull requests:**
+
 - \[MSYS-701\] Migrating aws\_cache\_subnet\_group resource from V1 to V2 [\#551](https://github.com/chef/chef-provisioning-aws/pull/551) ([NimishaS](https://github.com/NimishaS))
 - Removed earlier version methods which got duplicated in v2 code merge [\#550](https://github.com/chef/chef-provisioning-aws/pull/550) ([Vasu1105](https://github.com/Vasu1105))
 - \[MSYS-700\] Migrate aws\_cloudsearch\_domain from v1 to v2 [\#549](https://github.com/chef/chef-provisioning-aws/pull/549) ([Vasu1105](https://github.com/Vasu1105))
@@ -71,14 +91,17 @@
 - look at winrm\_no\_ssl\_peer\_verification [\#493](https://github.com/chef/chef-provisioning-aws/pull/493) ([hh](https://github.com/hh))
 
 ## [v2.0.0](https://github.com/chef/chef-provisioning-aws/tree/v2.0.0) (2016-08-25)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.11.0...v2.0.0)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.1...v2.0.0)
 
 **Implemented enhancements:**
 
 - Require Ruby 2.2.2+ and chef-zero 5.0+ [\#496](https://github.com/chef/chef-provisioning-aws/pull/496) ([jkeiser](https://github.com/jkeiser))
 
+## [v1.9.1](https://github.com/chef/chef-provisioning-aws/tree/v1.9.1) (2016-08-11)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.11.0...v1.9.1)
+
 ## [v1.11.0](https://github.com/chef/chef-provisioning-aws/tree/v1.11.0) (2016-08-11)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.10.0...v1.11.0)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.1...v1.11.0)
 
 **Fixed bugs:**
 
@@ -88,23 +111,35 @@
 
 - Preparing for EBS volume IDs to get longer [\#495](https://github.com/chef/chef-provisioning-aws/pull/495) ([tyler-ball](https://github.com/tyler-ball))
 - Fixing some errors I ran across with not using the V2 Route Table object [\#494](https://github.com/chef/chef-provisioning-aws/pull/494) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v1.8.1](https://github.com/chef/chef-provisioning-aws/tree/v1.8.1) (2016-08-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.10.0...v1.8.1)
+
+**Merged pull requests:**
+
 - prototype - Add SOA and NS support back to route53 [\#490](https://github.com/chef/chef-provisioning-aws/pull/490) ([keen99](https://github.com/keen99))
-- Add ECS to Resources not started yet [\#424](https://github.com/chef/chef-provisioning-aws/pull/424) ([cwandrews](https://github.com/cwandrews))
+- Add ECS to Resources not started yet [\#424](https://github.com/chef/chef-provisioning-aws/pull/424) ([cwndrws](https://github.com/cwndrws))
 
 ## [v1.10.0](https://github.com/chef/chef-provisioning-aws/tree/v1.10.0) (2016-06-16)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.0...v1.10.0)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.1...v1.10.0)
 
 **Fixed bugs:**
 
-- aws\_auto\_scaling\_group TAGs? [\#478](https://github.com/chef/chef-provisioning-aws/issues/478)
 - WARN: nil is an invalid value for output\_key\_format of resource chef\_client. In Chef 13, this warning will change to an error. Error: Property output\_key\_format must be one of: Symbol [\#475](https://github.com/chef/chef-provisioning-aws/issues/475)
 - fix how machine\_options are specified [\#483](https://github.com/chef/chef-provisioning-aws/pull/483) ([jgoulah](https://github.com/jgoulah))
 - Added aws\_nat\_gateway resource and provider [\#482](https://github.com/chef/chef-provisioning-aws/pull/482) ([tyler-ball](https://github.com/tyler-ball))
-- Add tagging support for the aws\_auto\_scaling\_group resource [\#479](https://github.com/chef/chef-provisioning-aws/pull/479) ([itmustbejj](https://github.com/itmustbejj))
 
 **Merged pull requests:**
 
 - Preparing 1.10.0 release [\#486](https://github.com/chef/chef-provisioning-aws/pull/486) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v1.7.1](https://github.com/chef/chef-provisioning-aws/tree/v1.7.1) (2016-05-17)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.9.0...v1.7.1)
+
+**Fixed bugs:**
+
+- aws\_auto\_scaling\_group TAGs? [\#478](https://github.com/chef/chef-provisioning-aws/issues/478)
+- Add tagging support for the aws\_auto\_scaling\_group resource [\#479](https://github.com/chef/chef-provisioning-aws/pull/479) ([itmustbejj](https://github.com/itmustbejj))
 
 ## [v1.9.0](https://github.com/chef/chef-provisioning-aws/tree/v1.9.0) (2016-04-14)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.8.0...v1.9.0)
@@ -120,7 +155,7 @@
 - Add support for long instance IDs [\#474](https://github.com/chef/chef-provisioning-aws/pull/474) ([larrywright](https://github.com/larrywright))
 - Winrm+RDP/SSL Fingerprint and Encrypted Password Caching [\#441](https://github.com/chef/chef-provisioning-aws/pull/441) ([hh](https://github.com/hh))
 - Add missing S to the example! [\#432](https://github.com/chef/chef-provisioning-aws/pull/432) ([miguelcnf](https://github.com/miguelcnf))
-- Add a health check to the load balancer options example [\#426](https://github.com/chef/chef-provisioning-aws/pull/426) ([cwandrews](https://github.com/cwandrews))
+- Add a health check to the load balancer options example [\#426](https://github.com/chef/chef-provisioning-aws/pull/426) ([cwndrws](https://github.com/cwndrws))
 
 ## [v1.8.0](https://github.com/chef/chef-provisioning-aws/tree/v1.8.0) (2016-02-03)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.7.0...v1.8.0)
@@ -497,7 +532,7 @@
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0...v1.0.1)
 
 ## [v1.0.0](https://github.com/chef/chef-provisioning-aws/tree/v1.0.0) (2015-04-02)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0.rc.1...v1.0.0)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0.rc.2...v1.0.0)
 
 **Fixed bugs:**
 
@@ -507,13 +542,19 @@
 
 - Load Balancer deletion not working in 1.0.0.rc.1 [\#171](https://github.com/chef/chef-provisioning-aws/issues/171)
 
+## [v1.0.0.rc.2](https://github.com/chef/chef-provisioning-aws/tree/v1.0.0.rc.2) (2015-04-02)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v1.0.0.rc.1...v1.0.0.rc.2)
+
 ## [v1.0.0.rc.1](https://github.com/chef/chef-provisioning-aws/tree/v1.0.0.rc.1) (2015-04-01)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.5.0...v1.0.0.rc.1)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.20...v1.0.0.rc.1)
 
 **Closed issues:**
 
 - :stop action has disappeared on machine and machine\_image [\#161](https://github.com/chef/chef-provisioning-aws/issues/161)
 - Second run on load balancer fails with AWS::Core::OptionGrammar::FormatError [\#130](https://github.com/chef/chef-provisioning-aws/issues/130)
+
+## [v0.20](https://github.com/chef/chef-provisioning-aws/tree/v0.20) (2015-03-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.5.0...v0.20)
 
 **Merged pull requests:**
 
@@ -560,7 +601,10 @@
 - Security groups, subnets and schemes can be updated [\#108](https://github.com/chef/chef-provisioning-aws/pull/108) ([tyler-ball](https://github.com/tyler-ball))
 
 ## [v0.3](https://github.com/chef/chef-provisioning-aws/tree/v0.3) (2015-02-26)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/verbose_specs...v0.3)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.19...v0.3)
+
+## [v0.19](https://github.com/chef/chef-provisioning-aws/tree/v0.19) (2015-02-26)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/verbose_specs...v0.19)
 
 **Fixed bugs:**
 
@@ -608,7 +652,10 @@
 - We must ensure that the transport is ready [\#71](https://github.com/chef/chef-provisioning-aws/pull/71) ([afiune](https://github.com/afiune))
 
 ## [v0.2](https://github.com/chef/chef-provisioning-aws/tree/v0.2) (2015-01-27)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.3...v0.2)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.18...v0.2)
+
+## [v0.18](https://github.com/chef/chef-provisioning-aws/tree/v0.18) (2015-01-27)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.17...v0.18)
 
 **Fixed bugs:**
 
@@ -622,6 +669,9 @@
 **Merged pull requests:**
 
 - Adding website endpoint as stored attribute [\#39](https://github.com/chef/chef-provisioning-aws/pull/39) ([jaym](https://github.com/jaym))
+
+## [v0.17](https://github.com/chef/chef-provisioning-aws/tree/v0.17) (2014-12-17)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.3...v0.17)
 
 ## [v0.1.3](https://github.com/chef/chef-provisioning-aws/tree/v0.1.3) (2014-12-15)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.2...v0.1.3)
@@ -642,7 +692,7 @@
 - No support for EIP Addresses [\#36](https://github.com/chef/chef-provisioning-aws/pull/36) ([lynchc](https://github.com/lynchc))
 
 ## [v0.1.2](https://github.com/chef/chef-provisioning-aws/tree/v0.1.2) (2014-11-24)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.1...v0.1.2)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.16...v0.1.2)
 
 **Fixed bugs:**
 
@@ -662,19 +712,142 @@
 - Make AWS machines convergent [\#18](https://github.com/chef/chef-provisioning-aws/pull/18) ([jkeiser](https://github.com/jkeiser))
 - rename fog to aws [\#16](https://github.com/chef/chef-provisioning-aws/pull/16) ([wrightp](https://github.com/wrightp))
 
+## [v0.16](https://github.com/chef/chef-provisioning-aws/tree/v0.16) (2014-11-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.15.3...v0.16)
+
+## [v0.15.3](https://github.com/chef/chef-provisioning-aws/tree/v0.15.3) (2014-11-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1.1...v0.15.3)
+
 ## [v0.1.1](https://github.com/chef/chef-provisioning-aws/tree/v0.1.1) (2014-11-05)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1...v0.1.1)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.15.2...v0.1.1)
+
+## [v0.15.2](https://github.com/chef/chef-provisioning-aws/tree/v0.15.2) (2014-11-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.1...v0.15.2)
 
 **Merged pull requests:**
 
 - Rename to chef-provisioning-aws [\#9](https://github.com/chef/chef-provisioning-aws/pull/9) ([jkeiser](https://github.com/jkeiser))
 
 ## [v0.1](https://github.com/chef/chef-provisioning-aws/tree/v0.1) (2014-11-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.15.1...v0.1)
+
+## [v0.15.1](https://github.com/chef/chef-provisioning-aws/tree/v0.15.1) (2014-10-30)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.15...v0.15.1)
+
+## [v0.15](https://github.com/chef/chef-provisioning-aws/tree/v0.15) (2014-10-29)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.14.2...v0.15)
+
 **Merged pull requests:**
 
 - Require V1 of AWS SDK [\#5](https://github.com/chef/chef-provisioning-aws/pull/5) ([jkeiser](https://github.com/jkeiser))
 - Add EC2 auto-scaling groups and launch configs [\#3](https://github.com/chef/chef-provisioning-aws/pull/3) ([raskchanky](https://github.com/raskchanky))
 
+## [v0.14.2](https://github.com/chef/chef-provisioning-aws/tree/v0.14.2) (2014-09-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.14.1...v0.14.2)
+
+## [v0.14.1](https://github.com/chef/chef-provisioning-aws/tree/v0.14.1) (2014-08-19)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.14...v0.14.1)
+
+## [v0.14](https://github.com/chef/chef-provisioning-aws/tree/v0.14) (2014-08-18)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.13...v0.14)
+
+## [v0.13](https://github.com/chef/chef-provisioning-aws/tree/v0.13) (2014-07-15)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.12.1...v0.13)
+
+## [v0.12.1](https://github.com/chef/chef-provisioning-aws/tree/v0.12.1) (2014-06-18)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.12...v0.12.1)
+
+## [v0.12](https://github.com/chef/chef-provisioning-aws/tree/v0.12) (2014-06-18)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.2...v0.12)
+
+## [v0.11.2](https://github.com/chef/chef-provisioning-aws/tree/v0.11.2) (2014-06-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.1...v0.11.2)
+
+## [v0.11.1](https://github.com/chef/chef-provisioning-aws/tree/v0.11.1) (2014-06-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11...v0.11.1)
+
+## [v0.11](https://github.com/chef/chef-provisioning-aws/tree/v0.11) (2014-06-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.11...v0.11)
+
+## [v0.11.beta.11](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.11) (2014-06-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.10...v0.11.beta.11)
+
+## [v0.11.beta.10](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.10) (2014-06-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.9...v0.11.beta.10)
+
+## [v0.11.beta.9](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.9) (2014-06-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.8...v0.11.beta.9)
+
+## [v0.11.beta.8](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.8) (2014-06-03)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.7...v0.11.beta.8)
+
+## [v0.11.beta.7](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.7) (2014-05-31)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.6...v0.11.beta.7)
+
+## [v0.11.beta.6](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.6) (2014-05-29)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.5...v0.11.beta.6)
+
+## [v0.11.beta.5](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.5) (2014-05-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.4...v0.11.beta.5)
+
+## [v0.11.beta.4](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.4) (2014-05-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.3...v0.11.beta.4)
+
+## [v0.11.beta.3](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.3) (2014-05-28)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta.2...v0.11.beta.3)
+
+## [v0.11.beta.2](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta.2) (2014-05-24)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.11.beta...v0.11.beta.2)
+
+## [v0.11.beta](https://github.com/chef/chef-provisioning-aws/tree/v0.11.beta) (2014-05-23)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.10.2...v0.11.beta)
+
+## [v0.10.2](https://github.com/chef/chef-provisioning-aws/tree/v0.10.2) (2014-05-02)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.10.1...v0.10.2)
+
+## [v0.10.1](https://github.com/chef/chef-provisioning-aws/tree/v0.10.1) (2014-05-02)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.10...v0.10.1)
+
+## [v0.10](https://github.com/chef/chef-provisioning-aws/tree/v0.10) (2014-05-01)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.9.4...v0.10)
+
+## [v0.9.4](https://github.com/chef/chef-provisioning-aws/tree/v0.9.4) (2014-04-24)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.9.3...v0.9.4)
+
+## [v0.9.3](https://github.com/chef/chef-provisioning-aws/tree/v0.9.3) (2014-04-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.9.2...v0.9.3)
+
+## [v0.9.2](https://github.com/chef/chef-provisioning-aws/tree/v0.9.2) (2014-04-13)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.9.1...v0.9.2)
+
+## [v0.9.1](https://github.com/chef/chef-provisioning-aws/tree/v0.9.1) (2014-04-12)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.9...v0.9.1)
+
+## [v0.9](https://github.com/chef/chef-provisioning-aws/tree/v0.9) (2014-04-11)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.8.2...v0.9)
+
+## [v0.8.2](https://github.com/chef/chef-provisioning-aws/tree/v0.8.2) (2014-04-09)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.8.1...v0.8.2)
+
+## [v0.8.1](https://github.com/chef/chef-provisioning-aws/tree/v0.8.1) (2014-04-09)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.8...v0.8.1)
+
+## [v0.8](https://github.com/chef/chef-provisioning-aws/tree/v0.8) (2014-04-08)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.7...v0.8)
+
+## [v0.7](https://github.com/chef/chef-provisioning-aws/tree/v0.7) (2014-04-06)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.6...v0.7)
+
+## [v0.6](https://github.com/chef/chef-provisioning-aws/tree/v0.6) (2014-04-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.5...v0.6)
+
+## [v0.5](https://github.com/chef/chef-provisioning-aws/tree/v0.5) (2014-04-04)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.4...v0.5)
+
+## [v0.4](https://github.com/chef/chef-provisioning-aws/tree/v0.4) (2014-03-29)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v0.3.1...v0.4)
+
+## [v0.3.1](https://github.com/chef/chef-provisioning-aws/tree/v0.3.1) (2014-03-18)
 
 
 \* *This Change Log was automatically generated by [github_changelog_generator](https://github.com/skywinder/Github-Changelog-Generator)*

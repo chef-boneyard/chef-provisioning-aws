@@ -1400,7 +1400,7 @@ EOD
       instance ||= instance_for(machine_spec)
       sleep_time = 10
       transport = transport_for(machine_spec, machine_options, instance)
-      unless instance.state.name.eql?("running")
+      unless instance.state.name.eql?("running") and transport.available?
         if action_handler.should_perform_actions
           action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
           max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120

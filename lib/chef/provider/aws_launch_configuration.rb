@@ -1,5 +1,6 @@
 require 'chef/provisioning/aws_driver/aws_provider'
 require 'chef/resource/aws_image'
+require 'base64'
 
 class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_launch_configuration
@@ -13,6 +14,9 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
     options[:launch_configuration_name] = new_resource.name if new_resource.name
     options[:image_id] = image_id
     options[:instance_type] = instance_type
+    if options[:user_data]
+      options[:user_data] = ensure_base64_encoded(options[:user_data])
+    end
 
     converge_by "create launch configuration #{new_resource.name} in #{region}" do
       new_resource.driver.auto_scaling_client.create_launch_configuration(options)
@@ -44,6 +48,17 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
         sleep 5
         retry
       end
+    end
+  end
+
+  private
+
+  def ensure_base64_encoded(data)
+    begin
+      Base64.strict_decode64(data)
+      return data
+    rescue ArgumentError
+      return Base64.encode64(data)
     end
   end
 

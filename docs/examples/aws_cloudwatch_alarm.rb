@@ -15,24 +15,24 @@ end
 
 # More complicated example settings up an alarm to scale up and auto-scaling
 # group if the CPU passes a certain threshold
-aws_launch_config 'my-launch-config' do
-  image 'ami-f0b11187'
-  instance_type 't1.micro'
+aws_launch_configuration 'my-launch-config' do
+  image 'ami-ca3b11af'
+  instance_type 't2.micro'
 end
 
-scaling_group =
-  aws_auto_scaling_group 'my-auto-scaling-group' do
-    desired_capacity 3
-    min_size 1
-    max_size 5
-    launch_config 'my-launch-config'
-    scaling_policies(
-      'my-scaling-policy' => {
-        adjustment_type: 'ChangeInCapacity',
-        scaling_adjustment: 2
-      }
-    )
-  end
+scaling_group = aws_auto_scaling_group 'scaling_group' do
+  desired_capacity 3
+  min_size 1
+  max_size 5
+  launch_configuration 'my-launch-config'
+  availability_zones ["#{driver.region}a"]
+  scaling_policies(
+    'my-scaling-policy' => {
+      adjustment_type: 'ChangeInCapacity',
+      scaling_adjustment: 2
+    }
+  )
+end
 
 aws_cloudwatch_alarm 'my-test-alert' do
   namespace 'AWS/EC2'
@@ -42,7 +42,7 @@ aws_cloudwatch_alarm 'my-test-alert' do
   period 60
   statistic 'Average'
   threshold 80
-  alarm_actions [
-    scaling_group.aws_object.scaling_policies['my-scaling-policy'].arn
-  ]
+  alarm_actions lazy { [
+    scaling_group.aws_object.policies().select{ |p| p.name == 'my-scaling-policy'}.first.policy_arn
+  ] }
 end

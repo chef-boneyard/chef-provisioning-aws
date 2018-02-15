@@ -1,7 +1,21 @@
 # Change Log
 
-## [3.0.1](https://github.com/chef/chef-provisioning-aws/tree/3.0.1) (2018-02-05)
-[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0...3.0.1)
+## [3.0.2](https://github.com/chef/chef-provisioning-aws/tree/3.0.2) (2018-02-14)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.1...3.0.2)
+
+**Closed issues:**
+
+- auto\_scaling\_group now requires new way to specify subnets [\#560](https://github.com/chef/chef-provisioning-aws/issues/560)
+-  machine/machine\_image resources no longer wait for transport [\#559](https://github.com/chef/chef-provisioning-aws/issues/559)
+- launch\_configuration expects base64 encoded user\_data [\#558](https://github.com/chef/chef-provisioning-aws/issues/558)
+- Examples for aws\_cloudwatch\_alarm work only with aws-sdk-v1 [\#557](https://github.com/chef/chef-provisioning-aws/issues/557)
+
+**Merged pull requests:**
+
+- Bug fixes [\#564](https://github.com/chef/chef-provisioning-aws/pull/564) ([tyler-ball](https://github.com/tyler-ball))
+
+## [v3.0.1](https://github.com/chef/chef-provisioning-aws/tree/v3.0.1) (2018-02-05)
+[Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0...v3.0.1)
 
 **Merged pull requests:**
 

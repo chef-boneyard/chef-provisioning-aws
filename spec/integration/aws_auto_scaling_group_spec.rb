@@ -63,6 +63,27 @@ describe Chef::Resource::AwsAutoScalingGroup do
           'test_group_with_policy').and be_idempotent
       end
 
+      # test_public_subnet
+      context "when referencing a subnet" do
+        purge_all
+        setup_public_vpc
+        it "creates an aws_auto_scaling_group" do
+          expect_recipe {
+            aws_auto_scaling_group 'test_group' do
+              launch_configuration 'test_config'
+              # availability_zones ["#{driver.region}a"]
+              min_size 1
+              max_size 2
+              options({
+                subnets: 'test_public_subnet'
+              })
+            end
+          }.to create_an_aws_auto_scaling_group('test_group',
+            vpc_zone_identifier: test_public_subnet.aws_object.id
+          ).and be_idempotent
+        end
+      end
+
       it "creates aws_auto_scaling_group tags" do
         expect_recipe {
           aws_auto_scaling_group 'test_group_with_policy' do

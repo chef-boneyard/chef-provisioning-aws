@@ -17,6 +17,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
       options[:auto_scaling_group_name] = new_resource.name
       options[:launch_configuration_name] = new_resource.launch_configuration if new_resource.launch_configuration
       options[:load_balancer_names] = new_resource.load_balancers if new_resource.load_balancers
+      options[:vpc_zone_identifier] = [options.delete(:subnets)].flatten.join(",") if options[:subnets]
 
       aws_obj = new_resource.driver.auto_scaling_resource.create_group(options)
 

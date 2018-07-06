@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.homepage = 'https://github.com/chef/chef-provisioning-aws'
   s.license = 'Apache-2.0'
 
-  s.required_ruby_version = ">= 2.1.9"
+  s.required_ruby_version = ">= 2.4.0"
 
   s.add_dependency 'chef-provisioning', '>= 1.0', '< 3.0'
 

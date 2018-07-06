@@ -1,7 +1,7 @@
 sudo: false
 language: ruby
 rvm:
-  - 2.3.1
+  - 2.4.4
 env:
   global:
   # encrypted with `travis encrypt "AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=..."`
@@ -22,9 +22,3 @@ script:
 - bundle update
 - bundle exec rake build
 - bundle exec rake $RAKE_TASK
-notifications:
-  email: false
-  slack:
-    secure: R5MWoIv3FOBb0bhawHIkIMh2b0HUzK7nkxSpovK+A3Xmkl5JDirV5bcDeYaSAWZNqUWvbfo7lw6I0o5xoU1eNjOrjiqV0HFfkZZ1tqbZYs/Zw9qSHpPYyB5xacQglFjqWn0VHobGg6J8QstnM4AEWrk2KapGtKdWMNtLK/2OR3Q=
-    on_failure: change
-    on_success: change

@@ -444,7 +444,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
 
     # If a load balancer is specified, grab it and then get its automatic security group
-    when /^elb-[a-fA-F0-9]{8}$/, Aws::ElasticLoadBalancing::Types::LoadBalancerDescription, Chef::Resource::AwsLoadBalancer
+    when /^elb-[a-fA-F0-9]+$/, Aws::ElasticLoadBalancing::Types::LoadBalancerDescription, Chef::Resource::AwsLoadBalancer
       lb=actor_spec
       if lb.class != Aws::ElasticLoadBalancing::Types::LoadBalancerDescription
         lb = Chef::Resource::AwsLoadBalancer.get_aws_object(actor_spec, resource: new_resource)
@@ -459,7 +459,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       end
 
     # If a security group is specified, grab it
-    when /^sg-[a-fA-F0-9]{8}$/, ::Aws::EC2::SecurityGroup, Chef::Resource::AwsSecurityGroup
+    when /^sg-[a-fA-F0-9]+$/, ::Aws::EC2::SecurityGroup, Chef::Resource::AwsSecurityGroup
       Chef::Resource::AwsSecurityGroup.get_aws_object(actor_spec, resource: new_resource)
 
     # If an IP addresses / CIDR are passed, return it verbatim; otherwise, assume it's the

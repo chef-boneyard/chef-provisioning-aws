@@ -45,7 +45,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
             kind_of: String,
             aws_id_attribute: true,
             default: lazy {
-              name =~ /^acl-[a-f0-9]{8}$/ ? name : nil
+              name =~ /^acl-[a-f0-9]+$/ ? name : nil
             }
 
   def aws_object

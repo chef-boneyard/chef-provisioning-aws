@@ -1,8 +1,16 @@
 # Change Log
 
+<!-- latest_release 3.0.5 -->
+## [3.0.5](https://github.com/chef/chef-provisioning-aws/tree/3.0.5) (2018-08-20)
+
+#### Merged Pull Requests
+- Chefstyle autofix + run chefstyle in Travis [#574](https://github.com/chef/chef-provisioning-aws/pull/574) ([tas50](https://github.com/tas50))
 <!-- latest_release -->
-<!-- latest_release -->
-<!-- release_rollup -->
+<!-- release_rollup since=3.0.4 -->
+### Changes not yet released to rubygems.org
+
+#### Merged Pull Requests
+- Chefstyle autofix + run chefstyle in Travis [#574](https://github.com/chef/chef-provisioning-aws/pull/574) ([tas50](https://github.com/tas50)) <!-- 3.0.5 -->
 <!-- release_rollup -->
 <!-- latest_stable_release -->
 ## [3.0.4](https://github.com/chef/chef-provisioning-aws/tree/3.0.4) (2018-08-20)

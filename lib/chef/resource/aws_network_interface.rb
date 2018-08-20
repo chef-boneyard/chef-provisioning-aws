@@ -10,7 +10,7 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
   attribute :name,                   kind_of: String, name_attribute: true
 
   attribute :network_interface_id,   kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^eni-[a-f0-9]{8}$/ ? name : nil
+    name =~ /^eni-[a-f0-9]+$/ ? name : nil
   }
 
   attribute :subnet,                 kind_of: [ String, ::Aws::EC2::Subnet, AwsSubnet ]

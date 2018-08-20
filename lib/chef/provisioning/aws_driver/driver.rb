@@ -69,7 +69,7 @@ class Provider
     # We override this so we can specify a machine name as `i-123456`
     # This is totally a hack until we move away from base resources
     def get_machine_spec!(machine_name)
-      if machine_name =~ /^i-[0-9a-f]{8}/
+      if machine_name =~ /^i-[0-9a-f]+/
         Struct.new(:name, :reference).new(machine_name, {'instance_id' => machine_name})
       else
         Chef::Log.debug "Getting machine spec for #{machine_name}"

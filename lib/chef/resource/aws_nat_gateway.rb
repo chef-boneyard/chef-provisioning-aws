@@ -87,7 +87,7 @@ class Chef::Resource::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSResource
   attribute :eip_address, kind_of: [ String, ::Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, nil ], default: nil
 
   attribute :nat_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^nat-[A-Fa-f0-9]{17}$/ ? name : nil
+    name =~ /^nat-[A-Fa-f0-9]+$/ ? name : nil
   }
 
   def aws_object

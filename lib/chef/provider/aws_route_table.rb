@@ -139,15 +139,15 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         raise "VPC #{new_resource.vpc} (#{vpc.id}) does not have an internet gateway to route to! Use `internet_gateway true` on the VPC itself to create one."
       end
       route_target = { internet_gateway: vpc.internet_gateways.first.id }
-    when /^igw-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsInternetGateway, ::Aws::EC2::InternetGateway
+    when /^igw-[A-Fa-f0-9]+$/, Chef::Resource::AwsInternetGateway, ::Aws::EC2::InternetGateway
       route_target = { internet_gateway: route_target }
-    when /^nat-[A-Fa-f0-9]{17}$/, Chef::Resource::AwsNatGateway, ::Aws::EC2::NatGateway
+    when /^nat-[A-Fa-f0-9]+$/, Chef::Resource::AwsNatGateway, ::Aws::EC2::NatGateway
       route_target = { nat_gateway: route_target }
-    when /^eni-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsNetworkInterface, ::Aws::EC2::NetworkInterface
+    when /^eni-[A-Fa-f0-9]+$/, Chef::Resource::AwsNetworkInterface, ::Aws::EC2::NetworkInterface
       route_target = { network_interface: route_target }
-    when /^pcx-[A-Fa-f0-9]{8}$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
+    when /^pcx-[A-Fa-f0-9]+$/, Chef::Resource::AwsVpcPeeringConnection, ::Aws::EC2::VpcPeeringConnection
       route_target = { vpc_peering_connection: route_target }
-    when /^vgw-[A-Fa-f0-9]{8}$/
+    when /^vgw-[A-Fa-f0-9]+$/
       route_target = { virtual_private_gateway: route_target }
     when String, Chef::Resource::AwsInstance
       route_target = { instance: route_target }

@@ -93,7 +93,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
             coerce: proc { |v| [v].flatten }
 
   attribute :route_table_id, kind_of: String, aws_id_attribute: true, default: lazy {
-    name =~ /^rtb-[a-f0-9]{8}$/ ? name : nil
+    name =~ /^rtb-[a-f0-9]+$/ ? name : nil
   }
 
   def aws_object

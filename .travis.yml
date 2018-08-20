@@ -1,7 +1,7 @@
 sudo: false
 language: ruby
 rvm:
-  - 2.3.1
+  - 2.4.3
 env:
   global:
   # encrypted with `travis encrypt "AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=..."`

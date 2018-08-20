@@ -45,7 +45,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
   attribute :type, equal_to: %w(SOA A TXT NS CNAME MX PTR SRV SPF AAAA), required: true
 
-  attribute :ttl, kind_of: Fixnum, required: true
+  attribute :ttl, kind_of: Integer, required: true
 
   attribute :resource_records, kind_of: Array, required: true
 

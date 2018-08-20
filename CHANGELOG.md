@@ -1,20 +1,16 @@
 # Change Log
 
-<!-- latest_release 3.0.4 -->
+<!-- latest_release -->
+<!-- latest_release -->
+<!-- release_rollup -->
+<!-- release_rollup -->
+<!-- latest_stable_release -->
 ## [3.0.4](https://github.com/chef/chef-provisioning-aws/tree/3.0.4) (2018-08-20)
 
 #### Merged Pull Requests
+- Setup this repo to use expeditor [#572](https://github.com/chef/chef-provisioning-aws/pull/572) ([tas50](https://github.com/tas50))
+- Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50))
 - specs for dynamic options in machine_batch, per chef-provisioning#438 [#326](https://github.com/chef/chef-provisioning-aws/pull/326) ([redterror](https://github.com/redterror))
-<!-- latest_release -->
-<!-- release_rollup since=3.0.2 -->
-### Changes not yet released to rubygems.org
-
-#### Merged Pull Requests
-- specs for dynamic options in machine_batch, per chef-provisioning#438 [#326](https://github.com/chef/chef-provisioning-aws/pull/326) ([redterror](https://github.com/redterror)) <!-- 3.0.4 -->
-- Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50)) <!-- 3.0.3 -->
-- Setup this repo to use expeditor [#572](https://github.com/chef/chef-provisioning-aws/pull/572) ([tas50](https://github.com/tas50)) <!-- 3.0.2 -->
-- Allow arbitarily Long resource IDs [#571](https://github.com/chef/chef-provisioning-aws/pull/571) ([jjlimepoint](https://github.com/jjlimepoint))
-<!-- release_rollup -->
 <!-- latest_stable_release -->
 
 ## [3.0.2](https://github.com/chef/chef-provisioning-aws/tree/3.0.2) (2018-02-14)
@@ -30,7 +26,6 @@
 **Merged pull requests:**
 
 - Bug fixes [\#564](https://github.com/chef/chef-provisioning-aws/pull/564) ([tyler-ball](https://github.com/tyler-ball))
-<!-- latest_stable_release -->
 
 ## [v3.0.1](https://github.com/chef/chef-provisioning-aws/tree/v3.0.1) (2018-02-05)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0...v3.0.1)

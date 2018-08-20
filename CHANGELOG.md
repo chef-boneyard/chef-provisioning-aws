@@ -1,15 +1,17 @@
 # Change Log
 
-<!-- latest_release unreleased -->
-## Unreleased
+<!-- latest_release 3.0.3 -->
+## [3.0.3](https://github.com/chef/chef-provisioning-aws/tree/3.0.3) (2018-08-20)
 
 #### Merged Pull Requests
+- Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50))
 - Setup this repo to use expeditor [#572](https://github.com/chef/chef-provisioning-aws/pull/572) ([tas50](https://github.com/tas50))
 <!-- latest_release -->
 <!-- release_rollup since=3.0.2 -->
 ### Changes not yet released to rubygems.org
 
 #### Merged Pull Requests
+- Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50)) <!-- 3.0.3 -->
 - Setup this repo to use expeditor [#572](https://github.com/chef/chef-provisioning-aws/pull/572) ([tas50](https://github.com/tas50)) <!-- 3.0.2 -->
 <!-- release_rollup -->
 <!-- latest_stable_release -->

@@ -1,5 +1,11 @@
 # Change Log
 
+<!-- latest_release -->
+<!-- latest_release -->
+<!-- release_rollup -->
+<!-- release_rollup -->
+<!-- latest_stable_release -->
+
 ## [3.0.2](https://github.com/chef/chef-provisioning-aws/tree/3.0.2) (2018-02-14)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.1...3.0.2)
 
@@ -13,6 +19,7 @@
 **Merged pull requests:**
 
 - Bug fixes [\#564](https://github.com/chef/chef-provisioning-aws/pull/564) ([tyler-ball](https://github.com/tyler-ball))
+<!-- latest_stable_release -->
 
 ## [v3.0.1](https://github.com/chef/chef-provisioning-aws/tree/v3.0.1) (2018-02-05)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.0...v3.0.1)

@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # DHCP options for use by VPCs.
@@ -61,6 +61,6 @@ class Chef::Resource::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSResourc
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidDhcpOptionIDNotFound
-    return false
+    false
   end
 end

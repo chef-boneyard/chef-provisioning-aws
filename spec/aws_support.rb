@@ -4,39 +4,39 @@
 # AWS objects and clean them up.
 #
 module AWSSupport
-  require 'cheffish/rspec/chef_run_support'
+  require "cheffish/rspec/chef_run_support"
   def self.extended(other)
     other.extend Cheffish::RSpec::ChefRunSupport
   end
 
-  require 'chef/provisioning/aws_driver'
-  require 'aws_support/matchers/create_an_aws_object'
-  require 'aws_support/matchers/update_an_aws_object'
-  require 'aws_support/matchers/destroy_an_aws_object'
-  require 'aws_support/matchers/have_aws_object_tags'
-  require 'aws_support/matchers/match_an_aws_object'
-  require 'aws_support/delayed_stream'
-  require 'chef/provisioning/aws_driver/resources'
-  require 'aws_support/aws_resource_run_wrapper'
+  require "chef/provisioning/aws_driver"
+  require "aws_support/matchers/create_an_aws_object"
+  require "aws_support/matchers/update_an_aws_object"
+  require "aws_support/matchers/destroy_an_aws_object"
+  require "aws_support/matchers/have_aws_object_tags"
+  require "aws_support/matchers/match_an_aws_object"
+  require "aws_support/delayed_stream"
+  require "chef/provisioning/aws_driver/resources"
+  require "aws_support/aws_resource_run_wrapper"
 
   # Add AWS to the list of objects which can be matched against a Hash or Array
-  require 'aws-sdk'
-  require 'aws_support/deep_matcher/matchable_object'
-  require 'aws_support/deep_matcher/matchable_array'
+  require "aws-sdk"
+  require "aws_support/deep_matcher/matchable_object"
+  require "aws_support/deep_matcher/matchable_array"
   DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(AutoScaling|EC2|ELB|IAM|S3|RDS|CloudSearch|CloudWatch|Route53|ElasticsearchService)($|::)/ }
-  DeepMatcher::MatchableArray.matchable_classes  #<< AWS::Core::Data::List
+  DeepMatcher::MatchableArray.matchable_classes # << AWS::Core::Data::List
 
   def purge_all
     before :all do
       driver = self.driver
       recipe do
-        vpcs = driver.ec2.describe_vpcs({filters: [{name: "tag-value", values: ["test_vpc"]}]})[:vpcs]
+        vpcs = driver.ec2.describe_vpcs(filters: [{ name: "tag-value", values: ["test_vpc"] }])[:vpcs]
         vpcs.each do |vpc|
           aws_vpc vpc.vpc_id do
             action :purge
           end
         end
-        aws_key_pair 'test_key_pair' do
+        aws_key_pair "test_key_pair" do
           action :purge
         end
       end.converge
@@ -44,41 +44,41 @@ module AWSSupport
   end
 
   def setup_public_vpc
-    aws_vpc 'test_vpc' do
-      cidr_block '10.0.0.0/16'
+    aws_vpc "test_vpc" do
+      cidr_block "10.0.0.0/16"
       internet_gateway true
       enable_dns_hostnames true
       # TODO : uncomment this when fix main routes in aws_vpc resource as per new version
       # main_routes '0.0.0.0/0' => :internet_gateway
     end
 
-    aws_key_pair 'test_key_pair' do
+    aws_key_pair "test_key_pair" do
       allow_overwrite true
     end
 
     before :context do
       # TODO : Need to fix below line as per version two commenting out for now since its failing and not able to proceed for other specs
-      image = driver.ec2.describe_images({filters: [{name: 'name', values: ['test_machine_image']}]}).first
+      image = driver.ec2.describe_images(filters: [{ name: "name", values: ["test_machine_image"] }]).first
       image.delete unless image
 
-      default_sg = test_vpc.aws_object.security_groups({filters: [{name: 'group-name', values: ['default']}]}).first
+      default_sg = test_vpc.aws_object.security_groups(filters: [{ name: "group-name", values: ["default"] }]).first
       recipe do
         aws_security_group default_sg do
-          inbound_rules '0.0.0.0/0' => 22
+          inbound_rules "0.0.0.0/0" => 22
         end
       end.converge
     end
 
-    aws_security_group 'test_security_group' do
-      vpc 'test_vpc'
-      inbound_rules '0.0.0.0/0' => [ 22, 80 ]
-      outbound_rules [ 22, 80 ] => '0.0.0.0/0'
+    aws_security_group "test_security_group" do
+      vpc "test_vpc"
+      inbound_rules "0.0.0.0/0" => [22, 80]
+      outbound_rules [22, 80] => "0.0.0.0/0"
     end
 
-    azs = driver.ec2_client.describe_availability_zones.availability_zones.map {|r| r.zone_name}
-    aws_subnet 'test_public_subnet' do
-      vpc 'test_vpc'
-      cidr_block '10.0.0.0/24'
+    azs = driver.ec2_client.describe_availability_zones.availability_zones.map(&:zone_name)
+    aws_subnet "test_public_subnet" do
+      vpc "test_vpc"
+      cidr_block "10.0.0.0/24"
       map_public_ip_on_launch true
       availability_zone azs.first
     end
@@ -98,9 +98,9 @@ module AWSSupport
       module_eval(&block)
     end
 
-    if ENV['AWS_TEST_DRIVER']  && !ENV['AWS_TEST_DRIVER'].empty?
-      aws_driver = Chef::Provisioning.driver_for_url(ENV['AWS_TEST_DRIVER'])
-      when_the_repository "exists #{description ? "and #{description}" : ""}", *tags, &context_block
+    if ENV["AWS_TEST_DRIVER"] && !ENV["AWS_TEST_DRIVER"].empty?
+      aws_driver = Chef::Provisioning.driver_for_url(ENV["AWS_TEST_DRIVER"])
+      when_the_repository "exists #{description ? "and #{description}" : ''}", *tags, &context_block
     else
       skip "AWS_TEST_DRIVER not set ... cannot run AWS tests.  Set AWS_TEST_DRIVER=aws or aws:profile:region to run tests that hit AWS." do
         context description, *tags, &context_block
@@ -126,7 +126,7 @@ module AWSSupport
       # in the order declared, and destroyed in reverse order.
       #
       aws_resources = Chef::Provisioning::AWSDriver::Resources.constants
-      aws_resources.map! {|r| Chef::Provisioning::AWSDriver::Resources.const_get(r) }
+      aws_resources.map! { |r| Chef::Provisioning::AWSDriver::Resources.const_get(r) }
 
       aws_resources += [Chef::Resource::Machine, Chef::Resource::MachineImage, Chef::Resource::MachineBatch, Chef::Resource::LoadBalancer]
       aws_resources.each do |resource_class|
@@ -154,9 +154,9 @@ module AWSSupport
             end
             begin
               resource.converge
-            rescue
-              puts "ERROR #{$!}"
-              puts $!.backtrace.join("\n")
+            rescue StandardError
+              puts "ERROR #{$ERROR_INFO}"
+              puts $ERROR_INFO.backtrace.join("\n")
               raise
             end
           end
@@ -175,7 +175,7 @@ module AWSSupport
         after :example do
           # Close up delayed streams so they don't print out their garbage later in the run
           unless chef_config[:include_output_after_example]
-            delayed_streams.each { |s| s.close }
+            delayed_streams.each(&:close)
           end
 
           # Destroy any objects we know got created during the test
@@ -205,19 +205,19 @@ module AWSSupport
     Chef::Provisioning::AWSDriver::Resources.constants.each do |resource_class|
       resource_class = Chef::Provisioning::AWSDriver::Resources.const_get(resource_class)
       resource_name = resource_class.resource_name
-      define_method("update_an_#{resource_name}") do |name, expected_updates={}, &block|
+      define_method("update_an_#{resource_name}") do |name, expected_updates = {}, &block|
         AWSSupport::Matchers::UpdateAnAWSObject.new(self, resource_class, name, expected_updates, block)
       end
-      define_method("create_an_#{resource_name}") do |name, expected_values={}, &block|
+      define_method("create_an_#{resource_name}") do |name, expected_values = {}, &block|
         AWSSupport::Matchers::CreateAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
-      define_method("have_#{resource_name}_tags") do |name, expected_tags={}|
+      define_method("have_#{resource_name}_tags") do |name, expected_tags = {}|
         AWSSupport::Matchers::HaveAWSObjectTags.new(self, resource_class, name, expected_tags)
       end
-      define_method("destroy_an_#{resource_name}") do |name, expected_values={}|
+      define_method("destroy_an_#{resource_name}") do |name, _expected_values = {}|
         AWSSupport::Matchers::DestroyAnAWSObject.new(self, resource_class, name)
       end
-      define_method("match_an_#{resource_name}") do |name, expected_values={}, &block|
+      define_method("match_an_#{resource_name}") do |name, expected_values = {}, &block|
         AWSSupport::Matchers::MatchAnAWSObject.new(self, resource_class, name, expected_values, block)
       end
     end
@@ -256,12 +256,11 @@ module AWSSupport
     end
 
     def default_vpc
-      @default_vpc ||= driver.ec2.describe_vpcs({filters: [{name: "isDefault", values: ["true"]}]})[:vpcs].first
+      @default_vpc ||= driver.ec2.describe_vpcs(filters: [{ name: "isDefault", values: ["true"] }])[:vpcs].first
     end
 
     def driver
       self.class.driver
     end
   end
-
 end

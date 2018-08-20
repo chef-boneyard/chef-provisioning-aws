@@ -9,10 +9,9 @@ module AWSSupport
     # end
     #
     module FuzzyMatchObjects
-
-      require 'rspec/support/fuzzy_matcher'
-      require 'aws_support/deep_matcher/matchable_object'
-      require 'aws_support/deep_matcher/matchable_array'
+      require "rspec/support/fuzzy_matcher"
+      require "aws_support/deep_matcher/matchable_object"
+      require "aws_support/deep_matcher/matchable_array"
 
       def values_match?(expected, actual)
         if Hash === expected
@@ -28,12 +27,10 @@ module AWSSupport
         expected_hash.all? do |expected_key, expected_value|
           # 'a.b.c'  => 1 -> { 'a' => { 'b' => { 'c' => 1 } } }
           # :"a.b.c" => 1 -> { :a  => { :b  => { :c  => 1 } } }
-          names = expected_key.to_s.split('.')
+          names = expected_key.to_s.split(".")
           if names.size > 1
             expected_key = expected_key.is_a?(Symbol) ? names.shift.to_sym : names.shift
-            while !names.empty?
-              expected_value = { names.pop => expected_value }
-            end
+            expected_value = { names.pop => expected_value } until names.empty?
           end
 
           # Grab the actual value from the object
@@ -47,7 +44,7 @@ module AWSSupport
             end
           end
 
-          return false if !values_match?(expected, actual)
+          return false unless values_match?(expected, actual)
         end
 
         true

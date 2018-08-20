@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'cheffish'
-require 'date'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "cheffish"
+require "date"
+require "retryable"
 
 class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -23,9 +23,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def action_create
     eni = super
 
-    if !new_resource.machine.nil?
-      update_eni(eni)
-    end
+    update_eni(eni) unless new_resource.machine.nil?
   end
 
   protected
@@ -50,30 +48,31 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   end
 
   def update_aws_object(eni)
-    if options.has_key?(:subnet_id)
+    if options.key?(:subnet_id)
       if Chef::Resource::AwsSubnet.get_aws_object(options[:subnet_id], resource: new_resource).id != eni.subnet.id
         raise "#{new_resource} subnet is #{new_resource.subnet}, but actual network interface has subnet set to #{eni.subnet_id}.  Cannot be modified!"
       end
     end
 
-    # TODO implement private ip reassignment
-    if options.has_key?(:private_ip_address)
+    # TODO: implement private ip reassignment
+    if options.key?(:private_ip_address)
       if options[:private_ip_address] != eni.private_ip_address
         raise "#{new_resource} private IP is #{new_resource.private_ip_address}, but actual network interface has private IP set to #{eni.private_ip_address}.  Private IP reassignment not implemented. Cannot be modified!"
       end
     end
 
-    if options.has_key?(:description)
+    if options.key?(:description)
       if options[:description] != eni.description
         converge_by "set #{new_resource} description to #{new_resource.description}" do
-          eni.client.modify_network_interface_attribute(:network_interface_id => eni.network_interface_id,
-                                                        :description => {
-                                                            :value => new_resource.description })
+          eni.client.modify_network_interface_attribute(network_interface_id: eni.network_interface_id,
+                                                        description: {
+                                                          value: new_resource.description
+                                                        })
         end
       end
     end
 
-    if options.has_key?(:groups)
+    if options.key?(:groups)
       groups = new_resource.security_groups
       eni_security_groups = []
       eni.groups.each do |group|
@@ -82,7 +81,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
 
       if groups.sort != eni_security_groups.sort
         converge_by "set #{new_resource} security groups to #{groups}" do
-          eni.client.modify_network_interface_attribute(:network_interface_id => eni.network_interface_id, :groups => groups)
+          eni.client.modify_network_interface_attribute(network_interface_id: eni.network_interface_id, groups: groups)
         end
       end
     end
@@ -100,20 +99,20 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
   def expected_instance
     # use instance if already set
     @expected_instance ||= new_resource.machine ?
-      # if not, and machine is set, find and return the instance
+        # if not, and machine is set, find and return the instance
         Chef::Resource::AwsInstance.get_aws_object(new_resource.machine, resource: new_resource) :
-      # otherwise return nil
+        # otherwise return nil
         nil
   end
 
   def options
     @options ||= begin
       options = {}
-      options[:subnet_id] = new_resource.subnet if !new_resource.subnet.nil?
-      options[:private_ip_address] = new_resource.private_ip_address if !new_resource.private_ip_address.nil?
-      options[:description] = new_resource.description if !new_resource.description.nil?
-      options[:groups] = new_resource.security_groups if !new_resource.security_groups.nil?
-      options[:device_index] = new_resource.device_index if !new_resource.device_index.nil?
+      options[:subnet_id] = new_resource.subnet unless new_resource.subnet.nil?
+      options[:private_ip_address] = new_resource.private_ip_address unless new_resource.private_ip_address.nil?
+      options[:description] = new_resource.description unless new_resource.description.nil?
+      options[:groups] = new_resource.security_groups unless new_resource.security_groups.nil?
+      options[:device_index] = new_resource.device_index unless new_resource.device_index.nil?
 
       AWSResource.lookup_options(options, resource: new_resource)
     end
@@ -136,7 +135,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
           attach(eni)
         end
       when nil
-        raise NetworkInterfaceNotFoundError.new(new_resource)
+        raise NetworkInterfaceNotFoundError, new_resource
       else
         raise NetworkInterfaceInvalidStatusError.new(new_resource, status)
       end
@@ -193,12 +192,11 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
         Chef::Log.info("waiting for network interface to delete...")
       }
 
-      Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
+      Retryable.retryable(tries: 30, sleep: 2, on: NetworkInterfaceStatusTimeoutError, ensure: log_callback) do
         result = new_resource.driver.ec2_resource.network_interface(eni.id) if eni.id
-		raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if new_resource.exists?(result)
+        raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if new_resource.exists?(result)
       end
       eni
     end
   end
-
 end

@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 def policy(user)
   <<EOF
@@ -41,44 +41,43 @@ describe Chef::Resource::AwsElasticsearchDomain do
   extend AWSSupport
 
   let(:all_options_result) do
-    {created: true,
-     elasticsearch_cluster_config: {
-       instance_type: "m4.large.elasticsearch",
-       instance_count: 2,
-       dedicated_master_enabled: true,
-       dedicated_master_type: "m4.large.elasticsearch",
-       zone_awareness_enabled: true
-     },
-     ebs_options: {
-       ebs_enabled: true,
-       volume_size: 35,
-       volume_type: "io1",
-       iops: 1000
-     },
-     snapshot_options: {
-       automated_snapshot_start_hour: 2
-     }
-    }
+    { created: true,
+      elasticsearch_cluster_config: {
+        instance_type: "m4.large.elasticsearch",
+        instance_count: 2,
+        dedicated_master_enabled: true,
+        dedicated_master_type: "m4.large.elasticsearch",
+        zone_awareness_enabled: true
+      },
+      ebs_options: {
+        ebs_enabled: true,
+        volume_size: 35,
+        volume_type: "io1",
+        iops: 1000
+      },
+      snapshot_options: {
+        automated_snapshot_start_hour: 2
+      } }
   end
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-      time = DateTime.now.strftime('%Q')
+      time = DateTime.now.strftime("%Q")
 
       it "returns nil when aws_object is called for something that does not exist" do
         r = nil
-        converge {
+        converge do
           r = aws_elasticsearch_domain "wont-exist" do
             action :nothing
           end
-        }
+        end
         expect(r.aws_object).to eq(nil)
       end
 
       it "aws_elasticsearch_domain 'test-#{time}' creates a elasticsearch domain" do
-        expect_recipe {
+        expect_recipe do
           all_options_domain("test-#{time}")
-        }.to create_an_aws_elasticsearch_domain("test-#{time}", all_options_result).and be_idempotent
+        end.to create_an_aws_elasticsearch_domain("test-#{time}", all_options_result).and be_idempotent
       end
 
       context "with an existing elasticsearch domain" do
@@ -88,32 +87,31 @@ describe Chef::Resource::AwsElasticsearchDomain do
         end
 
         it "can update all options" do
-          expect_recipe {
+          expect_recipe do
             all_options_domain("test-#{time}-2")
-          }.to update_an_aws_elasticsearch_domain("test-#{time}-2", all_options_result)
+          end.to update_an_aws_elasticsearch_domain("test-#{time}-2", all_options_result)
         end
 
         it "updates the aws_tags" do
-          expect_recipe {
+          expect_recipe do
             all_options_domain("test-#{time}-2")
-          }.to have_aws_elasticsearch_domain_tags("test-#{time}-2", {'key1' => 'value'})
+          end.to have_aws_elasticsearch_domain_tags("test-#{time}-2", "key1" => "value")
         end
 
         it "removes all aws_elasticsearch_domain tags" do
-          expect_recipe {
+          expect_recipe do
             aws_elasticsearch_domain "test-#{time}-2" do
               aws_tags({})
             end
-          }.to have_aws_elasticsearch_domain_tags("test-#{time}-2", {}).and be_idempotent
+          end.to have_aws_elasticsearch_domain_tags("test-#{time}-2", {}).and be_idempotent
         end
 
-
         it "destroys an elasticsearch domain" do
-          r = recipe {
+          r = recipe do
             aws_elasticsearch_domain "test-#{time}-2" do
               action :destroy
             end
-          }
+          end
           expect(r).to destroy_an_aws_elasticsearch_domain("test-#{time}-2")
         end
       end

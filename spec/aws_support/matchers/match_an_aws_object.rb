@@ -1,10 +1,9 @@
-require 'rspec/matchers'
-require 'chef/provisioning'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "chef/provisioning"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers
-
     # This matcher doesn't try to validate that an example was created/updated/destroyed
     # it just checks that the object exists and posses the attributes you specify
     # It also doesn't clean up any aws objects so only use if the resource is defined outside
@@ -38,8 +37,8 @@ module AWSSupport
         # Converge
         begin
           recipe.converge unless recipe.converged?
-        rescue
-          differences += [ "error trying to converge #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
+        rescue StandardError
+          differences += ["error trying to converge #{resource_name}[#{name}]!\n#{($ERROR_INFO.backtrace.map { |line| "- #{line}\n" } + [recipe.output_for_failure_message]).join('')}"]
         end
 
         # Check for object existence and properties

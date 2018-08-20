@@ -1,7 +1,6 @@
-require 'chef/provider/lwrp_base'
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'aws-sdk'
-
+require "chef/provider/lwrp_base"
+require "chef/provisioning/aws_driver/aws_provider"
+require "aws-sdk"
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_key_pair
@@ -13,7 +12,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   action :destroy do
     if current_resource_exists?
       converge_by "delete AWS key pair #{new_resource.name} on region #{region}" do
-        driver.ec2.delete_key_pair({key_name:new_resource.name})
+        driver.ec2.delete_key_pair(key_name: new_resource.name)
       end
     end
   end
@@ -43,7 +42,6 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
         ensure_keys(action)
       end
 
-
       # “The nice thing about standards is that you have so many to
       # choose from.” - Andrew S. Tanenbaum
       #
@@ -55,11 +53,11 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       #
       # So compute both possible AWS fingerprints and check if either of
       # them matches.
-      new_fingerprints = [Cheffish::KeyFormatter.encode(desired_key, :format => :fingerprint)]
+      new_fingerprints = [Cheffish::KeyFormatter.encode(desired_key, format: :fingerprint)]
       if RUBY_VERSION.to_f < 2.0
         if @@use_pkcs8.nil?
           begin
-            require 'openssl_pkcs8'
+            require "openssl_pkcs8"
             @@use_pkcs8 = true
           rescue LoadError
             Chef::Log.warn("The openssl_pkcs8 gem is not loaded: you may not be able to read key fingerprints created by some cloud providers.  gem install openssl_pkcs8 to fix!")
@@ -68,15 +66,15 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
         end
         if @@use_pkcs8
           new_fingerprints << Cheffish::KeyFormatter.encode(desired_private_key,
-                                :format => :pkcs8sha1fingerprint)
+                                                            format: :pkcs8sha1fingerprint)
         end
       end
 
-      if !new_fingerprints.any? { |f| compare_public_key f }
+      if new_fingerprints.none? { |f| compare_public_key f }
         if new_resource.allow_overwrite
           converge_by "update #{key_description} to match local key at #{new_resource.private_key_path}" do
-            driver.ec2.delete_key_pair({key_name:new_resource.name})
-            driver.ec2.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
+            driver.ec2.delete_key_pair(key_name: new_resource.name)
+            driver.ec2.import_key_pair(key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, format: :openssh))
           end
         else
           raise "#{key_description} with fingerprint #{@current_fingerprint} does not match local key fingerprint(s) #{new_fingerprints}, and allow_overwrite is false!"
@@ -88,7 +86,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
 
       # Create key
       converge_by "create #{key_description} from local key at #{new_resource.private_key_path}" do
-        driver.ec2.import_key_pair({key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, :format => :openssh)})
+        driver.ec2.import_key_pair(key_name: new_resource.name, public_key_material: Cheffish::KeyFormatter.encode(desired_key, format: :openssh))
       end
     end
   end
@@ -104,7 +102,7 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
       private_key private_key_path do
         public_key_path resource.public_key_path
         if resource.private_key_options
-          resource.private_key_options.each_pair do |key,value|
+          resource.private_key_options.each_pair do |key, value|
             send(key, value)
           end
         end
@@ -135,12 +133,12 @@ class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def current_resource_exists?
-    @current_resource.action != [ :destroy ]
+    @current_resource.action != [:destroy]
   end
 
   def compare_public_key(new)
-    c = @current_fingerprint.split[0,2].join(' ')
-    n = new.split[0,2].join(' ')
+    c = @current_fingerprint.split[0, 2].join(" ")
+    n = new.split[0, 2].join(" ")
     c == n
   end
 

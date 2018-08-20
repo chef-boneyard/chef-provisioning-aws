@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/rds'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/rds"
 
 class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::RDSConvergeTags
@@ -12,7 +12,7 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
     end
   end
 
-  def destroy_aws_object(subnet_group)
+  def destroy_aws_object(_subnet_group)
     converge_by "delete RDS subnet group #{new_resource.name} in #{region}" do
       driver.delete_db_subnet_group(db_subnet_group_name: new_resource.name)
     end
@@ -20,7 +20,7 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
 
   def update_aws_object(subnet_group)
     updates = required_updates(subnet_group)
-    if ! updates.empty?
+    unless updates.empty?
       converge_by updates do
         driver.modify_db_subnet_group(desired_options)
       end
@@ -48,11 +48,11 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
       ret << "  set group description to #{desired_options[:db_subnet_group_description]}"
     end
 
-    if ! xor_array(desired_options[:subnet_ids], subnet_ids(subnet_group[:subnets])).empty?
+    unless xor_array(desired_options[:subnet_ids], subnet_ids(subnet_group[:subnets])).empty?
       ret << "  set subnets to #{desired_options[:subnet_ids]}"
     end
 
-    if ! (desired_options[:aws_tags].nil? || desired_options[:aws_tags].empty?)
+    unless desired_options[:aws_tags].nil? || desired_options[:aws_tags].empty?
       # modify_db_subnet_group doesn't support the tags key according to
       # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#modify_db_subnet_group-instance_method
       Chef::Log.warn "Updating tags for RDS subnet groups is not supported."
@@ -62,11 +62,10 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
     ret
   end
 
-
   private
 
   def subnet_ids(subnets)
-    subnets.map {|i| i[:subnet_identifier] }
+    subnets.map { |i| i[:subnet_identifier] }
   end
 
   def xor_array(a, b)
@@ -78,7 +77,7 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
   def tag_hash_to_array(tag_hash)
     ret = []
     tag_hash.each do |key, value|
-      ret << {:key => key, :value => value}
+      ret << { key: key, value: value }
     end
     ret
   end

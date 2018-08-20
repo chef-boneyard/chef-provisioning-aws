@@ -1,8 +1,8 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_sqs_queue
-  
+
   def create_aws_object
     options = AWSResource.lookup_options(new_resource.options || {}, resource: new_resource)
     option_sqs = {}
@@ -15,8 +15,7 @@ class Chef::Provider::AwsSqsQueue < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
-  def update_aws_object(queue)
-  end
+  def update_aws_object(queue); end
 
   def destroy_aws_object(queue)
     converge_by "delete SQS queue #{new_resource.name} in #{region}" do

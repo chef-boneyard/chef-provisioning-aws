@@ -1,9 +1,9 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'date'
+require "chef/provisioning/aws_driver/aws_provider"
+require "date"
 
 class Chef::Provider::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_sns_topic
-  
+
   protected
 
   def create_aws_object
@@ -12,8 +12,7 @@ class Chef::Provider::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSProvider
     end
   end
 
-  def update_aws_object(topic)
-  end
+  def update_aws_object(topic); end
 
   def destroy_aws_object(topic)
     topic_arn_name = topic.attributes.values_at("TopicArn").first
@@ -21,5 +20,4 @@ class Chef::Provider::AwsSnsTopic < Chef::Provisioning::AWSDriver::AWSProvider
       new_resource.driver.sns.delete_topic(topic_arn: topic_arn_name)
     end
   end
-
 end

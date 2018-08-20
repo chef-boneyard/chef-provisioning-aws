@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "retryable"
 
 class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_vpc_peering_connection
@@ -36,15 +36,15 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
       vpc_peering_connection = vpc.request_vpc_peering_connection(options)
 
       retry_with_backoff(::Aws::EC2::Errors::ServiceError) do
-        ec2_resource.create_tags({
-          :resources => [vpc_peering_connection.id],
-          :tags => [
+        ec2_resource.create_tags(
+          resources: [vpc_peering_connection.id],
+          tags: [
             {
-              :key => "Name",
-              :value => new_resource.name
+              key: "Name",
+              value: new_resource.name
             }
           ]
-        })
+        )
       end
       vpc_peering_connection
     end
@@ -71,8 +71,8 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   end
 
   def destroy_aws_object(vpc_peering_connection)
-    converge_by "delete #{new_resource.to_s} in #{region}" do
-      unless ['deleted', 'failed', 'deleting'].include? vpc_peering_connection.status.code
+    converge_by "delete #{new_resource} in #{region}" do
+      unless %w{deleted failed deleting}.include? vpc_peering_connection.status.code
         vpc_peering_connection.delete
       end
     end
@@ -81,7 +81,7 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   private
 
   def accept_connection(vpc_peering_connection, new_resource)
-    if new_resource.peer_owner_id.nil? or new_resource.peer_owner_id == new_resource.driver.account_id
+    if new_resource.peer_owner_id.nil? || (new_resource.peer_owner_id == new_resource.driver.account_id)
       vpc_peering_connection.accept
     end
   end

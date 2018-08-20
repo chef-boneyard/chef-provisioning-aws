@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_tagger'
+require "chef/provisioning/aws_driver/aws_tagger"
 
 ####################
 # NOTE FROM http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Tagging.html
@@ -19,6 +19,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
         Chef::Provisioning::AWSDriver::AWSTagger.new(rds_strategy, action_handler)
       end
     end
+
     def converge_tags
       aws_tagger.converge_tags
     end
@@ -33,10 +34,10 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
         account_id = begin
           u = new_resource.driver.iam.get_user
           # We've got an AWS account root credential or an IAM admin with access rights
-          u[:user][:arn].match('^arn:aws:iam::([0-9]{12}):.*$')[1]
+          u[:user][:arn].match("^arn:aws:iam::([0-9]{12}):.*$")[1]
         rescue ::Aws::IAM::Errors::AccessDenied => e
           # We've got an AWS IAM Credential
-          e.to_s.match('^User: arn:aws:iam::([0-9]{12}):.*$')[1]
+          e.to_s.match("^User: arn:aws:iam::([0-9]{12}):.*$")[1]
         end
         # arn:aws:rds:<region>:<account number>:<resourcetype>:<name>
         "arn:aws:rds:#{region}:#{account_id}:#{rds_type}:#{name}"
@@ -46,47 +47,45 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
 end
 
 module Chef::Provisioning::AWSDriver::TaggingStrategy
-class RDS
+  class RDS
+    attr_reader :rds_client, :rds_object_arn, :desired_tags
 
-  attr_reader :rds_client, :rds_object_arn, :desired_tags
+    def initialize(rds_client, rds_object_arn, desired_tags)
+      @rds_client = rds_client
+      @rds_object_arn = rds_object_arn
+      @desired_tags = desired_tags
+    end
 
-  def initialize(rds_client, rds_object_arn, desired_tags)
-    @rds_client = rds_client
-    @rds_object_arn = rds_object_arn
-    @desired_tags = desired_tags
-  end
+    def current_tags
+      # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#list_tags_for_resource-instance_method
+      resp = rds_client.list_tags_for_resource(
+        resource_name: rds_object_arn
+      )
+      Hash[resp.tag_list.map { |t| [t.key, t.value] }]
+    end
 
-  def current_tags
-    # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#list_tags_for_resource-instance_method
-    resp = rds_client.list_tags_for_resource({
-      resource_name: rds_object_arn
-    })
-    Hash[resp.tag_list.map {|t| [t.key, t.value]}]
-  end
-
-  def set_tags(tags)
-    # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#add_tags_to_resource-instance_method
-    # Unlike EC2, RDS tags can have a nil value
-    tags = tags.map {|k,v|
-      if v.nil?
-        {key: k}
-      else
-        {key: k, value: v}
+    def set_tags(tags)
+      # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#add_tags_to_resource-instance_method
+      # Unlike EC2, RDS tags can have a nil value
+      tags = tags.map do |k, v|
+        if v.nil?
+          { key: k }
+        else
+          { key: k, value: v }
+        end
       end
-    }
-    rds_client.add_tags_to_resource({
-      resource_name: rds_object_arn,
-      tags: tags
-    })
-  end
+      rds_client.add_tags_to_resource(
+        resource_name: rds_object_arn,
+        tags: tags
+      )
+    end
 
-  def delete_tags(tag_keys)
-    # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#remove_tags_from_resource-instance_method
-    rds_client.remove_tags_from_resource({
-      resource_name: rds_object_arn,
-      tag_keys: tag_keys
-    })
+    def delete_tags(tag_keys)
+      # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#remove_tags_from_resource-instance_method
+      rds_client.remove_tags_from_resource(
+        resource_name: rds_object_arn,
+        tag_keys: tag_keys
+      )
+    end
   end
-
-end
 end

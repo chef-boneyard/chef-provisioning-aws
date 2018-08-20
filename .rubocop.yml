@@ -1,0 +1,64 @@
+Layout/EndAlignment:
+  Exclude:
+    - 'lib/chef/provider/aws_s3_bucket.rb'
+    - 'lib/chef/provider/aws_security_group.rb'
+    - 'lib/chef/provisioning/aws_driver/driver.rb'
+
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - 'docs/examples/aws_cloudwatch_alarm.rb'
+    - 'docs/examples/load_balancer.rb'
+    - 'docs/examples/ref_destroy.rb'
+
+Lint/DuplicatedKey:
+  Exclude:
+    - 'docs/examples/aws_sg.rb'
+
+Lint/IneffectiveAccessModifier:
+  Exclude:
+    - 'lib/chef/provisioning/aws_driver/aws_provider.rb'
+    - 'lib/chef/provisioning/aws_driver/aws_resource.rb'
+    - 'lib/chef/provisioning/aws_driver/aws_resource_with_entry.rb'
+    - 'lib/chef/resource/aws_sqs_queue.rb'
+
+Lint/NestedMethodDefinition:
+  Exclude:
+    - 'spec/aws_support.rb'
+
+Lint/ParenthesesAsGroupedExpression:
+  Exclude:
+    - 'docs/examples/load_balancer.rb'
+
+Lint/ShadowingOuterLocalVariable:
+  Exclude:
+    - 'lib/chef/provisioning/aws_driver/aws_resource.rb'
+    - 'lib/chef/provisioning/aws_driver/driver.rb'
+
+Lint/UselessAccessModifier:
+  Exclude:
+    - 'lib/chef/provisioning/aws_driver/aws_resource.rb'
+    - 'lib/chef/resource/aws_sqs_queue.rb'
+
+Lint/UselessAssignment:
+  Exclude:
+    - 'docs/examples/aws_rds_subnet_group.rb'
+    - 'lib/chef/provider/aws_key_pair.rb'
+    - 'lib/chef/provider/aws_rds_instance.rb'
+    - 'lib/chef/provider/aws_security_group.rb'
+    - 'lib/chef/provisioning/aws_driver/aws_resource_with_entry.rb'
+    - 'lib/chef/provisioning/aws_driver/driver.rb'
+    - 'lib/chef/provisioning/aws_driver/tagging_strategy/s3.rb'
+    - 'lib/chef/resource/aws_route53_hosted_zone.rb'
+    - 'spec/integration/aws_security_group_spec.rb'
+
+Performance/TimesMap:
+  Exclude:
+    - 'spec/unit/chef/provisioning/aws_driver/route53_spec.rb'
+
+Security/Eval:
+  Exclude:
+    - 'lib/chef/provisioning/aws_driver/aws_resource.rb'
+
+Style/MultilineTernaryOperator:
+  Exclude:
+    - 'lib/chef/provider/aws_network_interface.rb'

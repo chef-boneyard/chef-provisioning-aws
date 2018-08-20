@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "retryable"
 
 class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cache_cluster
@@ -54,20 +54,26 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
       options[:cache_node_type] = new_resource.node_type
       options[:engine] = new_resource.engine
       options[:az_mode] = new_resource.az_mode if new_resource.az_mode
-      options[:preferred_availability_zone] =
-        new_resource.preferred_availability_zone if new_resource.preferred_availability_zone
-      options[:preferred_availability_zones] =
-        new_resource.preferred_availability_zones if new_resource.preferred_availability_zones
+      if new_resource.preferred_availability_zone
+        options[:preferred_availability_zone] =
+          new_resource.preferred_availability_zone
+      end
+      if new_resource.preferred_availability_zones
+        options[:preferred_availability_zones] =
+          new_resource.preferred_availability_zones
+      end
       options[:engine_version] = new_resource.engine_version
-      options[:cache_subnet_group_name] =
-        new_resource.subnet_group_name if new_resource.subnet_group_name
+      if new_resource.subnet_group_name
+        options[:cache_subnet_group_name] =
+          new_resource.subnet_group_name
+      end
       options[:security_group_ids] = new_resource.security_groups
       AWSResource.lookup_options(options, resource: new_resource)
     end
   end
 
   def updatable_options(options)
-    updatable = [:security_groups, :num_cache_nodes, :engine_version]
+    updatable = %i{security_groups num_cache_nodes engine_version}
     options.delete_if { |option, _value| !updatable.include?(option) }
   end
 
@@ -75,21 +81,21 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
     current_sg_ids = cache_cluster[:security_groups].map { |sg| sg[:security_group_id] }.sort
 
     if desired_options[:security_group_ids].sort != current_sg_ids ||
-      desired_options[:num_cache_nodes] != cache_cluster[:num_cache_nodes] ||
-      desired_options[:engine_version] != cache_cluster[:engine_version]
+        desired_options[:num_cache_nodes] != cache_cluster[:num_cache_nodes] ||
+        desired_options[:engine_version] != cache_cluster[:engine_version]
       true
     else
       false
     end
   end
 
-  def wait_for_cache_cluster_state(aws_object, expected_status, tries=60, sleep=5)
+  def wait_for_cache_cluster_state(aws_object, expected_status, tries = 60, sleep = 5)
     query_method = :cache_cluster_status
 
-    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
-      action_handler.report_progress "waited #{retries*sleep}/#{tries*sleep}s for <#{aws_object.class}:#{aws_object.cache_cluster_id}>##{query_method} state to change to #{expected_status}..."
+    Retryable.retryable(tries: tries, sleep: sleep) do |retries, exception|
+      action_handler.report_progress "waited #{retries * sleep}/#{tries * sleep}s for <#{aws_object.class}:#{aws_object.cache_cluster_id}>##{query_method} state to change to #{expected_status}..."
       Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
-      cache_cluster =  new_resource.driver.elasticache.describe_cache_clusters(cache_cluster_id: aws_object.cache_cluster_id)
+      cache_cluster = new_resource.driver.elasticache.describe_cache_clusters(cache_cluster_id: aws_object.cache_cluster_id)
       status = cache_cluster.cache_clusters.first.cache_cluster_status
       action_handler.report_progress "Current Cluster Status: #{status}"
       raise CacheClusterStatusTimeoutError.new(aws_object, status, expected_status) if status != expected_status.to_s

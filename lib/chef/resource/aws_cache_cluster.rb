@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_security_group'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_security_group"
 
 # AWS Elasticache Cluster
 #
@@ -32,9 +32,8 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
   #
   # @param :preferred_availability_zones [String, Array] One or more preferred availability zones
   attribute :preferred_availability_zones,
-            kind_of: [ String, Array ],
+            kind_of: [String, Array],
             coerce: proc { |v| [v].flatten }
-
 
   # Number of Nodes
   #
@@ -65,17 +64,15 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
   #
   # @param :security_groups [String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup] one or more VPC security groups associated with the cache cluster.
   attribute :security_groups,
-            kind_of: [ String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup ],
+            kind_of: [String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup],
             required: true,
             coerce: proc { |v| [v].flatten }
 
   def aws_object
-    begin
-      driver.elasticache
-        .describe_cache_clusters(cache_cluster_id: cluster_name)
-        .data[:cache_clusters].first
-    rescue ::Aws::ElastiCache::Errors::CacheClusterNotFound
-      nil
-    end
+    driver.elasticache
+          .describe_cache_clusters(cache_cluster_id: cluster_name)
+          .data[:cache_clusters].first
+  rescue ::Aws::ElastiCache::Errors::CacheClusterNotFound
+    nil
   end
 end

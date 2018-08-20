@@ -1,9 +1,9 @@
-require 'timeout'
+require "timeout"
 
 module AWSSupport
   class DelayedStream
     def initialize(delay_before_streaming, *streams)
-      @streams = streams.flatten.select { |s| !s.nil? }
+      @streams = streams.flatten.reject(&:nil?)
       if delay_before_streaming > 0
         @buffer = StringIO.new
         @thread = Thread.new do

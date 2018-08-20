@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 module AWS
   class Elasticsearch
@@ -24,7 +24,7 @@ class Chef::Resource::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   # EBS Options
   attribute :ebs_enabled, kind_of: [TrueClass, FalseClass]
-  attribute :volume_type, equal_to: ["standard", "gp2", "io1"]
+  attribute :volume_type, equal_to: %w{standard gp2 io1}
   attribute :volume_size, kind_of: Integer
   attribute :iops, kind_of: Integer
 
@@ -36,7 +36,7 @@ class Chef::Resource::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   def aws_object
     driver.elasticsearch_client
-      .describe_elasticsearch_domains(domain_names: [domain_name])[:domain_status_list]
-      .find { |d| !d[:deleted] }
+          .describe_elasticsearch_domains(domain_names: [domain_name])[:domain_status_list]
+          .find { |d| !d[:deleted] }
   end
 end

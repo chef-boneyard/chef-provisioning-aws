@@ -1,10 +1,10 @@
-require 'cheffish/rspec/recipe_run_wrapper'
+require "cheffish/rspec/recipe_run_wrapper"
 
 module AWSSupport
   class AWSResourceRunWrapper < Cheffish::RSpec::RecipeRunWrapper
     def initialize(example, resource_type, name, &properties)
       super(example.chef_config) do
-        if properties && properties.parameters.size > 0
+        if properties && !properties.parameters.empty?
           public_send(resource_type, name) { instance_exec(example, &properties) }
         else
           public_send(resource_type, name, &properties)

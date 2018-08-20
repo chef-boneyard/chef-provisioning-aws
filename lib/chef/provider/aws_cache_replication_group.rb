@@ -1,8 +1,8 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cache_replication_group
-  
+
   protected
 
   def create_aws_object
@@ -11,8 +11,8 @@ class Chef::Provider::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
     end
   end
 
-  def update_aws_object(cache_replication_group)
-    Chef::Log.warn('Updating ElastiCache replication groups is currently unsupported')
+  def update_aws_object(_cache_replication_group)
+    Chef::Log.warn("Updating ElastiCache replication groups is currently unsupported")
   end
 
   def destroy_aws_object(cache_replication_group)
@@ -39,10 +39,14 @@ class Chef::Provider::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
       options[:cache_node_type] = new_resource.node_type
       options[:engine] = new_resource.engine
       options[:engine_version] = new_resource.engine_version
-      options[:preferred_cache_cluster_a_zs] =
-        new_resource.preferred_availability_zones if new_resource.preferred_availability_zones
-      options[:cache_subnet_group_name] =
-        new_resource.subnet_group_name if new_resource.subnet_group_name
+      if new_resource.preferred_availability_zones
+        options[:preferred_cache_cluster_a_zs] =
+          new_resource.preferred_availability_zones
+      end
+      if new_resource.subnet_group_name
+        options[:cache_subnet_group_name] =
+          new_resource.subnet_group_name
+      end
       options[:security_group_ids] = new_resource.security_groups
       AWSResource.lookup_options(options, resource: new_resource)
     end

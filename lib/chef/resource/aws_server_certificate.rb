@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type ::Aws::IAM::ServerCertificate
@@ -10,12 +10,10 @@ class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSR
   attribute :private_key, kind_of: String
 
   def aws_object
-    begin
-      cert = ::Aws::IAM::ServerCertificate.new(name,{client: driver.iam} )
-      cert.data
-      cert
-    rescue ::Aws::IAM::Errors::NoSuchEntity
-      nil
-    end
+    cert = ::Aws::IAM::ServerCertificate.new(name, client: driver.iam)
+    cert.data
+    cert
+  rescue ::Aws::IAM::Errors::NoSuchEntity
+    nil
   end
 end

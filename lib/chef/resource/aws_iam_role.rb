@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 #
 # An AWS IAM role, specifying set of policies for acessing other AWS services.
@@ -37,7 +37,7 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   #
   attribute :inline_policies, kind_of: Hash, callbacks: {
     "inline_policies must be a hash maping policy names to policy documents" => proc do |policies|
-      policies.all? {|policy_name, policy| (policy_name.is_a?(String) || policy_name.is_a?(Symbol)) && policy.is_a?(String)}
+      policies.all? { |policy_name, policy| (policy_name.is_a?(String) || policy_name.is_a?(Symbol)) && policy.is_a?(String) }
     end
   }
 
@@ -51,5 +51,4 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   rescue ::Aws::IAM::Errors::NoSuchEntity
     nil
   end
-
 end

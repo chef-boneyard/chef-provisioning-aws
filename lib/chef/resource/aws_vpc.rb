@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # Represents an AWS VPC.
@@ -29,10 +29,10 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   include Chef::Provisioning::AWSDriver::AWSTaggable
   aws_sdk_type ::Aws::EC2::Vpc,
                id: :id,
-               option_names: [:vpc, :vpc_id, :peer_vpc_id]
+               option_names: %i{vpc vpc_id peer_vpc_id}
 
-  require 'chef/resource/aws_dhcp_options'
-  require 'chef/resource/aws_route_table'
+  require "chef/resource/aws_dhcp_options"
+  require "chef/resource/aws_route_table"
   #
   # The name of this VPC.
   #
@@ -57,7 +57,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   # Defaults, not surprisingly, to `default`.
   #
-  attribute :instance_tenancy, equal_to: [ :default, :dedicated ]
+  attribute :instance_tenancy, equal_to: %i{default dedicated}
 
   #
   # Whether this VPC should have an Internet Gateway or not.
@@ -68,7 +68,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #   detach if not.
   # - You may specify the AWS ID of an actual Internet Gateway
   #
-  attribute :internet_gateway#, kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
+  attribute :internet_gateway # , kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
 
   #
   # The main route table.
@@ -78,7 +78,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # - An actual `aws_route_table` resource.
   # - An AWS `route_table` object.
   #
-  attribute :main_route_table, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ]
+  attribute :main_route_table, kind_of: [String, AwsRouteTable, ::Aws::EC2::RouteTable]
 
   #
   # The routes for the main route table.
@@ -104,7 +104,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #
   # The DHCP options for this VPC.
   #
-  attribute :dhcp_options, kind_of: [ AwsDhcpOptions, ::Aws::EC2::DhcpOptions, String ]
+  attribute :dhcp_options, kind_of: [AwsDhcpOptions, ::Aws::EC2::DhcpOptions, String]
 
   #
   # Indicates whether the DNS resolution is supported for the VPC. If this
@@ -117,7 +117,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # For more information, see Amazon DNS Server:
   # - http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html#AmazonDNS
   #
-  attribute :enable_dns_support, equal_to: [ true, false ]
+  attribute :enable_dns_support, equal_to: [true, false]
 
   #
   # Indicates whether the instances launched in the VPC get DNS hostnames. If
@@ -125,7 +125,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   # they do not. If you want your instances to get DNS hostnames, you must also
   # set enable_dns_support to true.
   #
-  attribute :enable_dns_hostnames, equal_to: [ true, false ]
+  attribute :enable_dns_hostnames, equal_to: [true, false]
 
   attribute :vpc_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^vpc-[a-f0-9]+$/ ? name : nil
@@ -141,6 +141,6 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidVpcIDNotFound
-    return false
+    false
   end
 end

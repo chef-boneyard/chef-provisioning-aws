@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_subnet'
-require 'chef/resource/aws_eip_address'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_subnet"
+require "chef/resource/aws_eip_address"
 
 class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -13,20 +13,20 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
     name =~ /^eni-[a-f0-9]+$/ ? name : nil
   }
 
-  attribute :subnet,                 kind_of: [ String, ::Aws::EC2::Subnet, AwsSubnet ]
+  attribute :subnet,                 kind_of: [String, ::Aws::EC2::Subnet, AwsSubnet]
 
   attribute :private_ip_address,     kind_of: String
 
   attribute :description,            kind_of: String
 
-  attribute :security_groups,        kind_of: Array #(Array<SecurityGroup>, Array<String>)
+  attribute :security_groups,        kind_of: Array # (Array<SecurityGroup>, Array<String>)
 
-  attribute :machine,                kind_of: [ String, FalseClass, AwsInstance, ::Aws::EC2::Instance, ::Aws::EC2::Instance ]
+  attribute :machine,                kind_of: [String, FalseClass, AwsInstance, ::Aws::EC2::Instance, ::Aws::EC2::Instance]
 
   attribute :device_index,           kind_of: Integer
 
-  # TODO implement eip address association
-  #attribute :elastic_ip_address,     kind_of: [ String, ::Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, FalseClass ]
+  # TODO: implement eip address association
+  # attribute :elastic_ip_address,     kind_of: [ String, ::Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, FalseClass ]
 
   def aws_object
     driver, id = get_driver_and_id
@@ -37,6 +37,6 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound
-    return false
+    false
   end
 end

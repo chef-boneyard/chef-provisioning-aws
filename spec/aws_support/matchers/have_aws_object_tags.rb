@@ -1,6 +1,6 @@
-require 'rspec/matchers'
-require 'chef/provisioning'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "chef/provisioning"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers
@@ -34,7 +34,7 @@ module AWSSupport
 
         # Check existence
         if @aws_object.nil?
-          differences << "#{resource.to_s} did not exist!"
+          differences << "#{resource} did not exist!"
         else
           differences += match_hashes_failure_messages(expected_tags, aws_object_tags(resource), resource.to_s)
         end
@@ -51,7 +51,6 @@ module AWSSupport
         provider = resource.provider_for_action(:create)
         provider.aws_tagger.current_tags
       end
-
     end
   end
 end

@@ -1,6 +1,6 @@
-require 'rspec/matchers'
-require 'chef/provisioning'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "chef/provisioning"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers
@@ -32,13 +32,13 @@ module AWSSupport
 
         # We want to record that it was created BEFORE the converge, so that
         # even if it fails, we destroy it.
-        example.created_during_test << [ resource_name, name ]
+        example.created_during_test << [resource_name, name]
 
         # Converge
         begin
           recipe.converge unless recipe.converged?
-        rescue
-          differences += [ "error trying to create #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
+        rescue StandardError
+          differences += ["error trying to create #{resource_name}[#{name}]!\n#{($ERROR_INFO.backtrace.map { |line| "- #{line}\n" } + [recipe.output_for_failure_message]).join('')}"]
         end
 
         # Check whether the recipe caused an update or not

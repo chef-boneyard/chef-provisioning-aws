@@ -1,16 +1,16 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_vpc'
-require 'chef/provisioning/aws_driver/exceptions'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_vpc"
+require "chef/provisioning/aws_driver/exceptions"
 
 class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
   aws_sdk_type ::Aws::EC2::SecurityGroup,
                id: :id,
-               option_names: [:security_group, :security_group_id, :security_group_name]
+               option_names: %i{security_group security_group_id security_group_name}
 
   attribute :name,          kind_of: String, name_attribute: true
-  attribute :vpc,           kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc,           kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
   attribute :description,   kind_of: String
 
   #
@@ -46,8 +46,8 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   #   - `inbound_rules load_balancer('myloadbalancer') => 80`
   #   - `inbound_rules AWS.ec2.security_groups.first => 80`
   #
-  attribute :inbound_rules,  kind_of: [ Array, Hash ]
-  attribute :outbound_rules, kind_of: [ Array, Hash ]
+  attribute :inbound_rules,  kind_of: [Array, Hash]
+  attribute :outbound_rules, kind_of: [Array, Hash]
 
   attribute :security_group_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^sg-[a-f0-9]+$/ ? name : nil
@@ -61,15 +61,15 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
       # provided
       if vpc
         vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: self)
-        results=vpc_object.security_groups.to_a.select { |s| s.group_name == name or s.id == name }
+        results = vpc_object.security_groups.to_a.select { |s| (s.group_name == name) || (s.id == name) }
       else
-        results=driver.ec2_resource.security_groups.to_a.select { |s| s.group_name == name or s.id == name }
+        results = driver.ec2_resource.security_groups.to_a.select { |s| (s.group_name == name) || (s.id == name) }
       end
       if results.size >= 2
         raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(name, results)
       end
       result = results.first
     end
-    result ? result : nil
+    result || nil
   end
 end

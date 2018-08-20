@@ -1,14 +1,13 @@
 # A simple load balancer for HTTP on port 80
 load_balancer "test-elb" do
-    machines [ "machine1", "machine2" ]
-    load_balancer_options :listeners => [{
-        :port => 80,
-        :protocol => :http,
-        :instance_port => 80,
-        :instance_protocol => :http,
-    }]
+  machines %w{machine1 machine2}
+  load_balancer_options listeners: [{
+    port: 80,
+    protocol: :http,
+    instance_port: 80,
+    instance_protocol: :http
+  }]
 end
-
 
 # A more complex load balancer.
 # This creates 10 t2.micro instances, and then adds them to a load balancer.
@@ -21,13 +20,13 @@ end
 num_instances = 10
 
 1.upto(num_instances) do |inst|
-    machine "my-machine-#{inst}" do
-        add_machine_options bootstrap_options: {
-            security_group_ids: 'test-sg',
-            subnet_id: 'subnet-1234567',
-            instance_type: 't2.micro'
-        }
-    end
+  machine "my-machine-#{inst}" do
+    add_machine_options bootstrap_options: {
+      security_group_ids: "test-sg",
+      subnet_id: "subnet-1234567",
+      instance_type: "t2.micro"
+    }
+  end
 end
 
 # using the example cert and private key from the AWS ServerCertificate docs
@@ -48,13 +47,13 @@ load_balancer "test-elb" do
           instance_port: 80,
           instance_protocol: :http
         },
-        {
-          port: 443,
-          protocol: :https,
-          instance_port: 443,
-          instance_protocol: :https,
-          ssl_certificate_id: cert.aws_object.arn
-        }],
+                    {
+                      port: 443,
+                      protocol: :https,
+                      instance_port: 443,
+                      instance_protocol: :https,
+                      ssl_certificate_id: cert.aws_object.arn
+                    }],
         health_check: {
           healthy_threshold:    2,
           unhealthy_threshold:  4,

@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/rds'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/rds"
 
 # inspiration taken from providers/aws_rds_subnet_group.rb
 # but different enough that I'm not sure there is easy abstraction
@@ -33,7 +33,7 @@ class Chef::Provider::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSP
 
   def update_aws_object(_parameter_group)
     updates = required_updates
-    if ! updates.empty?
+    unless updates.empty?
       converge_by updates do
         driver.modify_db_parameter_group(desired_update_options)
       end
@@ -82,21 +82,21 @@ class Chef::Provider::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSP
       ret << "  set group parameters to #{desired_options[:parameters]}"
     end
 
-    if ! desired_options[:db_parameter_group_family].nil?
+    unless desired_options[:db_parameter_group_family].nil?
       # modify_db_parameter_group doesn't support updating the db_parameter_group_family  according to
       # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#modify_db_parameter_group-instance_method
       # which is frustrating because it is required for create
       Chef::Log.warn "Updating description for RDS parameter groups is not supported by RDS client."
     end
 
-    if ! desired_options[:description].nil?
+    unless desired_options[:description].nil?
       # modify_db_parameter_group doesn't support updating the description according to
       # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#modify_db_parameter_group-instance_method
       # which is frustrating because it is required for create
       Chef::Log.warn "Updating description for RDS parameter groups is not supported by RDS client."
     end
 
-    if ! (desired_options[:aws_tags].nil? || desired_options[:aws_tags].empty?)
+    unless desired_options[:aws_tags].nil? || desired_options[:aws_tags].empty?
       # modify_db_parameter_group doesn't support the tags key according to
       # http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/RDS/Client.html#modify_db_parameter_group-instance_method
       Chef::Log.warn "Updating tags for RDS parameter groups is not supported by RDS client."
@@ -118,9 +118,9 @@ class Chef::Provider::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSP
     # value for apply_method for that parameter later in a recipe, or not be itempotent.
     #
     # Breaking the user is never the right option, so we have elected to not be itempotent.
-    ! (desired_options[:parameters].nil? || desired_options[:parameters].empty?)
+    !(desired_options[:parameters].nil? || desired_options[:parameters].empty?)
   end
-  
+
   def driver
     new_resource.driver.rds
   end

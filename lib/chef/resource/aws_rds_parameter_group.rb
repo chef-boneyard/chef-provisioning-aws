@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_rds_resource'
-require 'chef/provisioning/aws_driver/aws_taggable'
+require "chef/provisioning/aws_driver/aws_rds_resource"
+require "chef/provisioning/aws_driver/aws_taggable"
 
 class Chef::Resource::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -19,7 +19,7 @@ class Chef::Resource::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSR
     initial_request = driver.rds.describe_db_parameters(db_parameter_group_name: name, max_records: 100)
     marker = initial_request[:marker]
     parameters = initial_request[:parameters]
-    while !marker.nil?
+    until marker.nil?
       more_results = driver.rds.describe_db_parameters(db_parameter_group_name: name, max_records: 100, marker: marker)
       parameters += more_results[:parameters]
       marker = more_results[:marker]

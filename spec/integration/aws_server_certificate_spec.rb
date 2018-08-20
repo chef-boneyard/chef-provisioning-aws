@@ -1,4 +1,4 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe Chef::Resource::AwsServerCertificate do
   extend AWSSupport
@@ -7,7 +7,7 @@ describe Chef::Resource::AwsServerCertificate do
   # Follow those instructions except the chain should be `ca-int.crt` only
   # instead of concatenated intermediate and root
 
-  when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
+  when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "without a VPC" do
       cert_string = <<-CERT
 -----BEGIN CERTIFICATE-----
@@ -26,8 +26,8 @@ IUpfB2NibP9G5LhtxFY1fa+MLp9mJ+yI3hg0x+6xBPTiPDGVpFdJ+LH/mKWxsaWT
 /KKNXu+NC9z/lrNVU6J/XUCk54YdmjMvadHs1aJp6NWH7LI9df27AlBGLnRc/w04
 agCh4aCsjczD2YeBVl6idws/InYbSwhz7x9zXz2qB3BbI3psgBfJQQcJukulVGza
 RkD993U+CJpJMDbpIGRe9lXe33R3tGbbvfa4FaXZlZgoKCrE21SCb2hxlNG2+w==
------END CERTIFICATE-----           
-CERT
+-----END CERTIFICATE-----
+      CERT
 
       private_key_string = <<-KEY
 -----BEGIN RSA PRIVATE KEY-----
@@ -56,8 +56,8 @@ k7JouTKFS7IMwTW3AFpyHz+KG4QcBoQj94ofZvapIOv8E5+8MkSVyuONRbHuoOeE
 DNbJssECgYBIAFB3J66cZH3zBfyanHwYMPlTupxUBTsN19UCAK7MZqA5kbqG7b7Q
 cKPrgR7gibLvaxj22lvD8uEICMGy6g8s3+PyDwcw5PNrKOdIkRrYQxTFtfs1JRCa
 6kM8q32f1I3qd31zbpoDBHq+Se2RSaLbmoIAFqDSCWyeUHydALo2kw==
------END RSA PRIVATE KEY-----      
-KEY
+-----END RSA PRIVATE KEY-----
+      KEY
 
       certificate_chain_string = <<-CHAIN
 -----BEGIN CERTIFICATE-----
@@ -76,32 +76,30 @@ gtw2MXUV3eA9ByAD4XKIWSvaROdHj+5wiCKWKMGvrSEPay5xEJm54VcALXHGk+Vf
 jFNHTa/YFrlDXXupmI8HCYKwXrcooNcLuIkEmZIPX99s1vjFVT8oRdYLwFGt7AVC
 ufkpMTlf/J9WjsabI5O+fzJYgdVm7QUq8Dg3tiM0RcZtO2cWus4DZl/KQkZx84f1
 WGXzC2zbuS6DI9QPgkLeQ11O2kaeMqkNy6Tzr88XfA==
------END CERTIFICATE-----      
-CHAIN
+-----END CERTIFICATE-----
+      CHAIN
 
       it "creates a cert" do
-        expect_recipe {
+        expect_recipe do
           aws_server_certificate "test-cert" do
             certificate_body cert_string
             private_key private_key_string
             certificate_chain certificate_chain_string
           end
-        }.to create_an_aws_server_certificate("test-cert",
-                                              :certificate_body => cert_string.strip,
-                                              :certificate_chain => certificate_chain_string.strip
-                                             ).and be_idempotent
+        end.to create_an_aws_server_certificate("test-cert",
+                                                certificate_body: cert_string.strip,
+                                                certificate_chain: certificate_chain_string.strip).and be_idempotent
       end
 
       it "creates a cert without a certificate_chain" do
-        expect_recipe {
+        expect_recipe do
           aws_server_certificate "test-cert" do
             certificate_body cert_string
             private_key private_key_string
           end
-        }.to create_an_aws_server_certificate("test-cert",
-                                              :certificate_body => cert_string.strip,
-                                              :certificate_chain => nil
-                                             ).and be_idempotent
+        end.to create_an_aws_server_certificate("test-cert",
+                                                certificate_body: cert_string.strip,
+                                                certificate_chain: nil).and be_idempotent
       end
     end
   end

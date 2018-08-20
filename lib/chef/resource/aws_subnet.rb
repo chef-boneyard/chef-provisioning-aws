@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # An AWS subnet is a sub-section of a VPC, walled gardens within the walled garden;
@@ -16,11 +16,11 @@ require 'chef/provisioning/aws_driver/aws_resource_with_entry'
 class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
 
-  aws_sdk_type ::Aws::EC2::Subnet, :id => :id
+  aws_sdk_type ::Aws::EC2::Subnet, id: :id
 
-  require 'chef/resource/aws_vpc'
-  require 'chef/resource/aws_network_acl'
-  require 'chef/resource/aws_route_table'
+  require "chef/resource/aws_vpc"
+  require "chef/resource/aws_network_acl"
+  require "chef/resource/aws_route_table"
 
   #
   # The name of this subnet.
@@ -35,7 +35,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
 
   #
   # The CIDR block of IP addresses allocated to this subnet.
@@ -62,7 +62,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # Whether to give public IP addresses to new instances in this subnet by default.
   #
-  attribute :map_public_ip_on_launch, kind_of: [ TrueClass, FalseClass ]
+  attribute :map_public_ip_on_launch, kind_of: [TrueClass, FalseClass]
 
   #
   # The route table to associate with this subnet.
@@ -76,7 +76,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # By default, an implicit association with the main route table is made (`:default_to_main`)
   #
-  attribute :route_table#, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ], equal_to: [ :default_to_main ]
+  attribute :route_table # , kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ], equal_to: [ :default_to_main ]
 
   #
   # The Network ACL to associate with this subnet. Subnets may only
@@ -84,7 +84,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # TODO: See if it's possible to disassociate a Network ACL.
   #
-  attribute :network_acl, kind_of: [ String, AwsNetworkAcl, ::Aws::EC2::NetworkAcl ]
+  attribute :network_acl, kind_of: [String, AwsNetworkAcl, ::Aws::EC2::NetworkAcl]
 
   attribute :subnet_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^subnet-[a-f0-9]+$/ ? name : nil

@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "retryable"
 
 class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -9,7 +9,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
   def action_create
     route_table = super
 
-    if !new_resource.routes.nil?
+    unless new_resource.routes.nil?
       update_routes(vpc, route_table, new_resource.ignore_route_targets)
     end
 
@@ -29,14 +29,14 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "create route table #{new_resource.name} in VPC #{new_resource.vpc} (#{vpc.id}) and region #{region}" do
       route_table = vpc.create_route_table
       retry_with_backoff(::Aws::EC2::Errors::ServiceError) do
-        route_table.create_tags({
-             :tags => [
-                 {
-                     :key => "Name",
-                     :value => new_resource.name
-                 }
-             ]
-         })
+        route_table.create_tags(
+          tags: [
+            {
+              key: "Name",
+              value: new_resource.name
+            }
+          ]
+        )
       end
       route_table
     end
@@ -48,17 +48,17 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     if new_resource.vpc
       desired_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
       if vpc.id != desired_vpc_id
-        raise "VPC of route table #{new_resource.to_s} is #{vpc.id}, but desired VPC is #{desired_vpc_id}!  The AWS SDK does not support updating the main route table except by creating a new route table."
+        raise "VPC of route table #{new_resource} is #{vpc.id}, but desired VPC is #{desired_vpc_id}!  The AWS SDK does not support updating the main route table except by creating a new route table."
       end
     end
   end
 
   def destroy_aws_object(route_table)
-    converge_by "delete #{new_resource.to_s} in #{region}" do
+    converge_by "delete #{new_resource} in #{region}" do
       begin
         route_table.delete
       rescue ::Aws::EC2::Errors::DependencyViolation
-        raise "#{new_resource.to_s} could not be deleted because it is the main route table for #{route_table.vpc.id} or it is being used by a subnet"
+        raise "#{new_resource} could not be deleted because it is the main route table for #{route_table.vpc.id} or it is being used by a subnet"
       end
     end
   end
@@ -74,7 +74,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
       # Ignore the automatic local route
       next if route.nil?
       route_target = route.gateway_id || route.nat_gateway_id || route.instance_id || route.network_interface_id || route.vpc_peering_connection_id
-      next if route_target == 'local'
+      next if route_target == "local"
       next if ignore_route_targets.find { |target| route_target.match(/#{target}/) }
       current_routes[route.destination_cidr_block] = route
     end
@@ -94,7 +94,7 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
         end
       else
         action_handler.perform_action "route #{destination_cidr_block} to #{route_target} (#{target})" do
-          route_table.create_route({ :destination_cidr_block => destination_cidr_block }.merge(options))
+          route_table.create_route({ destination_cidr_block: destination_cidr_block }.merge(options))
         end
       end
     end
@@ -114,10 +114,9 @@ class Chef::Provider::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSProvider
     # Add propagated routes
     if gateway_ids
       gateway_ids.each do |gateway_id|
-        if !current_propagating_vgw_set.reject! { |vgw_set| vgw_set[:gateway_id] == gateway_id }
-          action_handler.perform_action "enable route propagation for route table #{route_table.id} to virtual private gateway #{gateway_id}" do
-            route_table.client.enable_vgw_route_propagation(route_table_id: route_table.id, gateway_id: gateway_id)
-          end
+        next if current_propagating_vgw_set.reject! { |vgw_set| vgw_set[:gateway_id] == gateway_id }
+        action_handler.perform_action "enable route propagation for route table #{route_table.id} to virtual private gateway #{gateway_id}" do
+          route_table.client.enable_vgw_route_propagation(route_table_id: route_table.id, gateway_id: gateway_id)
         end
       end
     end

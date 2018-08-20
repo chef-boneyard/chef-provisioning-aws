@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/ec2'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/ec2"
 
 class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -21,11 +21,11 @@ class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
       # When purging, we must wait until the instance is fully terminated - thats the only way
       # to delete the network interface that I can see
       instance.wait_until_terminated do |w|
-        # TODO look at `wait_for_status` - delay and max_attempts should be configurable
+        # TODO: look at `wait_for_status` - delay and max_attempts should be configurable
         w.delay = 5
         w.max_attempts = 60
-        w.before_wait do |attempts, response|
-          action_handler.report_progress "waited #{(attempts-1)*5}/#{60*5}s for #{instance.id} status to terminate..."
+        w.before_wait do |attempts, _response|
+          action_handler.report_progress "waited #{(attempts - 1) * 5}/#{60 * 5}s for #{instance.id} status to terminate..."
         end
       end
     end

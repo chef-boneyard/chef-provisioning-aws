@@ -1,8 +1,7 @@
-#require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+# require 'chef/provisioning/aws_driver/aws_provider'
+require "retryable"
 
 class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
-
   provides :aws_nat_gateway
 
   protected
@@ -14,7 +13,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
     subnet = Chef::Resource::AwsSubnet.get_aws_object(new_resource.subnet, resource: new_resource)
 
     if new_resource.eip_address.nil?
-      # TODO Ideally it would be nice to automatically manage an eip address but
+      # TODO: Ideally it would be nice to automatically manage an eip address but
       # the lack of tagging support and the limited SDK interaction with these two
       # resources makes that too hard right now. So we force the user to manage their
       # eip address as a seperate resource.
@@ -24,8 +23,8 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "create nat gateway #{new_resource.name} in region #{region} for subnet #{subnet}" do
       options = {
-          subnet_id: subnet.id,
-          allocation_id: eip_address.allocation_id
+        subnet_id: subnet.id,
+        allocation_id: eip_address.allocation_id
       }
 
       nat_gateway = new_resource.driver.ec2_resource.create_nat_gateway(options)
@@ -42,7 +41,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
 
     if new_resource.eip_address
       eip_address = Chef::Resource::AwsEipAddress.get_aws_object(new_resource.eip_address, resource: new_resource)
-      if eip_address.nil? or eip_address.allocation_id != nat_gateway.nat_gateway_addresses.first.allocation_id
+      if eip_address.nil? || (eip_address.allocation_id != nat_gateway.nat_gateway_addresses.first.allocation_id)
         raise "Nat gateway elastic ip address cannot be changed after being created! Desired elastic ip address for #{new_resource.name} (#{nat_gateway.id}) was \"#{nat_gateway.nat_gateway_addresses.first.allocation_id}\" and actual description is \"#{eip_address.allocation_id}\""
       end
     end

@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/elasticsearch'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/elasticsearch"
 
 class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_elasticsearch_domain
@@ -10,15 +10,15 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
     end
   end
 
-  def destroy_aws_object(domain)
+  def destroy_aws_object(_domain)
     converge_by "destroy Elasticsearch domain #{new_resource.domain_name}" do
-      es_client.delete_elasticsearch_domain({domain_name: new_resource.domain_name})
+      es_client.delete_elasticsearch_domain(domain_name: new_resource.domain_name)
     end
   end
 
   def update_aws_object(domain)
     updates = required_updates(domain)
-    if ! updates.empty?
+    unless updates.empty?
       converge_by updates do
         es_client.update_elasticsearch_domain_config(update_payload)
       end
@@ -30,7 +30,8 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
                       strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::Elasticsearch.new(
                         es_client,
                         new_resource.aws_object.arn,
-                        new_resource.aws_tags)
+                        new_resource.aws_tags
+                      )
                       Chef::Provisioning::AWSDriver::AWSTagger.new(strategy, action_handler)
                     end
   end
@@ -52,7 +53,7 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
   end
 
   def update_payload
-    payload = {domain_name: new_resource.domain_name}
+    payload = { domain_name: new_resource.domain_name }
     payload.merge!(ebs_options) if ebs_options_present?
     payload.merge!(cluster_options) if cluster_options_present?
     payload.merge!(snapshot_options) if snapshot_options_present?
@@ -60,34 +61,34 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
     payload
   end
 
-  EBS_OPTIONS = %i(ebs_enabled volume_type volume_size iops)
+  EBS_OPTIONS = %i{ebs_enabled volume_type volume_size iops}.freeze
   def ebs_options
     opts = EBS_OPTIONS.inject({}) do |accum, i|
-      new_resource.send(i).nil? ? accum : accum.merge({i => new_resource.send(i)})
+      new_resource.send(i).nil? ? accum : accum.merge(i => new_resource.send(i))
     end
-    {ebs_options: opts}
+    { ebs_options: opts }
   end
 
   def ebs_options_present?
-    EBS_OPTIONS.any? {|i| !new_resource.send(i).nil? }
+    EBS_OPTIONS.any? { |i| !new_resource.send(i).nil? }
   end
 
   def ebs_options_changed?(object)
     changed?(ebs_options[:ebs_options], object.ebs_options)
   end
 
-  CLUSTER_OPTIONS = %i(instance_type instance_count dedicated_master_enabled
-                       dedicated_master_type dedicated_master_count zone_awareness_enabled)
+  CLUSTER_OPTIONS = %i{instance_type instance_count dedicated_master_enabled
+                       dedicated_master_type dedicated_master_count zone_awareness_enabled}.freeze
 
   def cluster_options
     opts = CLUSTER_OPTIONS.inject({}) do |accum, i|
-      new_resource.send(i).nil? ? accum : accum.merge({i => new_resource.send(i)})
+      new_resource.send(i).nil? ? accum : accum.merge(i => new_resource.send(i))
     end
-    {elasticsearch_cluster_config: opts}
+    { elasticsearch_cluster_config: opts }
   end
 
   def cluster_options_present?
-    CLUSTER_OPTIONS.any? {|i| !new_resource.send(i).nil? }
+    CLUSTER_OPTIONS.any? { |i| !new_resource.send(i).nil? }
   end
 
   def cluster_options_changed?(object)
@@ -96,14 +97,14 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   def snapshot_options
     if !new_resource.automated_snapshot_start_hour.nil?
-      {snapshot_options: { automated_snapshot_start_hour: new_resource.automated_snapshot_start_hour }}
+      { snapshot_options: { automated_snapshot_start_hour: new_resource.automated_snapshot_start_hour } }
     else
       {}
     end
   end
 
   def snapshot_options_present?
-    ! new_resource.automated_snapshot_start_hour.nil?
+    !new_resource.automated_snapshot_start_hour.nil?
   end
 
   def snapshot_options_changed?(object)

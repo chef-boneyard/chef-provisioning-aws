@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
-require 'chef/resource/aws_vpc'
-require 'chef/resource/aws_subnet'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
+require "chef/resource/aws_vpc"
+require "chef/resource/aws_subnet"
 
 class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -20,7 +20,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
 
   #
   # Accepts rules in the format:
@@ -34,11 +34,11 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # However, if either is set to `[]` all respective current rules will be removed.
   #
   attribute :inbound_rules,
-            kind_of: [ Array, Hash ],
+            kind_of: [Array, Hash],
             coerce: proc { |v| v && [v].flatten }
 
   attribute :outbound_rules,
-            kind_of: [ Array, Hash ],
+            kind_of: [Array, Hash],
             coerce: proc { |v| v && [v].flatten }
 
   attribute :network_acl_id,
@@ -57,7 +57,6 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidNetworkAclIDNotFound
-    return false
+    false
   end
-
 end

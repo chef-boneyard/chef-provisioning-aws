@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_rds_resource'
-require 'chef/provisioning/aws_driver/aws_taggable'
+require "chef/provisioning/aws_driver/aws_rds_resource"
+require "chef/provisioning/aws_driver/aws_taggable"
 
 class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -32,8 +32,8 @@ class Chef::Resource::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSRDSReso
   attribute :additional_options, kind_of: Hash, default: {}
 
   def aws_object
-    result = self.driver.rds_resource.db_instance(name)
-    return nil unless result && result.db_instance_status != 'deleting'
+    result = driver.rds_resource.db_instance(name)
+    return nil unless result && result.db_instance_status != "deleting"
     result
   rescue ::Aws::RDS::Errors::DBInstanceNotFound
     nil

@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_iam_instance_profile
@@ -8,7 +8,6 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
     update_attached_role(iam_instance_profile)
   end
-
 
   protected
 
@@ -28,19 +27,19 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
       detach_role(iam_instance_profile)
       converge_by "associating role #{role} with instance profile #{new_resource.name}" do
         # Despite having collection methods for roles, instance profile can only have single role associated
-        iam_instance_profile.add_role({
+        iam_instance_profile.add_role(
           role_name: role
-        })
+        )
       end
     end
   end
 
   def create_aws_object
     converge_by "create IAM instance profile #{new_resource.name}" do
-      new_resource.driver.iam_resource.create_instance_profile({
+      new_resource.driver.iam_resource.create_instance_profile(
         path: new_resource.path || "/",
         instance_profile_name: new_resource.name
-      })
+      )
     end
   end
 
@@ -56,5 +55,4 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
       iam_instance_profile.delete
     end
   end
-
 end

@@ -1,5 +1,5 @@
-require 'spec_helper'
-require 'securerandom'
+require "spec_helper"
+require "securerandom"
 
 def mk_bucket_name
   bucket_postfix = SecureRandom.hex(8)
@@ -14,22 +14,19 @@ describe Chef::Resource::AwsS3Bucket do
       bucket_name = mk_bucket_name
 
       it "aws_s3_bucket '#{bucket_name}' creates a bucket" do
-        expect_recipe {
+        expect_recipe do
           aws_s3_bucket bucket_name
-        }.to create_an_aws_s3_bucket(bucket_name).and be_idempotent
+        end.to create_an_aws_s3_bucket(bucket_name).and be_idempotent
       end
 
       it "creates aws_s3_bucket tags" do
-        expect_recipe {
+        expect_recipe do
           aws_s3_bucket bucket_name do
             aws_tags key1: "value"
           end
-        }.to create_an_aws_s3_bucket(bucket_name)
-        .and have_aws_s3_bucket_tags(bucket_name,
-          {
-            'key1' => 'value'
-          }
-        ).and be_idempotent
+        end.to create_an_aws_s3_bucket(bucket_name)
+          .and have_aws_s3_bucket_tags(bucket_name,
+                                       "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -38,49 +35,44 @@ describe Chef::Resource::AwsS3Bucket do
         end
 
         it "updates aws_s3_bucket tags" do
-          expect_recipe {
+          expect_recipe do
             aws_s3_bucket bucket_name do
               aws_tags key1: "value2", key2: nil
             end
-          }.to have_aws_s3_bucket_tags(bucket_name,
-            {
-              'key1' => 'value2',
-              'key2' => ''
-            }
-          ).and be_idempotent
+          end.to have_aws_s3_bucket_tags(bucket_name,
+                                         "key1" => "value2",
+                                         "key2" => "").and be_idempotent
         end
 
         it "removes all aws_s3_bucket tags" do
-
-          expect_recipe {
+          expect_recipe do
             aws_s3_bucket bucket_name do
               aws_tags({})
             end
-          }.to have_aws_s3_bucket_tags(bucket_name, {}).and be_idempotent
+          end.to have_aws_s3_bucket_tags(bucket_name, {}).and be_idempotent
         end
       end
-
     end
 
     with_aws "when a bucket with content exists" do
       bucket_name = mk_bucket_name
-      with_converge {
+      with_converge do
         aws_s3_bucket bucket_name
 
         ruby_block "upload s3 object" do
           block do
-            ::Aws::S3::Resource.new(driver.s3_client).buckets.find { |b| b.name == bucket_name }.object("test-object").put( { body: "test-content" } )
+            ::Aws::S3::Resource.new(driver.s3_client).buckets.find { |b| b.name == bucket_name }.object("test-object").put(body: "test-content")
           end
         end
-      }
+      end
 
       it "aws_s3_bucket '#{bucket_name}' with recursive_delete set to true, deletes the bucket" do
-        r = recipe {
+        r = recipe do
           aws_s3_bucket bucket_name do
             recursive_delete true
             action :delete
           end
-        }
+        end
         expect(r).to destroy_an_aws_s3_bucket(bucket_name)
       end
     end

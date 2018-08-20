@@ -1,22 +1,21 @@
 module AWSSupport
   module DeepMatcher
     module MatchValuesFailureMessages
-
-      require 'set'
-      require 'rspec/matchers'
-      require 'rspec/matchers/composable'
-      require 'aws_support/deep_matcher'
-      require 'aws_support/deep_matcher/matchable_object'
-      require 'aws_support/deep_matcher/matchable_array'
+      require "set"
+      require "rspec/matchers"
+      require "rspec/matchers/composable"
+      require "aws_support/deep_matcher"
+      require "aws_support/deep_matcher/matchable_object"
+      require "aws_support/deep_matcher/matchable_array"
 
       protected
 
-      def match_values_failure_messages(expected, actual, identifier=nil)
+      def match_values_failure_messages(expected, actual, identifier = nil)
         if DeepMatcher === expected
           return expected.match_failure_messages(actual, identifier)
         elsif RSpec::Matchers::Composable === expected
           if !expected.matches?(actual)
-            return [ expected.failure_message ]
+            return [expected.failure_message]
           else
             return []
           end
@@ -33,31 +32,29 @@ module AWSSupport
         if values_match?(expected, actual)
           []
         elsif expected.respond_to?(:failure_message)
-          [ "#{identifier ? "#{identifier}: " : ""}#{expected.failure_message}" ]
+          ["#{identifier ? "#{identifier}: " : ''}#{expected.failure_message}"]
         else
-          [ "#{identifier ? "#{identifier}: " : ""}expected #{description_of(expected)}, but actual value was #{actual.inspect}" ]
+          ["#{identifier ? "#{identifier}: " : ''}expected #{description_of(expected)}, but actual value was #{actual.inspect}"]
         end
       end
 
       def match_sets_failure_messages(expected_set, actual_setlike, identifier)
         result = []
-        if ! actual_setlike.respond_to?(:to_set)
-          result << "expected #{identifier || "setlike"} to be castable to a Set, but it isn't!"
+        if !actual_setlike.respond_to?(:to_set)
+          result << "expected #{identifier || 'setlike'} to be castable to a Set, but it isn't!"
         else
           actual_set = actual_setlike.to_set
           expected_set.each do |expected|
-            unless actual_set.any? { |actual|
+            next if actual_set.any? do |actual|
               match_values_failure_messages(expected, actual, identifier).flatten.empty?
-            }
-              result << "- #{description_of(expected)}"
             end
+            result << "- #{description_of(expected)}"
           end
           actual_set.each do |actual|
-            unless expected_set.any? { |expected|
+            next if expected_set.any? do |expected|
               match_values_failure_messages(expected, actual, identifier).flatten.empty?
-            }
-              result << "+ #{description_of(actual)}"
             end
+            result << "+ #{description_of(actual)}"
           end
         end
         result
@@ -68,7 +65,7 @@ module AWSSupport
         expected_hash.all? do |expected_key, expected_value|
           missing_value = false
           actual_value = actual_hash.fetch(expected_key) do
-            result << "expected #{identifier || "hash"}.fetch(#{expected_key.inspect}) to #{description_of(expected_value)}, but it was missing entirely from the hash"
+            result << "expected #{identifier || 'hash'}.fetch(#{expected_key.inspect}) to #{description_of(expected_value)}, but it was missing entirely from the hash"
             missing_value = true
           end
           unless missing_value
@@ -84,32 +81,30 @@ module AWSSupport
       # which.
       #
       def match_arrays_failure_messages(expected_list, actual_list, identifier)
-        result = [ "#{identifier || "value"} is different from expected!  Differences:" ]
+        result = ["#{identifier || 'value'} is different from expected!  Differences:"]
 
         different = false
 
         expected_list = expected_list.map { |v| ExpectedValue.new(v) }
-        unless actual_list.class <= Array
-          actual_list = actual_list.to_a
-        end
+        actual_list = actual_list.to_a unless actual_list.class <= Array
         Diff::LCS.sdiff(expected_list, actual_list) do |change|
           case change.action
-          when '='
-            messages = [ change.new_element.inspect ]
-          when '+'
-            messages = [ change.new_element.inspect ]
+          when "="
+            messages = [change.new_element.inspect]
+          when "+"
+            messages = [change.new_element.inspect]
             different = true
-          when '-'
-            messages = [ change.old_element.value.inspect ]
+          when "-"
+            messages = [change.old_element.value.inspect]
             different = true
-          when '!'
+          when "!"
             messages = change.old_element.failure_messages(change.new_element)
             different = true
           else
             raise "Unknown operator returned from sdiff: #{op}"
           end
           op = change.action
-          op = ' ' if op == '='
+          op = " " if op == "="
 
           result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" } if messages
         end
@@ -120,12 +115,10 @@ module AWSSupport
         result = []
         expected_hash.all? do |expected_key, expected_value|
           # 'a.b.c' => 1 -> { a: { b: { c: 1 }}}
-          names = expected_key.to_s.split('.')
+          names = expected_key.to_s.split(".")
           if names.size > 1
             expected_key = names.shift
-            while !names.empty?
-              expected_value = { names.pop => expected_value }
-            end
+            expected_value = { names.pop => expected_value } until names.empty?
           end
 
           # Grab the actual value from the object
@@ -144,7 +137,7 @@ module AWSSupport
             end
           rescue NoMethodError
             if !actual_value.respond_to?(expected_key)
-              result << "#{identifier || "object"}.send(#{expected_key.inspect}) is missing, expected value #{description_of(expected_value)}"
+              result << "#{identifier || 'object'}.send(#{expected_key.inspect}) is missing, expected value #{description_of(expected_value)}"
               next
             else
               raise

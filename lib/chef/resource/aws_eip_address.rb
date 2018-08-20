@@ -1,11 +1,11 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type ::Aws::OpsWorks::Types::ElasticIp, option_names: [ :public_ip ], id: :public_ip, managed_entry_id_name: 'public_ip', backcompat_data_bag_name: 'eip_addresses'
+  aws_sdk_type ::Aws::OpsWorks::Types::ElasticIp, option_names: [:public_ip], id: :public_ip, managed_entry_id_name: "public_ip", backcompat_data_bag_name: "eip_addresses"
 
   attribute :name, kind_of: String, name_attribute: true
 
-  # TODO network interface
+  # TODO: network interface
   attribute :machine,          kind_of: [String, FalseClass]
   attribute :associate_to_vpc, kind_of: [TrueClass, FalseClass]
 
@@ -22,9 +22,9 @@ class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResource
 
   def action(*args)
     # Backcompat for associate and disassociate
-    if args == [ :associate ]
+    if args == [:associate]
       super(:create)
-    elsif args == [ :disassociate ]
+    elsif args == [:disassociate]
       machine false
       super(:create)
     else

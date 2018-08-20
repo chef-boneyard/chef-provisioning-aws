@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/resource/aws_instance'
-require 'chef/provisioning/machine_spec'
-require 'cheffish'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/resource/aws_instance"
+require "chef/provisioning/machine_spec"
+require "cheffish"
 
 class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_eip_address
@@ -9,9 +9,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   def action_create
     elastic_ip = super
 
-    if !new_resource.machine.nil?
-      update_association(elastic_ip)
-    end
+    update_association(elastic_ip) unless new_resource.machine.nil?
   end
 
   protected
@@ -22,7 +20,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
       if associate_to_vpc.nil?
         if desired_instance.is_a?(::Aws::EC2::Instance) || desired_instance.is_a?(::Aws::EC2::Instance)
           associate_to_vpc = !!desired_instance.vpc_id
-          Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? "is" : "is not"} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
+          Chef::Log.debug "Since associate_to_vpc is not specified and instance #{new_resource.machine} (#{desired_instance.id}) and #{associate_to_vpc ? 'is' : 'is not'} in a VPC, setting associate_to_vpc to #{associate_to_vpc}."
         end
       end
       new_resource.driver.ec2.allocate_address vpc: new_resource.associate_to_vpc
@@ -30,7 +28,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_aws_object(elastic_ip)
-    if !new_resource.associate_to_vpc.nil?
+    unless new_resource.associate_to_vpc.nil?
       if new_resource.associate_to_vpc != (elastic_ip.domain == "vpc")
         raise "#{new_resource}.associate_to_vpc = #{new_resource.associate_to_vpc}, but actual IP address has vpc? set to #{(elastic_ip.domain == 'vpc')}.  Cannot be modified!"
       end
@@ -38,7 +36,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(elastic_ip)
-    #if it's attached to something in a vpc, disassociate first
+    # if it's attached to something in a vpc, disassociate first
     if !elastic_ip.instance_id.nil? && elastic_ip.domain == "vpc"
       converge_by "dissociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id}" do
         new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
@@ -52,7 +50,7 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   def desired_instance
-    if !defined?(@desired_instance)
+    unless defined?(@desired_instance)
       if new_resource.machine == false
         @desired_instance = false
       else
@@ -77,12 +75,11 @@ class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
     # If we were told to set the association to false, disassociate it.
     #
     else
-      if !(elastic_ip.association_id.nil?)
+      unless elastic_ip.association_id.nil?
         converge_by "disassociate Elastic IP address #{new_resource.name} (#{elastic_ip.public_ip}) from #{elastic_ip.instance_id} in #{region}" do
           new_resource.driver.ec2.disassociate_address public_ip: elastic_ip.public_ip
         end
       end
     end
   end
-
 end

@@ -1,14 +1,13 @@
-require 'rspec/matchers'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers
     class UpdateAnAWSObject
-
       include RSpec::Matchers::Composable
       include AWSSupport::DeepMatcher
 
-      require 'chef/provisioning'
+      require "chef/provisioning"
 
       # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_obect
       def initialize(example, resource_class, name, expected_updates, custom_matcher)
@@ -39,7 +38,7 @@ module AWSSupport
       def match_failure_messages(recipe)
         differences = []
 
-        if !had_initial_value
+        unless had_initial_value
           differences << "expected recipe to update #{resource_name}[#{name}], but the AWS object did not exist before recipe ran!"
           return differences
         end
@@ -47,8 +46,8 @@ module AWSSupport
         # Converge
         begin
           recipe.converge unless recipe.converged?
-        rescue
-          differences += [ "error trying to update #{resource_name}[#{name}]!\n#{($!.backtrace.map { |line| "- #{line}\n" } + [ recipe.output_for_failure_message ]).join("")}" ]
+        rescue StandardError
+          differences += ["error trying to update #{resource_name}[#{name}]!\n#{($ERROR_INFO.backtrace.map { |line| "- #{line}\n" } + [recipe.output_for_failure_message]).join('')}"]
         end
 
         # Check if the recipe actually caused an update

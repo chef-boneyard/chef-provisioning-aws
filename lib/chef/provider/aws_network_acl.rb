@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/resource/aws_vpc'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/resource/aws_vpc"
+require "retryable"
 
 class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -25,24 +25,24 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
 
       network_acl = new_resource.driver.ec2_resource.create_network_acl(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidNetworkAclIDNotFound) do
-        network_acl.create_tags({tags: [{key: "Name", value: new_resource.name}]})
+        network_acl.create_tags(tags: [{ key: "Name", value: new_resource.name }])
       end
       network_acl
     end
   end
 
   def update_aws_object(network_acl)
-    if !new_resource.vpc.nil?
+    unless new_resource.vpc.nil?
       desired_vpc = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
       if desired_vpc != network_acl.vpc_id
-        raise "Network ACL VPC cannot be changed after being created!  Desired VPC for #{new_resource.to_s} was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{network_acl.vpc_id}"
+        raise "Network ACL VPC cannot be changed after being created!  Desired VPC for #{new_resource} was #{new_resource.vpc} (#{desired_vpc}) and actual VPC is #{network_acl.vpc_id}"
       end
     end
   end
 
   def destroy_aws_object(network_acl)
-    # TODO if purging, do we need to destory the linked subnets?
-    converge_by "delete #{new_resource.to_s} in #{region}" do
+    # TODO: if purging, do we need to destory the linked subnets?
+    converge_by "delete #{new_resource} in #{region}" do
       network_acl.delete
     end
   end
@@ -55,7 +55,7 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
     outbound_rules = new_resource.outbound_rules
     # AWS requires a deny all rule at the end. Delete here so we don't
     # try to compare.
-    current_rules.delete_if { |rule| rule[:rule_number] == 32767 }
+    current_rules.delete_if { |rule| rule[:rule_number] == 32_767 }
 
     current_inbound_rules = current_rules.select { |rule| rule[:egress] == false }
     # If inbound_rules is nil, leave rules alone. If empty array, delete all.
@@ -76,25 +76,24 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
 
     # Get the desired rules in a comparable state
     desired_rules.clone.each do |desired_rule|
-      matching_rule = current_rules.select { |r| r[:rule_number] == desired_rule[:rule_number]}.first
-      if matching_rule
-        # Anything unhandled will be removed
-        current_rules.delete(matching_rule)
-        # Anything unhandled will be added
-        desired_rules.delete(desired_rule)
+      matching_rule = current_rules.select { |r| r[:rule_number] == desired_rule[:rule_number] }.first
+      next unless matching_rule
+      # Anything unhandled will be removed
+      current_rules.delete(matching_rule)
+      # Anything unhandled will be added
+      desired_rules.delete(desired_rule)
 
-        # Converting matching_rule [:rule_action] and [:port_range] to symbol & hash to match correctly with desired_rule
-        matching_rule[:rule_action] = matching_rule[:rule_action].to_sym unless matching_rule[:rule_action].nil?
-        matching_rule[:port_range] = matching_rule[:port_range].to_hash unless matching_rule[:port_range].nil?
-        if matching_rule.merge(desired_rule) != matching_rule
-          # Replace anything with a matching rule number but different attributes
-          replace_rules << desired_rule
-        end
+      # Converting matching_rule [:rule_action] and [:port_range] to symbol & hash to match correctly with desired_rule
+      matching_rule[:rule_action] = matching_rule[:rule_action].to_sym unless matching_rule[:rule_action].nil?
+      matching_rule[:port_range] = matching_rule[:port_range].to_hash unless matching_rule[:port_range].nil?
+      if matching_rule.merge(desired_rule) != matching_rule
+        # Replace anything with a matching rule number but different attributes
+        replace_rules << desired_rule
       end
     end
 
     unless replace_rules.empty? && desired_rules.empty? && current_rules.empty?
-      action_handler.report_progress "update network ACL #{new_resource.name} #{direction.to_s} rules"
+      action_handler.report_progress "update network ACL #{new_resource.name} #{direction} rules"
       replace_rules(network_acl, replace_rules)
       add_rules(network_acl, desired_rules)
       remove_rules(network_acl, current_rules)
@@ -123,14 +122,14 @@ class Chef::Provider::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def rule_direction(rule)
-    rule[:egress] == true ? 'egress' : 'ingress'
+    rule[:egress] == true ? "egress" : "ingress"
   end
 
   def entry_to_hash(entry)
-    options = [
-      :rule_number, :rule_action, :protocol, :cidr_block, :egress,
-      :port_range, :icmp_type_code
-    ]
+    options = %i{
+      rule_number rule_action protocol cidr_block egress
+      port_range icmp_type_code
+    }
     entry_hash = {}
     options.each { |option| entry_hash.merge!(option => entry.send(option.to_sym)) }
     entry_hash

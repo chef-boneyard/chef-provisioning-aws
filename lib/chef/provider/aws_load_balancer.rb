@@ -1,7 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsLoadBalancer < Chef::Provisioning::AWSDriver::AWSProvider
-
   def aws_tagger
     @aws_tagger ||= begin
       elb_strategy = Chef::Provisioning::AWSDriver::TaggingStrategy::ELB.new(

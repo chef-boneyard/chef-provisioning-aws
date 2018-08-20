@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver'
+require "chef/provisioning/aws_driver"
 
-with_driver 'aws::us-west-1'
+with_driver "aws::us-west-1"
 
 aws_elasticsearch_domain "ref-es-domain" do
   action :destroy
@@ -18,76 +18,76 @@ aws_rds_subnet_group "ref-db-subnet-group" do
   action :destroy
 end
 
-aws_sqs_queue 'ref-sqs-queue' do
+aws_sqs_queue "ref-sqs-queue" do
   action :destroy
 end
 
-aws_sns_topic 'ref-sns-topic' do
+aws_sns_topic "ref-sns-topic" do
   action :destroy
 end
 
-aws_s3_bucket 'ref-s3-bucket' do
+aws_s3_bucket "ref-s3-bucket" do
   action :destroy
 end
 
-aws_eip_address 'ref-elastic-ip' do
+aws_eip_address "ref-elastic-ip" do
   action :destroy
 end
 
-aws_ebs_volume 'ref-volume' do
+aws_ebs_volume "ref-volume" do
   action :destroy
 end
 
-aws_auto_scaling_group 'ref-auto-scaling-group' do
+aws_auto_scaling_group "ref-auto-scaling-group" do
   action :destroy
 end
 
-aws_launch_configuration 'ref-launch-configuration' do
+aws_launch_configuration "ref-launch-configuration" do
   action :destroy
 end
 
-load_balancer 'ref-load-balancer' do
+load_balancer "ref-load-balancer" do
   action :destroy
 end
 
 machine_batch do
   action :destroy
-  machines 'ref-machine1', 'ref-machine2'
+  machines "ref-machine1", "ref-machine2"
 end
 
-machine_image 'ref-machine_image3' do
+machine_image "ref-machine_image3" do
   action :destroy
 end
 
-machine_image 'ref-machine_image2' do
+machine_image "ref-machine_image2" do
   action :destroy
 end
 
-machine_image 'ref-machine_image1' do
+machine_image "ref-machine_image1" do
   action :destroy
 end
 
-aws_subnet 'ref-subnet' do
+aws_subnet "ref-subnet" do
   action :destroy
 end
 
-aws_subnet 'ref-subnet-2' do
+aws_subnet "ref-subnet-2" do
   action :destroy
 end
 
-aws_route_table 'ref-public' do
+aws_route_table "ref-public" do
   action :destroy
 end
 
-aws_security_group 'ref-sg2' do
+aws_security_group "ref-sg2" do
   action :destroy
 end
 
-aws_security_group 'ref-sg1' do
+aws_security_group "ref-sg1" do
   action :destroy
 end
 
-aws_key_pair 'ref-key-pair' do
+aws_key_pair "ref-key-pair" do
   action :destroy
 end
 
@@ -97,23 +97,23 @@ end
 # call as the main route table.  Then we can delete the
 # 'ref-main-route-table' (because it is no longer main)
 # and finally delete the VPC (which deletes the main route table)
-aws_vpc 'ref-vpc' do
+aws_vpc "ref-vpc" do
   main_route_table lazy {
-    rt = self.aws_object.route_tables.select {|r| !r.main?}.first
+    rt = aws_object.route_tables.reject(&:main?).first
     rt.id if rt
   }
-  only_if { !self.aws_object.nil? }
+  only_if { !aws_object.nil? }
 end
 
-aws_route_table 'ref-main-route-table' do
+aws_route_table "ref-main-route-table" do
   action :destroy
 end
 
-aws_vpc 'ref-vpc' do
+aws_vpc "ref-vpc" do
   action :destroy
 end
 
-aws_dhcp_options 'ref-dhcp-options' do
+aws_dhcp_options "ref-dhcp-options" do
   action :destroy
 end
 

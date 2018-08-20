@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_security_group'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_security_group"
 
 # AWS Elasticache Replication Group
 # @see See http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_replication_group-instance_method
@@ -56,7 +56,7 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
   #
   # @param
   attribute :security_groups,
-            kind_of: [ String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup ],
+            kind_of: [String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup],
             required: true,
             coerce: proc { |v| [v].flatten }
 
@@ -64,16 +64,14 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
   #
   # @param
   attribute :preferred_availability_zones,
-            kind_of: [ String, Array ],
+            kind_of: [String, Array],
             coerce: proc { |v| [v].flatten }
 
   def aws_object
-    begin
-      driver.elasticache
-        .describe_replication_groups(replication_group_id: group_name)
-        .data[:replication_groups].first
-    rescue ::Aws::ElastiCache::Errors::ReplicationGroupNotFoundFault
-      nil
-    end
+    driver.elasticache
+          .describe_replication_groups(replication_group_id: group_name)
+          .data[:replication_groups].first
+  rescue ::Aws::ElastiCache::Errors::ReplicationGroupNotFoundFault
+    nil
   end
 end

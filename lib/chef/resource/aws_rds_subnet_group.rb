@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_rds_resource'
-require 'chef/provisioning/aws_driver/aws_taggable'
-require 'chef/resource/aws_subnet'
+require "chef/provisioning/aws_driver/aws_rds_resource"
+require "chef/provisioning/aws_driver/aws_taggable"
+require "chef/resource/aws_subnet"
 
 class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -10,7 +10,7 @@ class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSR
   attribute :name, kind_of: String, name_attribute: true
   attribute :description, kind_of: String, required: true
   attribute :subnets,
-            kind_of: [ String, Array, AwsSubnet, ::Aws::EC2::Subnet ],
+            kind_of: [String, Array, AwsSubnet, ::Aws::EC2::Subnet],
             required: true,
             coerce: proc { |v| [v].flatten }
 

@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "retryable"
 
 class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -20,19 +20,17 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
       ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
       internet_gateway = ec2_resource.create_internet_gateway
       retry_with_backoff(::Aws::EC2::Errors::InvalidInternetGatewayIDNotFound) do
-        internet_gateway.create_tags({tags: [{key: "Name", value: new_resource.name}]})
+        internet_gateway.create_tags(tags: [{ key: "Name", value: new_resource.name }])
       end
 
-      if desired_vpc
-        attach_vpc(desired_vpc, internet_gateway)
-      end
+      attach_vpc(desired_vpc, internet_gateway) if desired_vpc
 
       internet_gateway
     end
   end
 
   def update_aws_object(internet_gateway)
-    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(:internet_gateway_ids=>[internet_gateway.id])
+    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(internet_gateway_ids: [internet_gateway.id])
     current_vpc = ec2_resource.internet_gateways.first.attachments.first
 
     if new_resource.vpc
@@ -57,8 +55,8 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
 
   def attach_vpc(vpc, desired_gateway)
     if vpc.internet_gateways.first && vpc.internet_gateways.first != desired_gateway
-      current_driver = self.new_resource.driver
-      current_chef_server = self.new_resource.chef_server
+      current_driver = new_resource.driver
+      current_chef_server = new_resource.chef_server
       Cheffish.inline_resource(self, action) do
         aws_vpc vpc.id do
           cidr_block vpc.cidr_block
@@ -74,7 +72,7 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
   end
 
   def detach_vpc(internet_gateway)
-    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(:internet_gateway_ids=>[internet_gateway.id])
+    ec2_resource = new_resource.driver.ec2.describe_internet_gateways(internet_gateway_ids: [internet_gateway.id])
     vpcid = ec2_resource.internet_gateways.first.attachments.first
     vpc_id = vpcid.vpc_id unless vpcid.nil?
     if vpc_id
@@ -83,5 +81,4 @@ class Chef::Provider::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSPro
       end
     end
   end
-
 end

@@ -11,6 +11,7 @@
 - Setup this repo to use expeditor [#572](https://github.com/chef/chef-provisioning-aws/pull/572) ([tas50](https://github.com/tas50))
 - Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50))
 - specs for dynamic options in machine_batch, per chef-provisioning#438 [#326](https://github.com/chef/chef-provisioning-aws/pull/326) ([redterror](https://github.com/redterror))
+- Allow arbitarily Long resource IDs [#571](https://github.com/chef/chef-provisioning-aws/pull/571) ([jjlimepoint](https://github.com/jjlimepoint))
 <!-- latest_stable_release -->
 
 ## [3.0.2](https://github.com/chef/chef-provisioning-aws/tree/3.0.2) (2018-02-14)

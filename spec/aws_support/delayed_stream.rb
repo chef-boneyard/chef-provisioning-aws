@@ -1,4 +1,4 @@
-require 'timeout'
+require "timeout"
 
 module AWSSupport
   class DelayedStream

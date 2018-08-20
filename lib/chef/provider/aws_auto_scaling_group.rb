@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'set'
-require 'chef/provisioning/aws_driver/tagging_strategy/auto_scaling'
+require "chef/provisioning/aws_driver/aws_provider"
+require "set"
+require "chef/provisioning/aws_driver/tagging_strategy/auto_scaling"
 
 class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::AutoScalingConvergeTags
@@ -47,7 +47,7 @@ class Chef::Provider::AwsAutoScalingGroup < Chef::Provisioning::AWSDriver::AWSPr
   def desired_options
     @desired_options ||= begin
       options = new_resource.options.dup
-      %w( min_size max_size availability_zones desired_capacity ).each do |var|
+      %w{ min_size max_size availability_zones desired_capacity }.each do |var|
         var = var.to_sym
         value = new_resource.public_send(var)
         options[var] = value if value

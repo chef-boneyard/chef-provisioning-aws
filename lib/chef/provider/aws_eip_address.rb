@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/resource/aws_instance'
-require 'chef/provisioning/machine_spec'
-require 'cheffish'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/resource/aws_instance"
+require "chef/provisioning/machine_spec"
+require "cheffish"
 
 class Chef::Provider::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_eip_address

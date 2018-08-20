@@ -1,4 +1,4 @@
-require 'cheffish/rspec/recipe_run_wrapper'
+require "cheffish/rspec/recipe_run_wrapper"
 
 module AWSSupport
   class AWSResourceRunWrapper < Cheffish::RSpec::RecipeRunWrapper

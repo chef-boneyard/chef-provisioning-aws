@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type ::Aws::EC2::KeyPair, id: :name
@@ -15,7 +15,7 @@ class Chef::Resource::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSResource
 
   def aws_object
     resource = ::Aws::EC2::Resource.new(driver.ec2)
-    result = resource.key_pairs.find{|b| b.name==name}
+    result = resource.key_pairs.find { |b| b.name == name }
     result
   end
 end

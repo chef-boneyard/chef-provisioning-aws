@@ -1,6 +1,6 @@
-require 'rspec/matchers'
-require 'chef/provisioning'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "chef/provisioning"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers

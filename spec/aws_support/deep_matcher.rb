@@ -6,7 +6,7 @@ module AWSSupport
   #
   module DeepMatcher
 
-    require 'aws_support/deep_matcher/match_values_failure_messages'
+    require "aws_support/deep_matcher/match_values_failure_messages"
 
     include MatchValuesFailureMessages
 
@@ -33,7 +33,7 @@ module AWSSupport
     #
     # @return A failure message, or empty string if it does not fail.
     #
-    def match_failure_messages(actual, identifier='value')
+    def match_failure_messages(actual, identifier = "value")
       raise NotImplementedError, :match_failure_messages
     end
   end

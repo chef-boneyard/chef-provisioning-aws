@@ -1,5 +1,5 @@
 #require 'chef/provisioning/aws_driver/aws_provider'
-require 'retryable'
+require "retryable"
 
 class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
 
@@ -42,7 +42,7 @@ class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider
 
     if new_resource.eip_address
       eip_address = Chef::Resource::AwsEipAddress.get_aws_object(new_resource.eip_address, resource: new_resource)
-      if eip_address.nil? or eip_address.allocation_id != nat_gateway.nat_gateway_addresses.first.allocation_id
+      if eip_address.nil? || (eip_address.allocation_id != nat_gateway.nat_gateway_addresses.first.allocation_id)
         raise "Nat gateway elastic ip address cannot be changed after being created! Desired elastic ip address for #{new_resource.name} (#{nat_gateway.id}) was \"#{nat_gateway.nat_gateway_addresses.first.allocation_id}\" and actual description is \"#{eip_address.allocation_id}\""
       end
     end

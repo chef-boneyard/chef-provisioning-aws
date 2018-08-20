@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver'
+require "chef/provisioning/aws_driver"
 
-with_driver 'aws::us-east-1'
+with_driver "aws::us-east-1"
 
 # this will fail. we use the domain name as a data bag key, but Route 53 will add a trailing dot, and
 # furthermore Route 53 is content to have two HostedZones named "feegle.com.". in order to prevent unexpected
@@ -16,14 +16,14 @@ aws_route53_hosted_zone "feegle.com"
 # create a Route 53 Hosted Zone with a CNAME record.
 # TODO(9/17/2015): maybe add an RRS attribute to append the enclosing zone name (like 'append_zone_name true').
 aws_route53_hosted_zone "feegle.com" do
-  record_sets {
+  record_sets do
     aws_route53_record_set "some-hostname CNAME" do
       rr_name "some-api-host.feegle.com"
       type "CNAME"
       ttl 3600
       resource_records ["some-other-host"]
     end
-  }
+  end
 end
 
 # Route 53 ResourceRecordSets are mostly analogous to DNS resource records (RRs). in the AWS Console they look
@@ -35,12 +35,12 @@ end
 # not sure if that's possible. you could probably define the record_sets block elsewhere and pass it to the
 # resource, though.
 aws_route53_hosted_zone "feegle.com" do
-  record_sets {
+  record_sets do
     # the resource name can serve as the RR name.
     aws_route53_record_set "tiffany" do
       type "CNAME"
       ttl 1800
-      resource_records ["a-different-host"]    # always an array of strings.
+      resource_records ["a-different-host"] # always an array of strings.
     end
 
     # or you can specify the RR name separately.
@@ -67,7 +67,7 @@ aws_route53_hosted_zone "feegle.com" do
       ttl 1800
       resource_records ["a-different-host"]
     end
-  }
+  end
 end
 
 # some RR types have restrictions on the resource_records values:
@@ -81,7 +81,7 @@ end
 # delete an individual RecordSet. the values must be the same as those currently in Route 53, or else an AWS
 # error will bubble up.
 aws_route53_hosted_zone "feegle.com" do
-  record_sets {
+  record_sets do
     aws_route53_record_set "some-hostname CNAME" do
       action :destroy
       rr_name "some-api-host.feegle.com"
@@ -89,7 +89,7 @@ aws_route53_hosted_zone "feegle.com" do
       ttl 1800
       resource_records ["a-different-host"]
     end
-  }
+  end
 end
 
 # calling :destroy on a zone will unconditionally wipe all of its RecordSets.
@@ -103,7 +103,7 @@ end
 aws_route53_hosted_zone "feegle.com" do
   defaults ttl: 1800, type: "CNAME"
 
-  record_sets {
+  record_sets do
     # type CNAME, TTL 1800.
     aws_route53_record_set "host1" do
       resource_records ["a-different-host"]
@@ -114,5 +114,5 @@ aws_route53_hosted_zone "feegle.com" do
       type "A"
       resource_records ["8.8.8.8"]
     end
-  }
+  end
 end

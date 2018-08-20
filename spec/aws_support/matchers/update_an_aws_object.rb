@@ -1,5 +1,5 @@
-require 'rspec/matchers'
-require 'aws_support/deep_matcher'
+require "rspec/matchers"
+require "aws_support/deep_matcher"
 
 module AWSSupport
   module Matchers
@@ -8,7 +8,7 @@ module AWSSupport
       include RSpec::Matchers::Composable
       include AWSSupport::DeepMatcher
 
-      require 'chef/provisioning'
+      require "chef/provisioning"
 
       # @param custom_matcher [Block] A block with 1 argument that will be provided the aws_obect
       def initialize(example, resource_class, name, expected_updates, custom_matcher)

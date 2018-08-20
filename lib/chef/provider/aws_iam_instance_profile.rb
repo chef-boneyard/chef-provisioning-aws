@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_iam_instance_profile
@@ -8,7 +8,6 @@ class Chef::Provider::AwsInstanceProfile < Chef::Provisioning::AWSDriver::AWSPro
 
     update_attached_role(iam_instance_profile)
   end
-
 
   protected
 

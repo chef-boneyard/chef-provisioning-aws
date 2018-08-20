@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -13,7 +13,7 @@ class Chef::Resource::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSResource
 
   def aws_object
     resource = ::Aws::S3::Resource.new(driver.s3_client)
-    result = resource.buckets.find{|b| b.name==name}
+    result = resource.buckets.find { |b| b.name == name }
     result && result.exists? ? result : nil
   end
 end

@@ -15,10 +15,10 @@ module RSpec
   end
 end
 
-require 'aws_support/deep_matcher/match_values_failure_messages'
-require 'rspec/matchers/composable'
-require 'rspec/support/fuzzy_matcher'
-require 'aws_support/deep_matcher/fuzzy_match_objects'
+require "aws_support/deep_matcher/match_values_failure_messages"
+require "rspec/matchers/composable"
+require "rspec/support/fuzzy_matcher"
+require "aws_support/deep_matcher/fuzzy_match_objects"
 
 module RSpec::Support::FuzzyMatcher
   prepend AWSSupport::DeepMatcher::FuzzyMatchObjects

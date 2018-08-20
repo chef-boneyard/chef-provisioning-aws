@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # Represents an AWS VPC.
@@ -31,8 +31,8 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
                id: :id,
                option_names: [:vpc, :vpc_id, :peer_vpc_id]
 
-  require 'chef/resource/aws_dhcp_options'
-  require 'chef/resource/aws_route_table'
+  require "chef/resource/aws_dhcp_options"
+  require "chef/resource/aws_route_table"
   #
   # The name of this VPC.
   #
@@ -68,7 +68,7 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   #   detach if not.
   # - You may specify the AWS ID of an actual Internet Gateway
   #
-  attribute :internet_gateway#, kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
+  attribute :internet_gateway #, kind_of: [ String, ::Aws::EC2::InternetGateway ], equal_to: [ true, false, :detach ]
 
   #
   # The main route table.
@@ -141,6 +141,6 @@ class Chef::Resource::AwsVpc < Chef::Provisioning::AWSDriver::AWSResourceWithEnt
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidVpcIDNotFound
-    return false
+    false
   end
 end

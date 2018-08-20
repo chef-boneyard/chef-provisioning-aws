@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/s3'
-require 'date'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/s3"
+require "date"
 
 class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
@@ -26,17 +26,17 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
     bucket = super
 
     if new_resource.enable_website_hosting
-     if !website_exist?(new_resource,bucket)
+      if !website_exist?(new_resource, bucket)
         converge_by "enable website configuration for bucket #{new_resource.name}" do
-          create_website(bucket,new_resource )
+          create_website(bucket, new_resource )
         end
       elsif modifies_website_configuration?(bucket)
         converge_by "reconfigure website configuration for bucket #{new_resource.name} to #{new_resource.website_options}" do
-          create_website(bucket,new_resource )
+          create_website(bucket, new_resource )
         end
-      end
+       end
     else
-      if website_exist?(new_resource,bucket)
+      if website_exist?(new_resource, bucket)
         converge_by "disable website configuration for bucket #{new_resource.name}" do
           new_resource.driver.s3_client.delete_bucket_website(bucket: new_resource.name)
         end
@@ -48,7 +48,7 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     converge_by "create S3 bucket #{new_resource.name}" do
-      options = new_resource.options.merge({bucket: new_resource.name})
+      options = new_resource.options.merge({ bucket: new_resource.name })
       new_resource.driver.s3_client.create_bucket(options)
       # S3 buckets already have a top level name property so they don't need
       # a 'Name' tag
@@ -73,17 +73,17 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
 
   private
 
-  def website_exist?(new_resource,bucket)
-    return true if new_resource.driver.s3_client.get_bucket_website(bucket: new_resource.name) 
+  def website_exist?(new_resource, bucket)
+    return true if new_resource.driver.s3_client.get_bucket_website(bucket: new_resource.name)
   rescue Aws::S3::Errors::NoSuchWebsiteConfiguration
-    return false
+    false
   end
 
-  def create_website(bucket,new_resource )
+  def create_website(bucket, new_resource )
     website_configuration = Aws::S3::Types::WebsiteConfiguration.new(
             new_resource.website_options)
     s3_client = new_resource.driver.s3_client
-    s3_client.put_bucket_website( bucket: new_resource.name,  website_configuration:website_configuration)
+    s3_client.put_bucket_website( bucket: new_resource.name, website_configuration: website_configuration)
   end
 
   def modifies_website_configuration?(aws_object)
@@ -102,10 +102,10 @@ class Chef::Provider::AwsS3Bucket < Chef::Provisioning::AWSDriver::AWSProvider
   def s3_website_endpoint_region
     # ¯\_(ツ)_/¯
     case aws_object.location_constraint
-    when nil, 'US'
-      'us-east-1'
-    when 'EU'
-      'eu-west-1'
+    when nil, "US"
+      "us-east-1"
+    when "EU"
+      "eu-west-1"
     else
       aws_object.location_constraint
     end

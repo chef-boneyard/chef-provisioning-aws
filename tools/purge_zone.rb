@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'json'
-require 'pp'
-require 'aws-sdk'
+require "json"
+require "pp"
+require "aws-sdk"
 
 # it happens that you end up with a HostedZone with no Chef Server entry, and destroying it manually is
 # tedious, because you have to delete all the ResourceRecordSets. this script will handle that for you.
@@ -17,7 +17,7 @@ doomed_zones.each do |doomed_zone|
   winner = zones.find { |z| z["Name"] == doomed_zone }
 
   if winner.nil?
-    puts "Couldn't find zone '#{doomed_zone}'; candidates were #{zones.map {|z| z["Name"]} }"
+    puts "Couldn't find zone '#{doomed_zone}'; candidates were #{zones.map { |z| z["Name"] }}"
     exit
   end
 

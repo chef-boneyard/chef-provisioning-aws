@@ -17,7 +17,7 @@ module AWSSupport
       end
 
       def self.===(other)
-        return true if matchable_classes.any? { |c| c === other}
+        return true if matchable_classes.any? { |c| c === other }
         super
       end
     end

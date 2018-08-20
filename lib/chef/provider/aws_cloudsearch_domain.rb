@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cloudsearch_domain
@@ -96,7 +96,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     ret = {}
     ret[:desired_partition_count] = new_resource.partition_count if new_resource.partition_count
     ret[:desired_replication_count] = new_resource.replication_count if new_resource.replication_count
-    ret[:desired_instance_type] =  new_resource.instance_type if new_resource.instance_type
+    ret[:desired_instance_type] = new_resource.instance_type if new_resource.instance_type
     ret
   end
 
@@ -166,9 +166,9 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     cs_client.describe_index_fields(domain_name: new_resource.name).index_fields
   end
 
-  def get_option(option_name, key=nil)
+  def get_option(option_name, key = nil)
     opt = cs_client.send("describe_#{option_name}".to_sym,
-                         {domain_name: new_resource.name})[key || option_name]
+                         { domain_name: new_resource.name })[key || option_name]
     if ! opt[:status][:pending_deletion]
       opt[:options]
     else

@@ -1,12 +1,13 @@
 sudo: false
 language: ruby
 rvm:
-  - 2.4.3
+  - 2.4.4
 env:
   global:
   # encrypted with `travis encrypt "AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=..."`
   - secure: D/GQrYonTbI4DfzKStcy72gsPvC41Y6ozVkEacmAlN6hXnZX19/cg6eNm24mtxrA0OV/bh0E8aFcRpyFL579UkpbzfEgHQZhRUtP6gOT9SS5QlyqUODXR8LwRKUvTLddtgCWRLj3G9rB3vmzMKy9O0yTYiVJT8EWGm1Itp/zPOM=
   matrix:
+  - RAKE_TASK=chefstyle
   - RAKE_TASK=spec
   # We run the tests in different environments so they don't try to overwrite each other (deleting, creating the same VPC)
   # If we need to we can get rid of this but its nice for speed
@@ -14,6 +15,8 @@ env:
   - RAKE_TASK="travis[super_slow]" AWS_TRAVIS_DRIVER=aws::us-west-1
   # machine_image is a special snowflake - they take so long to run we need to give them their own builder
   - RAKE_TASK="machine_image" AWS_TRAVIS_DRIVER=aws::eu-west-1
+
+bundler_args: --jobs 7 --without docs debug
 
 before_script:
   - mkdir -p /home/travis/.chef

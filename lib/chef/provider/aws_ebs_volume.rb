@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'cheffish'
-require 'date'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "cheffish"
+require "date"
+require "retryable"
 
 class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -41,7 +41,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "create #{new_resource} in #{region}" do
       volume = new_resource.driver.ec2_resource.create_volume(initial_options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidVolumeNotFound) do
-        new_resource.driver.ec2_resource.create_tags(resources: [volume.volume_id],tags: [{key: "Name", value: new_resource.name}])
+        new_resource.driver.ec2_resource.create_tags(resources: [volume.volume_id], tags: [{ key: "Name", value: new_resource.name }])
       end
       volume
     end
@@ -203,7 +203,7 @@ class Chef::Provider::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSProvider
 
     converge_by "wait for #{new_resource} in #{region} to delete" do
       log_callback = proc {
-        Chef::Log.info('waiting for volume to delete...')
+        Chef::Log.info("waiting for volume to delete...")
       }
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => VolumeStatusTimeoutError, :ensure => log_callback) do

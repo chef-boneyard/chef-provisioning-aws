@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 class Chef::Resource::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -12,12 +12,12 @@ class Chef::Resource::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSRes
   attribute :dimensions, :kind_of => Array
   attribute :comparison_operator, :kind_of => String
   attribute :evaluation_periods, :kind_of => Integer
-  attribute :period, :kind_of => [Integer,Float], coerce: proc {|v| v.to_f}
+  attribute :period, :kind_of => [Integer, Float], coerce: proc { |v| v.to_f }
   attribute :statistic, :kind_of => String
-  attribute :threshold, :kind_of => [Integer,Float]
-  attribute :insufficient_data_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}
-  attribute :ok_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}
-  attribute :alarm_actions, :kind_of => Array, coerce: proc {|v| [v].flatten}
+  attribute :threshold, :kind_of => [Integer, Float]
+  attribute :insufficient_data_actions, :kind_of => Array, coerce: proc { |v| [v].flatten }
+  attribute :ok_actions, :kind_of => Array, coerce: proc { |v| [v].flatten }
+  attribute :alarm_actions, :kind_of => Array, coerce: proc { |v| [v].flatten }
   attribute :actions_enabled, :kind_of => [TrueClass, FalseClass]
   attribute :alarm_description, :kind_of => String
   attribute :unit, :kind_of => String

@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
-require 'chef/resource/aws_vpc'
-require 'chef/resource/aws_subnet'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
+require "chef/resource/aws_vpc"
+require "chef/resource/aws_subnet"
 
 class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -57,7 +57,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidNetworkAclIDNotFound
-    return false
+    false
   end
 
 end

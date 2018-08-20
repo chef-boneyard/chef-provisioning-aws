@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # An AWS subnet is a sub-section of a VPC, walled gardens within the walled garden;
@@ -18,9 +18,9 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
 
   aws_sdk_type ::Aws::EC2::Subnet, :id => :id
 
-  require 'chef/resource/aws_vpc'
-  require 'chef/resource/aws_network_acl'
-  require 'chef/resource/aws_route_table'
+  require "chef/resource/aws_vpc"
+  require "chef/resource/aws_network_acl"
+  require "chef/resource/aws_route_table"
 
   #
   # The name of this subnet.
@@ -76,7 +76,7 @@ class Chef::Resource::AwsSubnet < Chef::Provisioning::AWSDriver::AWSResourceWith
   #
   # By default, an implicit association with the main route table is made (`:default_to_main`)
   #
-  attribute :route_table#, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ], equal_to: [ :default_to_main ]
+  attribute :route_table #, kind_of: [ String, AwsRouteTable, ::Aws::EC2::RouteTable ], equal_to: [ :default_to_main ]
 
   #
   # The Network ACL to associate with this subnet. Subnets may only

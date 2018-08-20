@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_security_group'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_security_group"
 
 # AWS Elasticache Cluster
 #
@@ -35,7 +35,6 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
             kind_of: [ String, Array ],
             coerce: proc { |v| [v].flatten }
 
-
   # Number of Nodes
   #
   # @param :number_nodes [Integer] Number of nodes in the cache
@@ -70,12 +69,10 @@ class Chef::Resource::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSResour
             coerce: proc { |v| [v].flatten }
 
   def aws_object
-    begin
-      driver.elasticache
-        .describe_cache_clusters(cache_cluster_id: cluster_name)
-        .data[:cache_clusters].first
-    rescue ::Aws::ElastiCache::Errors::CacheClusterNotFound
-      nil
-    end
+    driver.elasticache
+      .describe_cache_clusters(cache_cluster_id: cluster_name)
+      .data[:cache_clusters].first
+  rescue ::Aws::ElastiCache::Errors::CacheClusterNotFound
+    nil
   end
 end

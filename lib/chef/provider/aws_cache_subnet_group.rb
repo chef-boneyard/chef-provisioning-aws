@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cache_subnet_group
@@ -52,7 +52,7 @@ class Chef::Provider::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSPr
                            .map { |subnet| subnet[:subnet_identifier] }.sort
     current_description = cache_subnet_group[:cache_subnet_group_description]
     if new_resource.description != current_description ||
-      desired_options[:subnet_ids].sort != current_subnet_ids
+        desired_options[:subnet_ids].sort != current_subnet_ids
       true
     else
       false

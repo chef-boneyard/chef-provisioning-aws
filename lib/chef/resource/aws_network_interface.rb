@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_subnet'
-require 'chef/resource/aws_eip_address'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_subnet"
+require "chef/resource/aws_eip_address"
 
 class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
   include Chef::Provisioning::AWSDriver::AWSTaggable
@@ -37,6 +37,6 @@ class Chef::Resource::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSRe
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidNetworkInterfaceIDNotFound
-    return false
+    false
   end
 end

@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/driver'
+require "chef/provisioning/aws_driver/driver"
 
 describe ::Aws::Route53::Types::ResourceRecordSet do
-  it "returns the correct RecordSet unique key" 
+  it "returns the correct RecordSet unique key"
   it "returns the correct AWS change struct"
 end
 
@@ -9,11 +9,11 @@ describe Chef::Resource::AwsRoute53RecordSet do
 
   let(:resource_name) { "test_resource" }
   let(:zone_name) { "blerf.net" }
-  let(:resource) {
+  let(:resource) do
     r = Chef::Resource::AwsRoute53RecordSet.new(resource_name)
     r.aws_route53_zone_name(zone_name)
     r
-  }
+  end
 
   it "returns the correct RecordSet unique key" do
     expect(resource.aws_key).to eq("#{resource_name}.#{zone_name}")
@@ -27,10 +27,10 @@ describe Chef::Resource::AwsRoute53RecordSet do
     resource.type("A")
     resource.resource_records(["141.222.1.1", "8.8.8.8"])
 
-    expect(resource.to_aws_struct).to eq({ :name=>"foo.blerf.net",
-                                           :type=>"A",
-                                           :ttl=>900, 
-                                           :resource_records=>[{:value=>"141.222.1.1"}, {:value=>"8.8.8.8"}]
+    expect(resource.to_aws_struct).to eq({ :name => "foo.blerf.net",
+                                           :type => "A",
+                                           :ttl => 900,
+                                           :resource_records => [{ :value => "141.222.1.1" }, { :value => "8.8.8.8" }]
                                            })
   end
 
@@ -57,7 +57,7 @@ describe Chef::Resource::AwsRoute53RecordSet do
       correct = ["foo"]
       expect(resource.validate_rr_type!("CNAME", correct)).to be_truthy
 
-      incorrect = ["foo1", "foo2"]
+      incorrect = %w{foo1 foo2}
       expect { resource.validate_rr_type!("CNAME", incorrect) }.to raise_error(Chef::Exceptions::ValidationFailed,
                                                                                /CNAME records may only have a single value/)
     end
@@ -72,7 +72,7 @@ describe Chef::Resource::AwsRoute53RecordSet do
     end
 
     it "quietly accepts the remaining RR types" do
-      %w(TXT PTR AAAA SPF).each do |type|
+      %w{TXT PTR AAAA SPF}.each do |type|
         expect(resource.validate_rr_type!(type, "We're not validating anything on type '#{type}'.")).to be_truthy
       end
 

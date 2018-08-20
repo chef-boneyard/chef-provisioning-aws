@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/json_compat'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/json_compat"
 
 class Chef::Provider::AwsIamRole < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_iam_role
@@ -64,10 +64,10 @@ class Chef::Provider::AwsIamRole < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   def update_inline_policy(role)
-    desired_inline_policies = Hash[new_resource.inline_policies.map {|k, v| [k.to_s, v]}]
-    current_inline_policies = Hash[role.policies.map {|p| [p.name, p.policy_document]}]
+    desired_inline_policies = Hash[new_resource.inline_policies.map { |k, v| [k.to_s, v] }]
+    current_inline_policies = Hash[role.policies.map { |p| [p.name, p.policy_document] }]
 
-    policies_to_put = desired_inline_policies.reject {|k,v| current_inline_policies[k] && !policy_update_required?(current_inline_policies[k], v)}
+    policies_to_put = desired_inline_policies.reject { |k, v| current_inline_policies[k] && !policy_update_required?(current_inline_policies[k], v) }
     policies_to_delete = current_inline_policies.keys - desired_inline_policies.keys
 
     policies_to_put.each do |policy_name, policy|

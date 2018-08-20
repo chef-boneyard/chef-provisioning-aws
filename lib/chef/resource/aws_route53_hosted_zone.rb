@@ -15,9 +15,9 @@
 # limitations under the License.
 #
 
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_route53_record_set'
-require 'securerandom'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_route53_record_set"
+require "securerandom"
 
 # the AWS API doesn't have these objects linked, so give it some help.
 class Aws::Route53::Types::HostedZone
@@ -45,7 +45,7 @@ class Chef::Resource::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSR
   DEFAULTABLE_ATTRS = [:ttl, :type]
 
   attribute :defaults, kind_of: Hash,
-            callbacks: { "'defaults' keys may be any of #{DEFAULTABLE_ATTRS}" => lambda { |dh|
+                       callbacks: { "'defaults' keys may be any of #{DEFAULTABLE_ATTRS}" => lambda { |dh|
                                              (dh.keys - DEFAULTABLE_ATTRS).size == 0 } }
 
   def record_sets(&block)
@@ -68,7 +68,7 @@ class Chef::Resource::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSR
   end
 
   # since this is used exactly once, it could plausibly be inlined in #aws_object.
-  def get_record_sets_from_aws(hosted_zone_id, opts={})
+  def get_record_sets_from_aws(hosted_zone_id, opts = {})
     params = { hosted_zone_id: hosted_zone_id }.merge(opts)
     driver.route53_client.list_resource_record_sets(params)
   end
@@ -114,7 +114,7 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
       values = {
         name: new_resource.name,
         hosted_zone_config: hosted_zone_config,
-        caller_reference: "chef-provisioning-aws-#{SecureRandom.uuid.upcase}",  # required, unique each call
+        caller_reference: "chef-provisioning-aws-#{SecureRandom.uuid.upcase}", # required, unique each call
       }
 
       # this will validate the record_set resources prior to making any AWS calls.
@@ -201,14 +201,14 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
     converge_by "delete Route53 zone #{new_resource}" do
       Chef::Log.info("Deleting all non-SOA/NS records for #{hosted_zone.name}")
 
-      rr_changes = hosted_zone.resource_record_sets.reject { |aws_rr|
-        %w{SOA NS}.include?(aws_rr.type)
-        }.map { |aws_rr|
-          {
-            action: DELETE,
-            resource_record_set: aws_rr.to_change_struct,
-          }
+      rr_changes = hosted_zone.resource_record_sets.reject do |aws_rr|
+                     %w{SOA NS}.include?(aws_rr.type)
+                   end.map do |aws_rr|
+        {
+          action: DELETE,
+          resource_record_set: aws_rr.to_change_struct,
         }
+      end
 
       if rr_changes.size > 0
         aws_struct = {
@@ -229,7 +229,6 @@ class Chef::Provider::AwsRoute53HostedZone < Chef::Provisioning::AWSDriver::AWSP
   # `record_sets` is defined on the `aws_route53_hosted_zone` resource as a block attribute, so compile that,
   # validate it, and return a list of AWSRoute53RecordSet resource objects.
   def get_record_sets_from_resource(new_resource)
-
     return nil unless new_resource.record_sets
     instance_eval(&new_resource.record_sets)
 

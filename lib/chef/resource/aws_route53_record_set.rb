@@ -28,7 +28,7 @@ class ::Aws::Route53::Types::ResourceRecordSet
       name: name,
       type: type,
       ttl: ttl,
-      resource_records: resource_records.map {|r| {:value => r.value}},
+      resource_records: resource_records.map { |r| { :value => r.value } },
     }
   end
 end
@@ -43,7 +43,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
   attribute :rr_name, required: true
 
-  attribute :type, equal_to: %w(SOA A TXT NS CNAME MX PTR SRV SPF AAAA), required: true
+  attribute :type, equal_to: %w{SOA A TXT NS CNAME MX PTR SRV SPF AAAA}, required: true
 
   attribute :ttl, kind_of: Integer, required: true
 
@@ -56,7 +56,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
   attribute :aws_route53_hosted_zone, required: true
 
   def initialize(name, *args)
-    self.rr_name(name) unless @rr_name
+    rr_name(name) unless @rr_name
     super(name, *args)
   end
 
@@ -65,31 +65,30 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
     # we'll check for integers, but leave the user responsible for valid DNS names.
     when "A"
       rr_list.all? { |v| v =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ } ||
-          raise(::Chef::Exceptions::ValidationFailed,
-                "A records are of the form '141.2.25.3'")
+        raise(::Chef::Exceptions::ValidationFailed,
+              "A records are of the form '141.2.25.3'")
     when "MX"
-      rr_list.all? { |v| v =~ /^\d+\s+[^ ]+/} ||
-          raise(::Chef::Exceptions::ValidationFailed,
-                "MX records must have a priority and mail server, of the form '15 mail.example.com.'")
+      rr_list.all? { |v| v =~ /^\d+\s+[^ ]+/ } ||
+        raise(::Chef::Exceptions::ValidationFailed,
+              "MX records must have a priority and mail server, of the form '15 mail.example.com.'")
     when "SRV"
       rr_list.all? { |v| v =~ /^\d+\s+\d+\s+\d+\s+[^ ]+$/ } ||
-          raise(::Chef::Exceptions::ValidationFailed,
-                "SRV records must have a priority, weight, port, and hostname, of the form '15 10 25 service.example.com.'")
+        raise(::Chef::Exceptions::ValidationFailed,
+              "SRV records must have a priority, weight, port, and hostname, of the form '15 10 25 service.example.com.'")
     when "CNAME"
       rr_list.size == 1 ||
-                raise(::Chef::Exceptions::ValidationFailed,
-                      "CNAME records may only have a single value (a hostname).")
-
+        raise(::Chef::Exceptions::ValidationFailed,
+              "CNAME records may only have a single value (a hostname).")
 
     when "SOA", "NS", "TXT", "PTR", "AAAA", "SPF"
       true
     else
-      raise ArgumentError, "Argument '#{type}' must be one of #{%w(SOA NS A MX SRV CNAME TXT PTR AAAA SPF)}"
+      raise ArgumentError, "Argument '#{type}' must be one of %w(SOA NS A MX SRV CNAME TXT PTR AAAA SPF)"
     end
   end
 
   def validate_zone_name!(rr_name, zone_name)
-    if rr_name.end_with?('.') && rr_name !~ /#{zone_name}\.$/
+    if rr_name.end_with?(".") && rr_name !~ /#{zone_name}\.$/
       raise(::Chef::Exceptions::ValidationFailed, "RecordSet name #{rr_name} does not match parent HostedZone name #{zone_name}.")
     end
     true
@@ -97,7 +96,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
   # because these resources can't actually converge themselves, we have to trigger the validations.
   def validate!
-    [:rr_name, :type, :ttl, :resource_records, :aws_route53_zone_name].each { |f| self.send(f) }
+    [:rr_name, :type, :ttl, :resource_records, :aws_route53_zone_name].each { |f| send(f) }
 
     # this was in an :is validator, but didn't play well with inheriting default values.
     validate_rr_type!(type, resource_records)
@@ -129,7 +128,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
     # http://redirx.me/?t3zo
     {
       action: aws_action,
-      resource_record_set: self.to_aws_struct
+      resource_record_set: to_aws_struct
     }
   end
 

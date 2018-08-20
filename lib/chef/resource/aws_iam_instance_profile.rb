@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 #
 # An AWS IAM instance profile, a container for an IAM role that you can use to
@@ -18,7 +18,7 @@ class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWS
   #
   # The name of the instance profile to create.
   #
-  attribute :name,   kind_of: String, name_attribute: true
+  attribute :name, kind_of: String, name_attribute: true
 
   #
   # The path to the instance profile. For more information about paths, see http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html

@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'date'
-require 'chef/provisioning'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "date"
+require "chef/provisioning"
+require "retryable"
 
 class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -67,14 +67,14 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def destroy_aws_object(vpc)
-    current_driver = self.new_resource.driver
-    current_chef_server = self.new_resource.chef_server
+    current_driver = new_resource.driver
+    current_chef_server = new_resource.chef_server
     if purging
       #SDK V2
       nat_gateways = new_resource.driver.ec2_client.describe_nat_gateways({
           :filter => [
               { name: "vpc-id", values: [vpc.id] },
-              { name: "state", values: ["available", "pending"] },
+              { name: "state", values: %w{available pending} },
           ]
       }).nat_gateways
 
@@ -146,10 +146,10 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       end
 
       vpc_peering_connections = []
-      %w(
+      %w{
         requester-vpc-info.vpc-id
         accepter-vpc-info.vpc-id
-      ).each do |filter|
+      }.each do |filter|
         vpc_peering_connections += new_resource.driver.ec2_client.describe_vpc_peering_connections({
             :filters => [
                 {
@@ -192,7 +192,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
     # We cannot delete the main route table, and it will be deleted when the VPC is deleted anyways
 
-    converge_by "delete #{new_resource.to_s} in #{region}" do
+    converge_by "delete #{new_resource} in #{region}" do
       vpc.delete
     end
   end
@@ -202,7 +202,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
   def update_vpc_attributes(vpc)
     # Figure out what (if anything) we need to update
     update_attributes = {}
-    %w(enable_dns_support enable_dns_hostnames).each do |name|
+    %w{enable_dns_support enable_dns_hostnames}.each do |name|
       desired_value = new_resource.public_send(name)
       if !desired_value.nil?
         # enable_dns_support -> enableDnsSupport
@@ -224,8 +224,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
 
   def update_internet_gateway(vpc)
     current_ig = vpc.internet_gateways.first
-    current_driver = self.new_resource.driver
-    current_chef_server = self.new_resource.chef_server
+    current_driver = new_resource.driver
+    current_chef_server = new_resource.chef_server
     case new_resource.internet_gateway
       when String, Chef::Resource::AwsInternetGateway, ::Aws::EC2::InternetGateway
         new_ig = Chef::Resource::AwsInternetGateway.get_aws_object(new_resource.internet_gateway, resource: new_resource)
@@ -266,7 +266,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
           Cheffish.inline_resource(self, action) do
             aws_internet_gateway "igw-managed-by-#{vpc.id}" do
               vpc vpc.id
-              aws_tags 'OwnedByVPC' => vpc.id
+              aws_tags "OwnedByVPC" => vpc.id
               driver current_driver
               chef_server current_chef_server
             end
@@ -310,9 +310,9 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     current_route_table ||= main_route_table
     if current_route_table.route_table_id != desired_route_table.id
       if main_route_table.nil?
-        raise "No main route table association found for #{new_resource.to_s} current main route table. error!  Probably a race condition."
+        raise "No main route table association found for #{new_resource} current main route table. error!  Probably a race condition."
       end
-      converge_by "change main route table for #{new_resource.to_s} to #{desired_route_table.id} (was #{current_route_table.route_table_id})" do
+      converge_by "change main route table for #{new_resource} to #{desired_route_table.id} (was #{current_route_table.route_table_id})" do
         vpc.client.replace_route_table_association(
           association_id: main_route_table.id,
           route_table_id: desired_route_table.id
@@ -332,8 +332,8 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
       main_route_table = entry.associations.find { |r| r.main == true } unless entry.associations.empty?
     end
     main_routes = new_resource.main_routes
-    current_driver = self.new_resource.driver
-    current_chef_server = self.new_resource.chef_server
+    current_driver = new_resource.driver
+    current_chef_server = new_resource.chef_server
     Cheffish.inline_resource(self, action) do
       aws_route_table main_route_table.route_table_id do
         vpc vpc
@@ -349,7 +349,7 @@ class Chef::Provider::AwsVpc < Chef::Provisioning::AWSDriver::AWSProvider
     dhcp_options = vpc.dhcp_options
     desired_dhcp_options = Chef::Resource::AwsDhcpOptions.get_aws_object(new_resource.dhcp_options, resource: new_resource)
     if dhcp_options.id != desired_dhcp_options.id
-      converge_by "change DHCP options for #{new_resource.to_s} to #{new_resource.dhcp_options} (#{desired_dhcp_options.id}) - was #{dhcp_options.id}" do
+      converge_by "change DHCP options for #{new_resource} to #{new_resource.dhcp_options} (#{desired_dhcp_options.id}) - was #{dhcp_options.id}" do
         vpc.associate_dhcp_options({
           dhcp_options_id: desired_dhcp_options.id, # required
           dry_run: false,

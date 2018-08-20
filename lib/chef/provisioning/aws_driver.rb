@@ -1,5 +1,5 @@
-require 'chef/provisioning'
-require 'chef/provisioning/aws_driver/driver'
+require "chef/provisioning"
+require "chef/provisioning/aws_driver/driver"
 
 require "chef/resource/aws_auto_scaling_group"
 require "chef/resource/aws_cache_cluster"
@@ -45,7 +45,9 @@ module NoResourceCloning
       super
     end
   end
+
   def emit_cloned_resource_warning; end
+
   def emit_harmless_cloning_debug; end
 end
 

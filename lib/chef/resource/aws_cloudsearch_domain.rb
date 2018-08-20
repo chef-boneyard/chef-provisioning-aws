@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource'
+require "chef/provisioning/aws_driver/aws_resource"
 
 module AWS
   class CloudSearch
@@ -13,7 +13,7 @@ end
 class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSResource
   aws_sdk_type ::Aws::CloudSearchDomain
   attribute :name, kind_of: String, name_attribute: true
-  attribute :cloudsearch_api_version, equal_to: ["20130101", "20110201"], default: "20130101"
+  attribute :cloudsearch_api_version, equal_to: %w{20130101 20110201}, default: "20130101"
 
   # Availability Options
   attribute :multi_az, kind_of: [TrueClass, FalseClass], default: false
@@ -30,7 +30,6 @@ class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSR
   # For now we just allow the user to shove the policy in via a string.
   attribute :access_policies, kind_of: String
 
-
   # Indexing Options
   # TODO(ssd): Like Access Polcies, we should decide
   # whether we want a DSL for defining index fields, or just allow the
@@ -41,10 +40,10 @@ class Chef::Resource::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSR
   # objects in the version of the AWS API we are using.  This will
   # return a hash with some relevant information about the domain.
   def aws_object
-    driver.cloudsearch.describe_domains(domain_names: [name])[:domain_status_list].find {|d| !d[:deleted] }
+    driver.cloudsearch.describe_domains(domain_names: [name])[:domain_status_list].find { |d| !d[:deleted] }
   end
 
-  def cloudsearch_api_version(arg=nil)
+  def cloudsearch_api_version(arg = nil)
     unless arg.nil?
       Chef::Log.warn("The ':cloudsearch_api_version' has been deprecated since it has been removed in AWS SDK version 2.")
     end

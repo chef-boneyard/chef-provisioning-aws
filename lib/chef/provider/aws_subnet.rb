@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'date'
-require 'chef/resource/aws_vpc'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/aws_resource"
+require "date"
+require "chef/resource/aws_vpc"
 
 class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -11,11 +11,11 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   def action_create
     subnet = super
 
-    if new_resource.map_public_ip_on_launch != nil
+    if !new_resource.map_public_ip_on_launch.nil?
       update_map_public_ip_on_launch(subnet)
     end
 
-    if new_resource.route_table != nil
+    if !new_resource.route_table.nil?
       update_route_table(subnet)
     end
 
@@ -36,8 +36,8 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     converge_by "create subnet #{new_resource.name} with CIDR #{cidr_block} in VPC #{new_resource.vpc} (#{options[:vpc_id]}) in #{region}" do
       subnet = new_resource.driver.ec2_resource.create_subnet(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidSubnetIDNotFound) do
-        new_resource.driver.ec2_resource.create_tags(resources: [subnet.id],tags: [{key: "Name", value: new_resource.name}])
-        new_resource.driver.ec2_resource.create_tags(resources: [subnet.id],tags: [{key: "VPC", value: new_resource.vpc}])
+        new_resource.driver.ec2_resource.create_tags(resources: [subnet.id], tags: [{ key: "Name", value: new_resource.name }])
+        new_resource.driver.ec2_resource.create_tags(resources: [subnet.id], tags: [{ key: "VPC", value: new_resource.vpc }])
       end
       subnet
     end
@@ -61,8 +61,8 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     if purging
       # TODO possibly convert to http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Client.html#terminate_instances-instance_method
       p = Chef::ChefFS::Parallelizer.new(5)
-      current_driver = self.new_resource.driver
-      current_chef_server = self.new_resource.chef_server
+      current_driver = new_resource.driver
+      current_chef_server = new_resource.chef_server
       p.parallel_do(subnet.instances.to_a) do |instance|
         Cheffish.inline_resource(self, action) do
           aws_instance instance.id do
@@ -87,7 +87,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
         end
       end
     end
-    converge_by "delete #{new_resource.to_s} in VPC #{new_resource.vpc} in #{region}" do
+    converge_by "delete #{new_resource} in VPC #{new_resource.vpc} in #{region}" do
       # If the subnet doesn't exist we can't check state on it - state can only be :pending or :available
       begin
         subnet.delete
@@ -118,10 +118,10 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   end
 
   def update_route_table(subnet)
-    current_route_table_association = subnet.client.describe_route_tables(filters: [{name: "vpc-id", values: [subnet.vpc.id]}]).route_tables
+    current_route_table_association = subnet.client.describe_route_tables(filters: [{ name: "vpc-id", values: [subnet.vpc.id] }]).route_tables
     route_table_entry = nil
     do_break = false
-    # Below snippet gives the entry of route_table who is associated with current subnet either by matching its 
+    # Below snippet gives the entry of route_table who is associated with current subnet either by matching its
     # subnet_id or with a default subnet (i.e by checking association.main == true & in that case
     # association.subnet_id is nil)
     current_route_table_association.each do |route_tbl|
@@ -168,7 +168,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
       network_acl_id =
         AWSResource.lookup_options({ network_acl: new_resource.network_acl }, resource: new_resource)[:network_acl]
       # Below snippet gives the entry of network_acl who is associated with current subnet by matching its subnet_id
-      network_acl_association = subnet.client.describe_network_acls(filters: [{name: "vpc-id", values: [subnet.vpc.id]}, {name: "association.subnet-id", values: [subnet.id]}]).network_acls.first.associations
+      network_acl_association = subnet.client.describe_network_acls(filters: [{ name: "vpc-id", values: [subnet.vpc.id] }, { name: "association.subnet-id", values: [subnet.id] }]).network_acls.first.associations
       current_network_acl_association = network_acl_association.find { |r| r.subnet_id == subnet.id } unless network_acl_association.empty?
 
       if current_network_acl_association.network_acl_id != network_acl_id && !current_network_acl_association.nil?

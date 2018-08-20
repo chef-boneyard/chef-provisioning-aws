@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_cloudwatch_alarm
@@ -28,10 +28,10 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
       # Because an update is a PUT, we must ensure that any properties not specified
       # on the resource that are already present on the object stay the same
       aws_object = new_resource.aws_object
-      opts = {alarm_name: new_resource.name}
-      %i(namespace metric_name comparison_operator
+      opts = { alarm_name: new_resource.name }
+      %i{namespace metric_name comparison_operator
          evaluation_periods period statistic threshold
-         actions_enabled alarm_description unit).each do |opt|
+         actions_enabled alarm_description unit}.each do |opt|
         if !new_resource.public_send(opt).nil?
           opts[opt] = new_resource.public_send(opt)
         elsif aws_object && !aws_object.public_send(opt).nil?
@@ -41,7 +41,7 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
       if !new_resource.dimensions.nil?
         opts[:dimensions] = new_resource.dimensions
       elsif aws_object && !aws_object.dimensions.nil?
-        opts[:dimensions] = aws_object.dimensions.map! {|d| d.to_h}
+        opts[:dimensions] = aws_object.dimensions.map! { |d| d.to_h }
       end
       # Normally we would just use `lookup_options` here but because these parameters
       # don't necessarily sound like sns topics we manually do it
@@ -71,14 +71,14 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
         return true
       end
     end
-    unless (Set.new(alarm.dimensions.map {|d| d.to_h}) ^ Set.new(desired_options[:dimensions])).empty?
+    unless (Set.new(alarm.dimensions.map { |d| d.to_h }) ^ Set.new(desired_options[:dimensions])).empty?
       return true
     end
-    %i(insufficient_data_actions ok_actions alarm_actions).each do |opt|
+    %i{insufficient_data_actions ok_actions alarm_actions}.each do |opt|
       unless (Set.new(alarm.public_send(opt)) ^ Set.new(desired_options[opt])).empty?
         return true
       end
     end
-    return false
+    false
   end
 end

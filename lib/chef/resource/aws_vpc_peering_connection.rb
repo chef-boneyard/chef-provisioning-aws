@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # An AWS peering connection, specifying which VPC to peer.
@@ -15,7 +15,7 @@ class Chef::Resource::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
   aws_sdk_type ::Aws::EC2::VpcPeeringConnection
   actions :accept, :create, :destroy, :purge, :nothing
 
-  require 'chef/resource/aws_vpc'
+  require "chef/resource/aws_vpc"
 
   #
   # The name of this peering connection.

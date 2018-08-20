@@ -2,16 +2,16 @@ module AWSSupport
   module DeepMatcher
     module MatchValuesFailureMessages
 
-      require 'set'
-      require 'rspec/matchers'
-      require 'rspec/matchers/composable'
-      require 'aws_support/deep_matcher'
-      require 'aws_support/deep_matcher/matchable_object'
-      require 'aws_support/deep_matcher/matchable_array'
+      require "set"
+      require "rspec/matchers"
+      require "rspec/matchers/composable"
+      require "aws_support/deep_matcher"
+      require "aws_support/deep_matcher/matchable_object"
+      require "aws_support/deep_matcher/matchable_array"
 
       protected
 
-      def match_values_failure_messages(expected, actual, identifier=nil)
+      def match_values_failure_messages(expected, actual, identifier = nil)
         if DeepMatcher === expected
           return expected.match_failure_messages(actual, identifier)
         elsif RSpec::Matchers::Composable === expected
@@ -46,16 +46,16 @@ module AWSSupport
         else
           actual_set = actual_setlike.to_set
           expected_set.each do |expected|
-            unless actual_set.any? { |actual|
+            unless actual_set.any? do |actual|
               match_values_failure_messages(expected, actual, identifier).flatten.empty?
-            }
+            end
               result << "- #{description_of(expected)}"
             end
           end
           actual_set.each do |actual|
-            unless expected_set.any? { |expected|
+            unless expected_set.any? do |expected|
               match_values_failure_messages(expected, actual, identifier).flatten.empty?
-            }
+            end
               result << "+ #{description_of(actual)}"
             end
           end
@@ -94,22 +94,22 @@ module AWSSupport
         end
         Diff::LCS.sdiff(expected_list, actual_list) do |change|
           case change.action
-          when '='
+          when "="
             messages = [ change.new_element.inspect ]
-          when '+'
+          when "+"
             messages = [ change.new_element.inspect ]
             different = true
-          when '-'
+          when "-"
             messages = [ change.old_element.value.inspect ]
             different = true
-          when '!'
+          when "!"
             messages = change.old_element.failure_messages(change.new_element)
             different = true
           else
             raise "Unknown operator returned from sdiff: #{op}"
           end
           op = change.action
-          op = ' ' if op == '='
+          op = " " if op == "="
 
           result += messages.flat_map { |m| m.split("\n") }.map { |m| "#{op} #{m}" } if messages
         end
@@ -120,12 +120,10 @@ module AWSSupport
         result = []
         expected_hash.all? do |expected_key, expected_value|
           # 'a.b.c' => 1 -> { a: { b: { c: 1 }}}
-          names = expected_key.to_s.split('.')
+          names = expected_key.to_s.split(".")
           if names.size > 1
             expected_key = names.shift
-            while !names.empty?
-              expected_value = { names.pop => expected_value }
-            end
+            expected_value = { names.pop => expected_value } until names.empty?
           end
 
           # Grab the actual value from the object

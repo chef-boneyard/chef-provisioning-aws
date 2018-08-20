@@ -14,7 +14,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
 
   aws_sdk_type ::Aws::EC2::InternetGateway, id: :id
 
-  require 'chef/resource/aws_vpc'
+  require "chef/resource/aws_vpc"
 
   #
   # Extend actions for the internet gateway
@@ -50,6 +50,6 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   def exists?(result)
     return true if result.data
   rescue ::Aws::EC2::Errors::InvalidInternetGatewayIDNotFound
-    return false
+    false
   end
 end

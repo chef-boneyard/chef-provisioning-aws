@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_provider'
+require "chef/provisioning/aws_driver/aws_provider"
 
 class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -18,24 +18,24 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
     end
   end
 
-  def create_dhcp_options options
-    options = options.map{|k,v| {key: k.to_s.gsub('_', '-'), values: Array(v).map(&:to_s)}}
+  def create_dhcp_options(options)
+    options = options.map { |k, v| { key: k.to_s.tr("_", "-"), values: Array(v).map(&:to_s) } }
     ec2_resource = ::Aws::EC2::Resource.new(new_resource.driver.ec2)
-    dhcp_options = ec2_resource.create_dhcp_options({dhcp_configurations: options})
+    dhcp_options = ec2_resource.create_dhcp_options({ dhcp_configurations: options })
     retry_with_backoff(::Aws::EC2::Errors::InvalidDhcpOptionIDNotFound) do
-      dhcp_options.create_tags({tags: [{key: "Name", value: new_resource.name}]})
+      dhcp_options.create_tags({ tags: [{ key: "Name", value: new_resource.name }] })
     end
     dhcp_options
   end
 
   def update_aws_object(dhcp_options)
     # Verify unmodifiable attributes of existing dhcp_options
-    config = dhcp_options.data.to_h[:dhcp_configurations].map{|a|{a[:key].gsub('-', '_').to_sym => a[:values].map{|k|k[:value]} }}.reduce Hash.new, :merge
+    config = dhcp_options.data.to_h[:dhcp_configurations].map { |a| { a[:key].tr("-", "_").to_sym => a[:values].map { |k| k[:value] } } }.reduce Hash.new, :merge
     differing_options = desired_options.select { |name, value| config[name] != Array(value).map(&:to_s) }
     if !differing_options.empty?
       old_dhcp_options = dhcp_options
       # Report what we are trying to change ...
-      action_handler.report_progress "update #{new_resource.to_s}"
+      action_handler.report_progress "update #{new_resource}"
       differing_options.each do |name, value|
         action_handler.report_progress "  set #{name} to #{value.inspect} (was #{config.has_key?(name) ? config[name].inspect : "not set"})"
       end
@@ -76,7 +76,7 @@ class Chef::Provider::AwsDhcpOptions < Chef::Provisioning::AWSDriver::AWSProvide
 
   def desired_options
     desired_options = {}
-    %w(domain_name domain_name_servers ntp_servers netbios_name_servers netbios_node_type).each do |attr|
+    %w{domain_name domain_name_servers ntp_servers netbios_name_servers netbios_node_type}.each do |attr|
       attr = attr.to_sym
       value = new_resource.public_send(attr)
       desired_options[attr] = value unless value.nil?

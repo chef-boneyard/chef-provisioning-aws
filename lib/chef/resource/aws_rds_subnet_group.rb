@@ -1,6 +1,6 @@
-require 'chef/provisioning/aws_driver/aws_rds_resource'
-require 'chef/provisioning/aws_driver/aws_taggable'
-require 'chef/resource/aws_subnet'
+require "chef/provisioning/aws_driver/aws_rds_resource"
+require "chef/provisioning/aws_driver/aws_taggable"
+require "chef/resource/aws_subnet"
 
 class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable

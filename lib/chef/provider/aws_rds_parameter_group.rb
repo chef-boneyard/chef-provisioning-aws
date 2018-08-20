@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/rds'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/rds"
 
 # inspiration taken from providers/aws_rds_subnet_group.rb
 # but different enough that I'm not sure there is easy abstraction
@@ -120,7 +120,7 @@ class Chef::Provider::AwsRdsParameterGroup < Chef::Provisioning::AWSDriver::AWSP
     # Breaking the user is never the right option, so we have elected to not be itempotent.
     ! (desired_options[:parameters].nil? || desired_options[:parameters].empty?)
   end
-  
+
   def driver
     new_resource.driver.rds
   end

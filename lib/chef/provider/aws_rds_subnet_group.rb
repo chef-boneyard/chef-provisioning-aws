@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/rds'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/rds"
 
 class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::RDSConvergeTags
@@ -62,11 +62,10 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
     ret
   end
 
-
   private
 
   def subnet_ids(subnets)
-    subnets.map {|i| i[:subnet_identifier] }
+    subnets.map { |i| i[:subnet_identifier] }
   end
 
   def xor_array(a, b)
@@ -78,7 +77,7 @@ class Chef::Provider::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSProv
   def tag_hash_to_array(tag_hash)
     ret = []
     tag_hash.each do |key, value|
-      ret << {:key => key, :value => value}
+      ret << { :key => key, :value => value }
     end
     ret
   end

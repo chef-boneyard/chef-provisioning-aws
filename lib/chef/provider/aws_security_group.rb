@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'date'
-require 'ipaddr'
-require 'set'
+require "chef/provisioning/aws_driver/aws_provider"
+require "date"
+require "ipaddr"
+require "set"
 
 class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -21,7 +21,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       options = { description: new_resource.description.to_s }
       options[:vpc_id] = new_resource.vpc if new_resource.vpc
       options[:group_name] = new_resource.name
-      if options[:description].nil? or options[:description]==""
+      if options[:description].nil? || (options[:description] == "")
         options[:description] = new_resource.name.to_s
       end
       options = AWSResource.lookup_options(options, resource: new_resource)
@@ -29,7 +29,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
 
       sg = new_resource.driver.ec2_resource.create_security_group(options)
       retry_with_backoff(::Aws::EC2::Errors::InvalidSecurityGroupsIDNotFound, ::Aws::EC2::Errors::InvalidGroupNotFound) do
-        new_resource.driver.ec2_resource.create_tags(resources: [sg.id],tags: [{key: "Name", value: new_resource.name}]) 
+        new_resource.driver.ec2_resource.create_tags(resources: [sg.id], tags: [{ key: "Name", value: new_resource.name }])
       end
       sg
     end
@@ -49,7 +49,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
   end
 
   def destroy_aws_object(sg)
-    converge_by "delete security group #{new_resource.to_s} in #{region}" do
+    converge_by "delete security group #{new_resource} in #{region}" do
       sg.delete({ dry_run: false })
     end
   end
@@ -99,7 +99,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "authorize #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
           names.each do |iprange|
            begin
-            if iprange.include?('-')
+            if iprange.include?("-")
               # user_id_group_pairs allows to add inbound rules for source security group
               sg.authorize_ingress({
                 ip_permissions: [{
@@ -146,7 +146,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "revoke the ability of #{names.join(', ')} to send traffic to group #{new_resource.name} (#{sg.id}) on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
           names.each do |iprange|
            begin
-            if iprange.include?('-')
+            if iprange.include?("-")
               # user_id_group_pairs allows to revoke inbound rules for source security group
               sg.revoke_ingress({
                 ip_permissions: [{
@@ -225,7 +225,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "authorize group #{new_resource.name} (#{sg.id}) to send traffic to #{names.join(', ')} on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
           names.each do |iprange|
            begin
-            if iprange.include?('-')
+            if iprange.include?("-")
               sg.authorize_egress({
                 ip_permissions: [{
                   ip_protocol: protocol,
@@ -271,7 +271,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         converge_by "revoke the ability of group #{new_resource.name} (#{sg.id}) to send traffic to #{names.join(', ')} on port_range #{port_range.inspect} with protocol #{protocol || 'nil'}" do
           names.each do |iprange|
            begin
-            if iprange.include?('-')
+            if iprange.include?("-")
               sg.revoke_egress({
                 ip_permissions: [{
                   ip_protocol: protocol,
@@ -322,7 +322,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
         port_range: rule[:from_port] ? rule[:from_port]..rule[:to_port] : -1..-1,
         protocol: rule[:ip_protocol].to_s.to_sym
       }
-      rule[:user_id_group_pairs].map! { |h| h.select { |x| x != :group_name} }
+      rule[:user_id_group_pairs].map! { |h| h.select { |x| x != :group_name } }
       add_rule(actual_rules, [ port_range ], rule[:user_id_group_pairs]) if rule[:user_id_group_pairs]
       add_rule(actual_rules, [ port_range ], rule[:ip_ranges].map { |r| r[:cidr_ip] }) if rule[:ip_ranges]
     end
@@ -424,7 +424,7 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
       if actor_spec.keys.all? { |key| [ :user_id, :group_id, :group_name ].include?(key) }
         if actor_spec.has_key?(:group_name)
           vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: new_resource)
-          actor_spec[:group_id] ||= vpc_object.security_groups({filters: [name: "group-name", values: [actor_spec[:group_name]]]}).first.id
+          actor_spec[:group_id] ||= vpc_object.security_groups({ filters: [name: "group-name", values: [actor_spec[:group_name]]] }).first.id
         end
         actor_spec[:user_id] ||= new_resource.driver.account_id
 
@@ -445,14 +445,14 @@ class Chef::Provider::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSProvi
 
     # If a load balancer is specified, grab it and then get its automatic security group
     when /^elb-[a-fA-F0-9]+$/, Aws::ElasticLoadBalancing::Types::LoadBalancerDescription, Chef::Resource::AwsLoadBalancer
-      lb=actor_spec
+      lb = actor_spec
       if lb.class != Aws::ElasticLoadBalancing::Types::LoadBalancerDescription
         lb = Chef::Resource::AwsLoadBalancer.get_aws_object(actor_spec, resource: new_resource)
       end
       # get secgroup via vpc_id
       vpc_object = Chef::Resource::AwsVpc.get_aws_object(vpc, resource: new_resource)
       results = vpc_object.security_groups.to_a.select { |s| s.group_name == lb.source_security_group.group_name }
-      if results.size == 1  
+      if results.size == 1
         get_actors(vpc, results.first.id)
       else
         raise ::Chef::Provisioning::AWSDriver::Exceptions::MultipleSecurityGroupError.new(lb.source_security_group.group_name, results)

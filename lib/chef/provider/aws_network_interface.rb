@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'cheffish'
-require 'date'
-require 'retryable'
+require "chef/provisioning/aws_driver/aws_provider"
+require "cheffish"
+require "date"
+require "retryable"
 
 class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSProvider
   include Chef::Provisioning::AWSDriver::TaggingStrategy::EC2ConvergeTags
@@ -195,7 +195,7 @@ class Chef::Provider::AwsNetworkInterface < Chef::Provisioning::AWSDriver::AWSPr
 
       Retryable.retryable(:tries => 30, :sleep => 2, :on => NetworkInterfaceStatusTimeoutError, :ensure => log_callback) do
         result = new_resource.driver.ec2_resource.network_interface(eni.id) if eni.id
-		raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if new_resource.exists?(result)
+        raise NetworkInterfaceStatusTimeoutError.new(new_resource, "exists", "deleted") if new_resource.exists?(result)
       end
       eni
     end

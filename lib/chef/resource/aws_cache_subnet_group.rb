@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_resource'
-require 'chef/resource/aws_subnet'
+require "chef/provisioning/aws_driver/aws_resource"
+require "chef/resource/aws_subnet"
 
 # AWS Elasticache Subnet Group
 # @see http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/ElastiCache/Client/V20140930.html#create_cache_subnet_group-instance_method
@@ -31,12 +31,10 @@ class Chef::Resource::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSRe
             coerce: proc { |v| [v].flatten }
 
   def aws_object
-    begin
-      driver.elasticache
-        .describe_cache_subnet_groups(cache_subnet_group_name: group_name)
-        .data[:cache_subnet_groups].first
-    rescue ::Aws::ElastiCache::Errors::CacheSubnetGroupNotFoundFault
-      nil
-    end
+    driver.elasticache
+      .describe_cache_subnet_groups(cache_subnet_group_name: group_name)
+      .data[:cache_subnet_groups].first
+  rescue ::Aws::ElastiCache::Errors::CacheSubnetGroupNotFoundFault
+    nil
   end
 end

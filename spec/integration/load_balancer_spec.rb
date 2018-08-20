@@ -1,10 +1,10 @@
-require 'spec_helper'
-require 'securerandom'
+require "spec_helper"
+require "securerandom"
 
 describe Chef::Resource::LoadBalancer do
   extend AWSSupport
 
-  when_the_chef_12_server "exists", organization: 'foo', server_scope: :context do
+  when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "with a VPC and a public subnet" do
 
       purge_all
@@ -30,8 +30,8 @@ describe Chef::Resource::LoadBalancer do
       end
 
       it "creates a load_balancer with the maximum attributes" do
-        expect_recipe {
-          load_balancer 'test-load-balancer' do
+        expect_recipe do
+          load_balancer "test-load-balancer" do
             load_balancer_options({
               listeners: [
                 {
@@ -58,7 +58,7 @@ describe Chef::Resource::LoadBalancer do
                 healthy_threshold: 2
               },
               sticky_sessions: {
-                cookie_name: 'test-cookie-name',
+                cookie_name: "test-cookie-name",
                 ports: [80, 443]
               },
               scheme: "internal",
@@ -91,13 +91,13 @@ describe Chef::Resource::LoadBalancer do
               # availability_zones: [test_public_subnet.aws_object.availability_zone_name]
            })
           end
-        }.to create_an_aws_load_balancer('test-load-balancer',
+        end.to create_an_aws_load_balancer("test-load-balancer",
           driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]
         ).and be_idempotent
         expect(
           driver.elb_client.describe_load_balancer_attributes(load_balancer_name: "test-load-balancer").to_h
         ).to eq(load_balancer_attributes: {
-          cross_zone_load_balancing: {enabled: true},
+          cross_zone_load_balancing: { enabled: true },
           access_log: {
             enabled: true,
             s3_bucket_name: bucket_name,
@@ -112,42 +112,42 @@ describe Chef::Resource::LoadBalancer do
             idle_timeout: 1,
           }
         })
-        stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: 'test-load-balancer')[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }.to_h
+        stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: "test-load-balancer")[:policy_descriptions].detect { |pd| pd[:policy_type_name] == "AppCookieStickinessPolicyType" }.to_h
         expect(stickiness_policy).to eq(
           {
             policy_attribute_descriptions: [
-              {attribute_value: "test-cookie-name", attribute_name: "CookieName"}
+              { attribute_value: "test-cookie-name", attribute_name: "CookieName" }
           ],
             policy_type_name: "AppCookieStickinessPolicyType",
             policy_name: "test-load-balancer-sticky-session-policy"
           }
         )
 
-        listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+        listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[:load_balancer_descriptions][0][:listener_descriptions]
         expect(listener_descriptions.size).to eql(2)
         http_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 80 }
         https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
-        expect(http_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
-        expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
+        expect(http_listener[:policy_names]).to include("test-load-balancer-sticky-session-policy")
+        expect(https_listener[:policy_names]).to include("test-load-balancer-sticky-session-policy")
       end
 
-      context 'with an existing load balancer' do
-        aws_security_group 'test_security_group2' do
-          vpc 'test_vpc'
-          inbound_rules '0.0.0.0/0' => [ 22, 80 ]
-          outbound_rules [ 22, 80 ] => '0.0.0.0/0'
+      context "with an existing load balancer" do
+        aws_security_group "test_security_group2" do
+          vpc "test_vpc"
+          inbound_rules "0.0.0.0/0" => [ 22, 80 ]
+          outbound_rules [ 22, 80 ] => "0.0.0.0/0"
         end
 
-        azs = driver.ec2_client.describe_availability_zones.availability_zones.map {|r| r.zone_name}
-        aws_subnet 'test_public_subnet2' do
-          vpc 'test_vpc'
+        azs = driver.ec2_client.describe_availability_zones.availability_zones.map { |r| r.zone_name }
+        aws_subnet "test_public_subnet2" do
+          vpc "test_vpc"
           map_public_ip_on_launch true
-          cidr_block '10.0.1.0/24'
+          cidr_block "10.0.1.0/24"
           # This subnet _must_ be in a different availability_zone than the existing one
           availability_zone azs.last
         end
 
-        load_balancer 'test-load-balancer' do
+        load_balancer "test-load-balancer" do
           load_balancer_options({
             listeners: [{
                 :port => 80,
@@ -172,7 +172,7 @@ describe Chef::Resource::LoadBalancer do
               healthy_threshold: 2
             },
             sticky_sessions: {
-              cookie_name: 'test-cookie-name',
+              cookie_name: "test-cookie-name",
               ports: [80]
             },
             scheme: "internal",
@@ -197,9 +197,9 @@ describe Chef::Resource::LoadBalancer do
           })
         end
 
-        it 'updates all available attributes' do
-          expect_recipe {
-            load_balancer 'test-load-balancer' do
+        it "updates all available attributes" do
+          expect_recipe do
+            load_balancer "test-load-balancer" do
               load_balancer_options({
                 listeners: [{
                     :port => 443,
@@ -225,7 +225,7 @@ describe Chef::Resource::LoadBalancer do
                   healthy_threshold: 3
                 },
                 sticky_sessions: {
-                  cookie_name: 'test-cookie-name2',
+                  cookie_name: "test-cookie-name2",
                   ports: [443]
                 },
                 # scheme is immutable, we cannot update it
@@ -250,7 +250,7 @@ describe Chef::Resource::LoadBalancer do
                 }
              })
             end
-          }.to update_an_aws_load_balancer('test-load-balancer', driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]).and be_idempotent
+          end.to update_an_aws_load_balancer("test-load-balancer", driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0]).and be_idempotent
 
           expect(
             driver.elb_client.describe_load_balancer_attributes(load_balancer_name: "test-load-balancer").to_h
@@ -273,25 +273,25 @@ describe Chef::Resource::LoadBalancer do
             }
           })
 
-          stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: 'test-load-balancer')[:policy_descriptions].detect { |pd| pd[:policy_type_name] == 'AppCookieStickinessPolicyType' }.to_h
+          stickiness_policy = driver.elb_client.describe_load_balancer_policies(load_balancer_name: "test-load-balancer")[:policy_descriptions].detect { |pd| pd[:policy_type_name] == "AppCookieStickinessPolicyType" }.to_h
           expect(stickiness_policy).to eq(
             {
               policy_attribute_descriptions: [
-                {attribute_value: "test-cookie-name2", attribute_name: "CookieName"}
+                { attribute_value: "test-cookie-name2", attribute_name: "CookieName" }
             ],
               policy_type_name: "AppCookieStickinessPolicyType",
               policy_name: "test-load-balancer-sticky-session-policy"
             }
           )
 
-          listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ['test-load-balancer'])[:load_balancer_descriptions][0][:listener_descriptions]
+          listener_descriptions = driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[:load_balancer_descriptions][0][:listener_descriptions]
           expect(listener_descriptions.size).to eql(2)
           https_listener = listener_descriptions.detect { |ld| ld[:listener][:load_balancer_port] == 443 }
-          expect(https_listener[:policy_names]).to include('test-load-balancer-sticky-session-policy')
+          expect(https_listener[:policy_names]).to include("test-load-balancer-sticky-session-policy")
         end
       end
 
-      context 'when there are machines', :super_slow do
+      context "when there are machines", :super_slow do
         [1, 2].each do |i|
           machine "test_load_balancer_machine#{i}" do
             machine_options bootstrap_options: {
@@ -303,116 +303,116 @@ describe Chef::Resource::LoadBalancer do
         end
 
         it "creates a load_balancer and assigns machine1" do
-          expect_recipe {
-            load_balancer 'test-load-balancer' do
+          expect_recipe do
+            load_balancer "test-load-balancer" do
               load_balancer_options({
                 subnets: ["test_public_subnet"],
                 security_groups: ["test_security_group"]
               })
-              machines ['test_load_balancer_machine1']
+              machines ["test_load_balancer_machine1"]
             end
-          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
-            ids = aws_object.instances.map {|i| i.instance_id}
+          end.to create_an_aws_load_balancer("test-load-balancer") { |aws_object|
+            ids = aws_object.instances.map { |i| i.instance_id }
             expect([test_load_balancer_machine1.aws_object.id]).to eq(ids)
           }.and be_idempotent
         end
 
         it "can reference machines by name or id" do
-          expect_recipe {
-            load_balancer 'test-load-balancer' do
+          expect_recipe do
+            load_balancer "test-load-balancer" do
               load_balancer_options({
                 subnets: ["test_public_subnet"],
                 security_groups: ["test_security_group"]
               })
-              machines ['test_load_balancer_machine1', test_load_balancer_machine2.aws_object.id]
+              machines ["test_load_balancer_machine1", test_load_balancer_machine2.aws_object.id]
             end
-          }.to create_an_aws_load_balancer('test-load-balancer') { |aws_object|
-            ids = aws_object.instances.map {|i| i.instance_id}
+          end.to create_an_aws_load_balancer("test-load-balancer") { |aws_object|
+            ids = aws_object.instances.map { |i| i.instance_id }
             expect(ids.to_set).to eq([test_load_balancer_machine1.aws_object.id, test_load_balancer_machine2.aws_object.id].to_set)
           }.and be_idempotent
         end
 
         context "with an existing load_balancer with machine1 attached" do
-          load_balancer 'test-load-balancer' do
+          load_balancer "test-load-balancer" do
             load_balancer_options({
               subnets: ["test_public_subnet"],
               security_groups: ["test_security_group"]
             })
-            machines ['test_load_balancer_machine1']
+            machines ["test_load_balancer_machine1"]
           end
 
           it "updates the attached machine to machine2" do
-            expect_recipe {
-              load_balancer 'test-load-balancer' do
+            expect_recipe do
+              load_balancer "test-load-balancer" do
                 load_balancer_options({
                   subnets: ["test_public_subnet"],
                   security_groups: ["test_security_group"]
                 })
-                machines ['test_load_balancer_machine2']
+                machines ["test_load_balancer_machine2"]
               end
-            }.to match_an_aws_load_balancer('test-load-balancer') { |aws_object|
-              ids = aws_object.instances.map {|i| i.instance_id}
+            end.to match_an_aws_load_balancer("test-load-balancer") { |aws_object|
+              ids = aws_object.instances.map { |i| i.instance_id }
               expect([test_load_balancer_machine2.aws_object.id]).to eq(ids)
             }.and be_idempotent
           end
         end
       end
 
-      context 'with an existing load_balancer' do
-        load_balancer 'test-load-balancer' do
+      context "with an existing load_balancer" do
+        load_balancer "test-load-balancer" do
           load_balancer_options subnets: ["test_public_subnet"]
         end
 
-        it 'successfully deletes the load_balancer with the :destroy action' do
-          r = recipe {
-            load_balancer 'test-load-balancer' do
+        it "successfully deletes the load_balancer with the :destroy action" do
+          r = recipe do
+            load_balancer "test-load-balancer" do
               action :destroy
             end
-          }
-          expect(r).to destroy_an_aws_load_balancer('test-load-balancer').and be_idempotent
+          end
+          expect(r).to destroy_an_aws_load_balancer("test-load-balancer").and be_idempotent
         end
       end
 
       it "creates load_balancer tags" do
-        expect_recipe {
-          load_balancer 'test-load-balancer' do
+        expect_recipe do
+          load_balancer "test-load-balancer" do
             aws_tags key1: "value"
             load_balancer_options subnets: ["test_public_subnet"]
           end
-        }.to create_an_aws_load_balancer('test-load-balancer',
+        end.to create_an_aws_load_balancer("test-load-balancer",
           driver.elb_client.describe_load_balancers(load_balancer_names: ["test-load-balancer"])[0][0])
-        .and have_aws_load_balancer_tags('test-load-balancer',
+        .and have_aws_load_balancer_tags("test-load-balancer",
           {
-            'key1' => 'value'
+            "key1" => "value"
           }
         ).and be_idempotent
       end
 
       context "with existing tags" do
-        load_balancer 'test-load-balancer' do
+        load_balancer "test-load-balancer" do
           aws_tags key1: "value"
           load_balancer_options subnets: ["test_public_subnet"]
         end
 
         it "updates aws_load_balancer tags" do
-          expect_recipe {
-            load_balancer 'test-load-balancer' do
+          expect_recipe do
+            load_balancer "test-load-balancer" do
               aws_tags key1: "value2", key2: nil
             end
-          }.to have_aws_load_balancer_tags('test-load-balancer',
+          end.to have_aws_load_balancer_tags("test-load-balancer",
             {
-              'key1' => 'value2',
-              'key2' => ''
+              "key1" => "value2",
+              "key2" => ""
             }
           ).and be_idempotent
         end
 
         it "removes all aws_load_balancer tags" do
-          expect_recipe {
-            load_balancer 'test-load-balancer' do
+          expect_recipe do
+            load_balancer "test-load-balancer" do
               aws_tags Hash.new
             end
-          }.to have_aws_load_balancer_tags('test-load-balancer',
+          end.to have_aws_load_balancer_tags("test-load-balancer",
             Hash.new
           ).and be_idempotent
         end

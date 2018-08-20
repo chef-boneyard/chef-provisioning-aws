@@ -1,5 +1,5 @@
-require 'chef/provisioning/aws_driver/aws_provider'
-require 'chef/provisioning/aws_driver/tagging_strategy/elasticsearch'
+require "chef/provisioning/aws_driver/aws_provider"
+require "chef/provisioning/aws_driver/tagging_strategy/elasticsearch"
 
 class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_elasticsearch_domain
@@ -12,7 +12,7 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   def destroy_aws_object(domain)
     converge_by "destroy Elasticsearch domain #{new_resource.domain_name}" do
-      es_client.delete_elasticsearch_domain({domain_name: new_resource.domain_name})
+      es_client.delete_elasticsearch_domain({ domain_name: new_resource.domain_name })
     end
   end
 
@@ -52,7 +52,7 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
   end
 
   def update_payload
-    payload = {domain_name: new_resource.domain_name}
+    payload = { domain_name: new_resource.domain_name }
     payload.merge!(ebs_options) if ebs_options_present?
     payload.merge!(cluster_options) if cluster_options_present?
     payload.merge!(snapshot_options) if snapshot_options_present?
@@ -60,34 +60,34 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
     payload
   end
 
-  EBS_OPTIONS = %i(ebs_enabled volume_type volume_size iops)
+  EBS_OPTIONS = %i{ebs_enabled volume_type volume_size iops}
   def ebs_options
     opts = EBS_OPTIONS.inject({}) do |accum, i|
-      new_resource.send(i).nil? ? accum : accum.merge({i => new_resource.send(i)})
+      new_resource.send(i).nil? ? accum : accum.merge({ i => new_resource.send(i) })
     end
-    {ebs_options: opts}
+    { ebs_options: opts }
   end
 
   def ebs_options_present?
-    EBS_OPTIONS.any? {|i| !new_resource.send(i).nil? }
+    EBS_OPTIONS.any? { |i| !new_resource.send(i).nil? }
   end
 
   def ebs_options_changed?(object)
     changed?(ebs_options[:ebs_options], object.ebs_options)
   end
 
-  CLUSTER_OPTIONS = %i(instance_type instance_count dedicated_master_enabled
-                       dedicated_master_type dedicated_master_count zone_awareness_enabled)
+  CLUSTER_OPTIONS = %i{instance_type instance_count dedicated_master_enabled
+                       dedicated_master_type dedicated_master_count zone_awareness_enabled}
 
   def cluster_options
     opts = CLUSTER_OPTIONS.inject({}) do |accum, i|
-      new_resource.send(i).nil? ? accum : accum.merge({i => new_resource.send(i)})
+      new_resource.send(i).nil? ? accum : accum.merge({ i => new_resource.send(i) })
     end
-    {elasticsearch_cluster_config: opts}
+    { elasticsearch_cluster_config: opts }
   end
 
   def cluster_options_present?
-    CLUSTER_OPTIONS.any? {|i| !new_resource.send(i).nil? }
+    CLUSTER_OPTIONS.any? { |i| !new_resource.send(i).nil? }
   end
 
   def cluster_options_changed?(object)
@@ -96,7 +96,7 @@ class Chef::Provider::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   def snapshot_options
     if !new_resource.automated_snapshot_start_hour.nil?
-      {snapshot_options: { automated_snapshot_start_hour: new_resource.automated_snapshot_start_hour }}
+      { snapshot_options: { automated_snapshot_start_hour: new_resource.automated_snapshot_start_hour } }
     else
       {}
     end

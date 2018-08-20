@@ -1,7 +1,7 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 class Chef::Resource::AwsEipAddress < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-  aws_sdk_type ::Aws::OpsWorks::Types::ElasticIp, option_names: [ :public_ip ], id: :public_ip, managed_entry_id_name: 'public_ip', backcompat_data_bag_name: 'eip_addresses'
+  aws_sdk_type ::Aws::OpsWorks::Types::ElasticIp, option_names: [ :public_ip ], id: :public_ip, managed_entry_id_name: "public_ip", backcompat_data_bag_name: "eip_addresses"
 
   attribute :name, kind_of: String, name_attribute: true
 

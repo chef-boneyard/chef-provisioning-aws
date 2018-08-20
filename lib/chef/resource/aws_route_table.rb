@@ -1,4 +1,4 @@
-require 'chef/provisioning/aws_driver/aws_resource_with_entry'
+require "chef/provisioning/aws_driver/aws_resource_with_entry"
 
 #
 # An AWS route table, specifying where to route traffic destined for particular
@@ -16,7 +16,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   include Chef::Provisioning::AWSDriver::AWSTaggable
   aws_sdk_type ::Aws::EC2::RouteTable
 
-  require 'chef/resource/aws_vpc'
+  require "chef/resource/aws_vpc"
 
   #
   # The name of this route table.
@@ -44,7 +44,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # ```
   #
   attribute :virtual_private_gateways, kind_of: [ String, Array ],
-            coerce: proc { |v| [v].flatten }
+                                       coerce: proc { |v| [v].flatten }
 
   #
   # The routes for this route table.
@@ -90,7 +90,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # ignore_route_targets ['^eni-']
   # ```
   attribute :ignore_route_targets, kind_of: [ String, Array ], default: [],
-            coerce: proc { |v| [v].flatten }
+                                   coerce: proc { |v| [v].flatten }
 
   attribute :route_table_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^rtb-[a-f0-9]+$/ ? name : nil

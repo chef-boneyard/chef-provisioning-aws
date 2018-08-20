@@ -6,10 +6,10 @@ gem "chef"
 gem "rb-readline"
 
 gem "chef-zero", ">= 4.0"
-gem "rspec", "~> 3.0"
-gem "rake"
-gem "simplecov"
 gem "chefstyle", "~> 0.10.0"
+gem "rake"
+gem "rspec", "~> 3.0"
+gem "simplecov"
 
 group :debug do
   gem "pry"

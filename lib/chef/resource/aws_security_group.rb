@@ -7,10 +7,10 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
 
   aws_sdk_type ::Aws::EC2::SecurityGroup,
                id: :id,
-               option_names: [:security_group, :security_group_id, :security_group_name]
+               option_names: %i{security_group security_group_id security_group_name}
 
   attribute :name,          kind_of: String, name_attribute: true
-  attribute :vpc,           kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc,           kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
   attribute :description,   kind_of: String
 
   #
@@ -46,8 +46,8 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
   #   - `inbound_rules load_balancer('myloadbalancer') => 80`
   #   - `inbound_rules AWS.ec2.security_groups.first => 80`
   #
-  attribute :inbound_rules,  kind_of: [ Array, Hash ]
-  attribute :outbound_rules, kind_of: [ Array, Hash ]
+  attribute :inbound_rules,  kind_of: [Array, Hash]
+  attribute :outbound_rules, kind_of: [Array, Hash]
 
   attribute :security_group_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^sg-[a-f0-9]+$/ ? name : nil
@@ -70,6 +70,6 @@ class Chef::Resource::AwsSecurityGroup < Chef::Provisioning::AWSDriver::AWSResou
       end
       result = results.first
     end
-    result ? result : nil
+    result || nil
   end
 end

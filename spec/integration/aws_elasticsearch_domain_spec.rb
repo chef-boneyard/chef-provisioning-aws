@@ -43,22 +43,21 @@ describe Chef::Resource::AwsElasticsearchDomain do
   let(:all_options_result) do
     { created: true,
       elasticsearch_cluster_config: {
-       instance_type: "m4.large.elasticsearch",
-       instance_count: 2,
-       dedicated_master_enabled: true,
-       dedicated_master_type: "m4.large.elasticsearch",
-       zone_awareness_enabled: true
-     },
+        instance_type: "m4.large.elasticsearch",
+        instance_count: 2,
+        dedicated_master_enabled: true,
+        dedicated_master_type: "m4.large.elasticsearch",
+        zone_awareness_enabled: true
+      },
       ebs_options: {
-       ebs_enabled: true,
-       volume_size: 35,
-       volume_type: "io1",
-       iops: 1000
-     },
+        ebs_enabled: true,
+        volume_size: 35,
+        volume_type: "io1",
+        iops: 1000
+      },
       snapshot_options: {
-       automated_snapshot_start_hour: 2
-     }
-    }
+        automated_snapshot_start_hour: 2
+      } }
   end
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
@@ -96,7 +95,7 @@ describe Chef::Resource::AwsElasticsearchDomain do
         it "updates the aws_tags" do
           expect_recipe do
             all_options_domain("test-#{time}-2")
-          end.to have_aws_elasticsearch_domain_tags("test-#{time}-2", { "key1" => "value" })
+          end.to have_aws_elasticsearch_domain_tags("test-#{time}-2", "key1" => "value")
         end
 
         it "removes all aws_elasticsearch_domain tags" do

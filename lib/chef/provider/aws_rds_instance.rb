@@ -7,11 +7,11 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   provides :aws_rds_instance
 
   REQUIRED_OPTIONS = %i{db_instance_identifier allocated_storage engine
-                        db_instance_class master_username master_user_password}
+                        db_instance_class master_username master_user_password}.freeze
 
-  OTHER_OPTIONS = %i{db_snapshot_identifier engine_version multi_az iops publicly_accessible db_name port db_subnet_group_name db_parameter_group_name}
+  OTHER_OPTIONS = %i{db_snapshot_identifier engine_version multi_az iops publicly_accessible db_name port db_subnet_group_name db_parameter_group_name}.freeze
 
-  def update_aws_object(instance)
+  def update_aws_object(_instance)
     Chef::Log.warn("aws_rds_instance does not support modifying a started instance")
     # There are required optiosn (like `allocated_storage`) that the use may not
     # specify on a resource to perform an update.  For example, they may want to
@@ -27,7 +27,7 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
   def create_aws_object
     converge_by "create RDS instance #{new_resource.db_instance_identifier} in #{region}" do
       if new_resource.db_snapshot_identifier
-        snap_options_hash = [:allocated_storage, :master_username, :master_user_password, :engine_version].each { |k| options_hash.delete(k) }
+        snap_options_hash = %i{allocated_storage master_username master_user_password engine_version}.each { |k| options_hash.delete(k) }
         new_resource.driver.rds_client.restore_db_instance_from_db_snapshot(options_hash).db_instance
       else
         new_resource.driver.rds_resource.create_db_instance(options_hash)
@@ -49,8 +49,8 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
         expected_responses: ["deleted"],
         acceptable_errors: [::Aws::RDS::Errors::DBInstanceNotFound],
         tries: 60,
-        sleep: 10
-      ) { |instance| instance.reload }
+        sleep: 10, &:reload
+      )
     end
   end
 
@@ -63,11 +63,10 @@ class Chef::Provider::AwsRdsInstance < Chef::Provisioning::AWSDriver::AWSProvide
         opts[opt] = new_resource.send(opt)
       end
       OTHER_OPTIONS.each do |opt|
-        opts[opt] = new_resource.send(opt) if ! new_resource.send(opt).nil?
+        opts[opt] = new_resource.send(opt) unless new_resource.send(opt).nil?
       end
       AWSResource.lookup_options(opts, resource: new_resource)
       opts
     end
   end
-
 end

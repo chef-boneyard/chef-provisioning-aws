@@ -35,12 +35,12 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
         raise "#{new_resource}.instance_type = #{new_resource.instance_type}, but actual launch configuration has instance_type set to #{launch_configuration.instance_type}.  Cannot be modified!"
       end
     end
-    # TODO compare options
+    # TODO: compare options
   end
 
   def destroy_aws_object(launch_configuration)
     converge_by "delete launch configuration #{new_resource.name} in #{region}" do
-      # TODO add a timeout here.
+      # TODO: add a timeout here.
       # TODO is InUse really a status guaranteed to go away??
       begin
         new_resource.driver.auto_scaling_client.delete_launch_configuration(launch_configuration_name: launch_configuration.launch_configuration_name)
@@ -59,5 +59,4 @@ class Chef::Provider::AwsLaunchConfiguration < Chef::Provisioning::AWSDriver::AW
   rescue ArgumentError
     Base64.encode64(data)
   end
-
 end

@@ -13,7 +13,7 @@ end
 
 aws_cache_subnet_group "test-ec" do
   description "My awesome group"
-  subnets [ "public-test" ]
+  subnets ["public-test"]
 end
 
 aws_security_group "test-sg" do

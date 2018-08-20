@@ -47,17 +47,17 @@ class Chef
         end
 
         # copy from Chef 12.5 params_validate.rb at http://redirx.me/?t35q.
-        if !method_defined?(:_pv_is)
+        unless method_defined?(:_pv_is)
           def _pv_is(opts, key, to_be, raise_error: true)
-            return true if !opts.has_key?(key.to_s) && !opts.has_key?(key.to_sym)
+            return true if !opts.key?(key.to_s) && !opts.key?(key.to_sym)
             value = _pv_opts_lookup(opts, key)
-            to_be = [ to_be ].flatten(1)
+            to_be = [to_be].flatten(1)
             to_be.each do |tb|
               case tb
               when Proc
                 return true if instance_exec(value, &tb)
               when Property
-                validate(opts, { key => tb.validation_options })
+                validate(opts, key => tb.validation_options)
                 return true
               else
                 return true if tb === value
@@ -65,7 +65,7 @@ class Chef
             end
 
             if raise_error
-              raise ::Chef::Exceptions::ValidationFailed, "Option #{key} must be one of: #{to_be.join(", ")}!  You passed #{value.inspect}."
+              raise ::Chef::Exceptions::ValidationFailed, "Option #{key} must be one of: #{to_be.join(', ')}!  You passed #{value.inspect}."
             else
               false
             end

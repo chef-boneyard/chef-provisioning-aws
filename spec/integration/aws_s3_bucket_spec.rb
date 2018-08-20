@@ -25,11 +25,8 @@ describe Chef::Resource::AwsS3Bucket do
             aws_tags key1: "value"
           end
         end.to create_an_aws_s3_bucket(bucket_name)
-        .and have_aws_s3_bucket_tags(bucket_name,
-          {
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_s3_bucket_tags(bucket_name,
+                                       "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -43,15 +40,11 @@ describe Chef::Resource::AwsS3Bucket do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_s3_bucket_tags(bucket_name,
-            {
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                         "key1" => "value2",
+                                         "key2" => "").and be_idempotent
         end
 
         it "removes all aws_s3_bucket tags" do
-
           expect_recipe do
             aws_s3_bucket bucket_name do
               aws_tags({})
@@ -59,7 +52,6 @@ describe Chef::Resource::AwsS3Bucket do
           end.to have_aws_s3_bucket_tags(bucket_name, {}).and be_idempotent
         end
       end
-
     end
 
     with_aws "when a bucket with content exists" do
@@ -69,7 +61,7 @@ describe Chef::Resource::AwsS3Bucket do
 
         ruby_block "upload s3 object" do
           block do
-            ::Aws::S3::Resource.new(driver.s3_client).buckets.find { |b| b.name == bucket_name }.object("test-object").put( { body: "test-content" } )
+            ::Aws::S3::Resource.new(driver.s3_client).buckets.find { |b| b.name == bucket_name }.object("test-object").put(body: "test-content")
           end
         end
       end

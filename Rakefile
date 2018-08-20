@@ -1,12 +1,12 @@
 require "bundler/gem_tasks"
 require "rspec/core/rake_task"
 
-task :default => :spec
+task default: :spec
 
 desc "run all non-integration specs"
 RSpec::Core::RakeTask.new(:spec) do |spec|
   spec.pattern = "spec/**/*_spec.rb"
-  # TODO add back integration tests whenever we have strategy for keys
+  # TODO: add back integration tests whenever we have strategy for keys
   spec.exclude_pattern = "spec/integration/**/*_spec.rb"
 end
 
@@ -35,7 +35,7 @@ task :all_slow do
 end
 
 desc "travis specific task - runs CI integration tests (regular and super_slow in parallel) and sets up travis specific ENV variables"
-task :travis, [:sub_task] do |t, args|
+task :travis, [:sub_task] do |_t, args|
   sub_task = args[:sub_task]
   if sub_task == "super_slow"
     pattern = "load_balancer_spec.rb,aws_route_table_spec.rb,machine_spec.rb,aws_eip_address_spec.rb" # This is a comma seperated list

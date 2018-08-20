@@ -11,7 +11,7 @@ class Chef::Provider::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
     end
   end
 
-  def update_aws_object(cache_replication_group)
+  def update_aws_object(_cache_replication_group)
     Chef::Log.warn("Updating ElastiCache replication groups is currently unsupported")
   end
 

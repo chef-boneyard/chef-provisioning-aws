@@ -23,7 +23,7 @@ class Chef
 
         # Backwards compatibility for action :destroy
         def action(*args)
-          if args == [ :delete ]
+          if args == [:delete]
             super(:destroy)
           else
             super
@@ -91,7 +91,7 @@ class Chef
         #
         # Keys that represent non-AWS-objects (such as `timeout`) are left alone.
         #
-        def self.lookup_options(options = Hash.new, **handler_options)
+        def self.lookup_options(options = {}, **handler_options)
           options = options.dup
           options.each do |name, value|
             if name.to_s.end_with?("s")
@@ -126,9 +126,7 @@ class Chef
           end
 
           result = resource.aws_object
-          if required && result.nil?
-            raise "#{self}[#{value}] does not exist!"
-          end
+          raise "#{self}[#{value}] does not exist!" if required && result.nil?
           result
         end
 
@@ -175,20 +173,20 @@ class Chef
           eval("Chef::Provisioning::AWSDriver::Resources::#{name} = self", binding, __FILE__, __LINE__)
         end
 
-        def self.aws_sdk_class
-          @aws_sdk_class
+        class << self
+          attr_reader :aws_sdk_class
         end
 
-        def self.aws_sdk_class_id
-          @aws_sdk_class_id
+        class << self
+          attr_reader :aws_sdk_class_id
         end
 
-        def self.aws_id_prefix
-          @aws_id_prefix
+        class << self
+          attr_reader :aws_id_prefix
         end
 
-        def self.aws_sdk_option_name
-          @aws_sdk_option_name
+        class << self
+          attr_reader :aws_sdk_option_name
         end
 
         @@aws_option_handlers = {}
@@ -202,11 +200,10 @@ class Chef
           super(name, validation_opts)
         end
 
-        def self.aws_id_attribute
-          @aws_id_attribute
+        class << self
+          attr_reader :aws_id_attribute
         end
       end
-
     end
   end
 end

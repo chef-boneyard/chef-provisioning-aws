@@ -36,7 +36,7 @@ module Chef::Provisioning::AWSDriver
     # Return the damned value from the block, not whatever weirdness converge_by
     # normally returns.
     #
-    def converge_by(*args, &block)
+    def converge_by(*args)
       result = nil
       super(*args) do
         result = yield
@@ -116,9 +116,7 @@ module Chef::Provisioning::AWSDriver
       #
       if aws_object
         action, new_obj = update_aws_object(aws_object)
-        if action == :replaced_aws_object
-          aws_object = new_obj
-        end
+        aws_object = new_obj if action == :replaced_aws_object
       else
         aws_object = create_aws_object
       end
@@ -132,14 +130,12 @@ module Chef::Provisioning::AWSDriver
 
       # This has to be after the managed entry save so the `aws_object` lookup
       # from the resource succeeds
-      if respond_to?(:converge_tags)
-        converge_tags
-      end
+      converge_tags if respond_to?(:converge_tags)
 
       aws_object
     end
 
-    # TODO having a @purging flag feels weird
+    # TODO: having a @purging flag feels weird
     action :purge do
       @purging = true
       begin
@@ -203,9 +199,7 @@ module Chef::Provisioning::AWSDriver
       #
       # Call the delete method
       #
-      if aws_object
-        destroy_aws_object(aws_object)
-      end
+      destroy_aws_object(aws_object) if aws_object
 
       #
       # Associate the managed entry with the AWS object
@@ -221,11 +215,11 @@ module Chef::Provisioning::AWSDriver
       raise NotImplementedError, :create_aws_object
     end
 
-    def update_aws_object(obj)
+    def update_aws_object(_obj)
       raise NotImplementedError, :update_aws_object
     end
 
-    def destroy_aws_object(obj)
+    def destroy_aws_object(_obj)
       raise NotImplementedError, :destroy_aws_object
     end
 
@@ -268,7 +262,7 @@ module Chef::Provisioning::AWSDriver
       tries = opts[:tries] || 60
       sleep = opts[:sleep] || 5
 
-      Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
+      Retryable.retryable(tries: tries, sleep: sleep) do |retries, exception|
         action_handler.report_progress "waited #{retries * sleep}/#{tries * sleep}s for <#{aws_object.class}:#{aws_object.id}>##{query_method} state to change to #{expected_responses.inspect}..."
         Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
         begin
@@ -297,7 +291,7 @@ module Chef::Provisioning::AWSDriver
     #
     def self.retry_with_backoff(*retry_on)
       retry_on ||= [RuntimeError]
-      Retryable.retryable(:tries => 10, :sleep => lambda { |n| [2**n, 16].min }, :on => retry_on) do |retries, exception|
+      Retryable.retryable(tries: 10, sleep: ->(n) { [2**n, 16].min }, on: retry_on) do |_retries, exception|
         Chef::Log.debug("Current exception in retry_with_backoff is #{exception.inspect}")
         yield
       end
@@ -306,6 +300,5 @@ module Chef::Provisioning::AWSDriver
     def retry_with_backoff(*retry_on, &block)
       self.class.retry_with_backoff(*retry_on, &block)
     end
-
   end
 end

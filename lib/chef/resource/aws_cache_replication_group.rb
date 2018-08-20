@@ -56,7 +56,7 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
   #
   # @param
   attribute :security_groups,
-            kind_of: [ String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup ],
+            kind_of: [String, Array, AwsSecurityGroup, ::Aws::EC2::SecurityGroup],
             required: true,
             coerce: proc { |v| [v].flatten }
 
@@ -64,13 +64,13 @@ class Chef::Resource::AwsCacheReplicationGroup < Chef::Provisioning::AWSDriver::
   #
   # @param
   attribute :preferred_availability_zones,
-            kind_of: [ String, Array ],
+            kind_of: [String, Array],
             coerce: proc { |v| [v].flatten }
 
   def aws_object
     driver.elasticache
-      .describe_replication_groups(replication_group_id: group_name)
-      .data[:replication_groups].first
+          .describe_replication_groups(replication_group_id: group_name)
+          .data[:replication_groups].first
   rescue ::Aws::ElastiCache::Errors::ReplicationGroupNotFoundFault
     nil
   end

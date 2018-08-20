@@ -7,13 +7,11 @@ require "aws-sdk-core/assume_role_credentials"
 class Chef
   module Provisioning
     module AWSDriver
-
       class LoadCredentialsError < RuntimeError; end
 
       # Loads the credentials for the AWS SDK V2
       # Attempts to load credentials in the order specified at http://docs.aws.amazon.com/sdkforruby/api/index.html#Configuration
       class Credentials2
-
         attr_reader :profile_name
 
         # @param [Hash] options
@@ -29,10 +27,10 @@ class Chef
           # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment
           credentials_file = ENV.fetch("AWS_SHARED_CREDENTIALS_FILE", ENV["AWS_CONFIG_FILE"])
           shared_creds = ::Aws::SharedCredentials.new(
-            :profile_name => profile_name,
-            :path => credentials_file
+            profile_name: profile_name,
+            path: credentials_file
           )
-          instance_profile_creds = ::Aws::InstanceProfileCredentials.new(:retries => 1)
+          instance_profile_creds = ::Aws::InstanceProfileCredentials.new(retries: 1)
 
           if ENV["AWS_ACCESS_KEY_ID"] && ENV["AWS_SECRET_ACCESS_KEY"]
             creds = ::Aws::Credentials.new(
@@ -45,12 +43,11 @@ class Chef
           elsif instance_profile_creds.set?
             creds = instance_profile_creds
           else
-            raise LoadCredentialsError.new("Could not load credentials from the environment variables, the .aws/credentials file or the metadata service")
+            raise LoadCredentialsError, "Could not load credentials from the environment variables, the .aws/credentials file or the metadata service"
           end
           creds
         end
       end
-
     end
   end
 end

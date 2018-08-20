@@ -16,7 +16,7 @@ class Chef
         include Chef::Mixin::DeepMerge
 
         def default
-          if @credentials.size == 0
+          if @credentials.empty?
             raise "No credentials loaded!  Do you have a ~/.aws/config?"
           end
           @credentials[ENV["AWS_DEFAULT_PROFILE"] || "default"] || @credentials.first[1]
@@ -38,8 +38,7 @@ class Chef
           @credentials = load_config_ini(config_ini_file)
           if credentials_ini_file
             @credentials = deep_merge!(@credentials,
-                                       load_credentials_ini(credentials_ini_file)
-                                      )
+                                       load_credentials_ini(credentials_ini_file))
           end
         end
 
@@ -48,15 +47,13 @@ class Chef
           config = {}
           if inifile
             inifile.each_section do |section|
-              if section =~ /^\s*profile\s+(.+)$/ || section =~ /^\s*(default)\s*/
-                profile_name = $1.strip
-                profile = inifile[section].inject({}) do |result, pair|
-                  result[pair[0].to_sym] = pair[1]
-                  result
-                end
-                profile[:name] = profile_name
-                config[profile_name] = profile
+              next unless section =~ /^\s*profile\s+(.+)$/ || section =~ /^\s*(default)\s*/
+              profile_name = Regexp.last_match(1).strip
+              profile = inifile[section].each_with_object({}) do |pair, result|
+                result[pair[0].to_sym] = pair[1]
               end
+              profile[:name] = profile_name
+              config[profile_name] = profile
             end
           end
           config
@@ -67,9 +64,8 @@ class Chef
           config = {}
           if inifile
             inifile.each_section do |section|
-              profile = inifile[section].inject({}) do |result, pair|
+              profile = inifile[section].each_with_object({}) do |pair, result|
                 result[pair[0].to_sym] = pair[1]
-                result
               end
               profile[:name] = section
               config[section] = profile
@@ -79,12 +75,12 @@ class Chef
         end
 
         def load_csv(credentials_csv_file)
-          CSV.new(File.open(credentials_csv_file), :headers => :first_row).each do |row|
+          CSV.new(File.open(credentials_csv_file), headers: :first_row).each do |row|
             @credentials[row["User Name"]] = {
-              :name => row["User Name"],
-              :user_name => row["User Name"],
-              :aws_access_key_id => row["Access Key Id"],
-              :aws_secret_access_key => row["Secret Access Key"]
+              name: row["User Name"],
+              user_name: row["User Name"],
+              aws_access_key_id: row["Access Key Id"],
+              aws_secret_access_key: row["Secret Access Key"]
             }
           end
         end
@@ -108,9 +104,7 @@ class Chef
               load_inis(config_file)
             end
           end
-          if @credentials.size == 0
-            load_env_variables
-          end
+          load_env_variables if @credentials.empty?
         end
 
         def self.method_missing(name, *args, &block)

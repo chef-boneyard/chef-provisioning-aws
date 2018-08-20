@@ -4,7 +4,6 @@ module AWSSupport
     # If a module implements this, it signifies that
     #
     module MatchableArray
-
       #
       # TODO allow the user to return a new object that actually implements the
       # enumerable, in case the class in question is non-standard.

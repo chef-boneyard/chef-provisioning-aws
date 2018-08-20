@@ -3,14 +3,11 @@ describe "AwsNetworkInterface" do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       context "setting up public VPC" do
-
         purge_all
         setup_public_vpc
 
         context "with machines", :super_slow do
-
           machine "test_machine" do
             machine_options bootstrap_options: {
               subnet_id: "test_public_subnet",
@@ -32,8 +29,7 @@ describe "AwsNetworkInterface" do
                 machine machine_id
                 device_index 1
               end
-            end.to create_an_aws_network_interface("test_network_interface"
-            ).and be_idempotent
+            end.to create_an_aws_network_interface("test_network_interface").and be_idempotent
           end
         end
 
@@ -44,12 +40,9 @@ describe "AwsNetworkInterface" do
               aws_tags key1: "value"
             end
           end.to create_an_aws_network_interface("test_network_interface")
-          .and have_aws_network_interface_tags("test_network_interface",
-            {
-              "Name" => "test_network_interface",
-              "key1" => "value"
-            }
-          ).and be_idempotent
+            .and have_aws_network_interface_tags("test_network_interface",
+                                                 "Name" => "test_network_interface",
+                                                 "key1" => "value").and be_idempotent
         end
 
         context "with existing tags" do
@@ -65,12 +58,9 @@ describe "AwsNetworkInterface" do
                 aws_tags key1: "value2", key2: nil
               end
             end.to have_aws_network_interface_tags("test_network_interface",
-              {
-                "Name" => "test_network_interface",
-                "key1" => "value2",
-                "key2" => ""
-              }
-            ).and be_idempotent
+                                                   "Name" => "test_network_interface",
+                                                   "key1" => "value2",
+                                                   "key2" => "").and be_idempotent
           end
 
           it "removes all aws_network_interface tags except Name" do
@@ -80,15 +70,10 @@ describe "AwsNetworkInterface" do
                 aws_tags({})
               end
             end.to have_aws_network_interface_tags("test_network_interface",
-              {
-                "Name" => "test_network_interface"
-              }
-            ).and be_idempotent
+                                                   "Name" => "test_network_interface").and be_idempotent
           end
         end
-
       end
-
     end
   end
 end

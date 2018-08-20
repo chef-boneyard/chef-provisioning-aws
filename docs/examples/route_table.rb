@@ -18,7 +18,7 @@ machine "test" do
   machine_options bootstrap_options: { key_name: "ref-key-pair" }
 end
 
-# TODO this still fails
+# TODO: this still fails
 aws_route_table "ref-public2" do
   vpc "test-vpc"
   routes "0.0.0.0/0" => :internet_gateway,

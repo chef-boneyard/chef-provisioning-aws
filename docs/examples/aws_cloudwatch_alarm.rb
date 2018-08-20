@@ -44,6 +44,7 @@ aws_cloudwatch_alarm "my-test-alert" do
   threshold 80
   alarm_actions lazy {
                   [
-    scaling_group.aws_object.policies().select { |p| p.name == "my-scaling-policy" }.first.policy_arn
-  ] }
+                    scaling_group.aws_object.policies.select { |p| p.name == "my-scaling-policy" }.first.policy_arn
+                  ]
+                }
 end

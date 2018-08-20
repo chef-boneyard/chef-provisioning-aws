@@ -44,9 +44,9 @@ describe Chef::Resource::AwsLaunchConfiguration do
           aws_launch_configuration "my-launch-configuration" do
             image ami
             instance_type "t2.micro"
-            options({
+            options(
               user_data: Base64.encode64("echo 1")
-            })
+            )
           end
         end.to create_an_aws_launch_configuration("my-launch-configuration").and be_idempotent
       end
@@ -57,13 +57,12 @@ describe Chef::Resource::AwsLaunchConfiguration do
           aws_launch_configuration "my-launch-configuration" do
             image ami
             instance_type "t2.micro"
-            options({
+            options(
               user_data: "echo 1"
-            })
+            )
           end
         end.to create_an_aws_launch_configuration("my-launch-configuration").and be_idempotent
       end
-
     end
   end
 end

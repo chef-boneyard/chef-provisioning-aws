@@ -11,7 +11,6 @@ module AWSSupport
     # Which will compare my_object.a to 1 and my_object.b to 2.
     #
     module MatchableObject
-
       def self.matchable_classes
         @matchable_classes ||= []
       end

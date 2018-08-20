@@ -16,7 +16,7 @@ def ec2_principal
     }
   ]
 }
-EOF
+  EOF
 end
 
 def rds_principal
@@ -34,7 +34,7 @@ def rds_principal
     }
   ]
 }
-EOF
+  EOF
 end
 
 def rds_role_policy
@@ -54,7 +54,7 @@ def rds_role_policy
     }
   ]
 }
-EOF
+  EOF
 end
 
 def iam_role_policy
@@ -69,7 +69,7 @@ def iam_role_policy
     }
   ]
 }
-EOF
+  EOF
 end
 
 describe Chef::Resource::AwsIamRole do
@@ -77,7 +77,6 @@ describe Chef::Resource::AwsIamRole do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       let(:role_name) do
         name_postfix = SecureRandom.hex(8)
         "cp_test_iam_role_#{name_postfix}"
@@ -101,12 +100,11 @@ describe Chef::Resource::AwsIamRole do
             inline_policies a: iam_role_policy
           end
         end.to create_an_aws_iam_role(role_name,
-          path: "/",
-          policies: [{ name: "a" }]
-        ) { |aws_object|
-          expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(ec2_principal))
-          expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(iam_role_policy))
-        }.and be_idempotent
+                                      path: "/",
+                                      policies: [{ name: "a" }]) { |aws_object|
+                 expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(ec2_principal))
+                 expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(iam_role_policy))
+               }.and be_idempotent
       end
 
       context "with an existing aws_iam_role" do
@@ -140,23 +138,21 @@ describe Chef::Resource::AwsIamRole do
               inline_policies b: rds_role_policy
             end
           end.to create_an_aws_iam_role(role_name,
-            path: "/",
-            policies: [{ name: "b" }]
-          ) { |aws_object|
-            expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(rds_principal))
-            expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(rds_role_policy))
-          }.and be_idempotent
+                                        path: "/",
+                                        policies: [{ name: "b" }]) { |aws_object|
+                   expect(Chef::JSONCompat.parse(URI.decode(aws_object.assume_role_policy_document))).to eq(Chef::JSONCompat.parse(rds_principal))
+                   expect(Chef::JSONCompat.parse(URI.decode(aws_object.policies.first.policy_document))).to eq(Chef::JSONCompat.parse(rds_role_policy))
+                 }.and be_idempotent
         end
 
         it "clears inline_policies with an empty hash" do
           expect_recipe do
             aws_iam_role role_name do
-              inline_policies Hash.new
+              inline_policies({})
             end
           end.to create_an_aws_iam_role(role_name,
-            path: "/",
-            policies: []
-          ).and be_idempotent
+                                        path: "/",
+                                        policies: []).and be_idempotent
         end
 
         it "deletes the aws_iam_role" do
@@ -169,8 +165,6 @@ describe Chef::Resource::AwsIamRole do
           expect { driver.iam_client.list_role_policies(role_name: role_name).policy_names }.to raise_error(::Aws::IAM::Errors::NoSuchEntity)
         end
       end
-
     end
-
   end
 end

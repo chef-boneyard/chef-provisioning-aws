@@ -11,13 +11,11 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   def action_create
     subnet = super
 
-    if !new_resource.map_public_ip_on_launch.nil?
+    unless new_resource.map_public_ip_on_launch.nil?
       update_map_public_ip_on_launch(subnet)
     end
 
-    if !new_resource.route_table.nil?
-      update_route_table(subnet)
-    end
+    update_route_table(subnet) unless new_resource.route_table.nil?
 
     update_network_acl(subnet)
   end
@@ -26,9 +24,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
   def create_aws_object
     cidr_block = new_resource.cidr_block
-    if !cidr_block
-      cidr_block = Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
-    end
+    cidr_block ||= Chef::Resource::AwsVpc.get_aws_object(new_resource.vpc, resource: new_resource).cidr_block
     options = { vpc_id: new_resource.vpc, cidr_block: cidr_block }
     options[:availability_zone] = new_resource.availability_zone if new_resource.availability_zone
     options = Chef::Provisioning::AWSDriver::AWSResource.lookup_options(options, resource: new_resource)
@@ -59,7 +55,7 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
 
   def destroy_aws_object(subnet)
     if purging
-      # TODO possibly convert to http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Client.html#terminate_instances-instance_method
+      # TODO: possibly convert to http://docs.aws.amazon.com/AWSRubySDK/latest/AWS/EC2/Client.html#terminate_instances-instance_method
       p = Chef::ChefFS::Parallelizer.new(5)
       current_driver = new_resource.driver
       current_chef_server = new_resource.chef_server
@@ -99,10 +95,10 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
   private
 
   def update_map_public_ip_on_launch(subnet)
-    if !new_resource.map_public_ip_on_launch.nil?
-      subnet_desc = subnet.client.describe_subnets(subnet_ids: [ subnet.id ])[:subnets].first
+    unless new_resource.map_public_ip_on_launch.nil?
+      subnet_desc = subnet.client.describe_subnets(subnet_ids: [subnet.id])[:subnets].first
       if new_resource.map_public_ip_on_launch
-        if !subnet_desc[:map_public_ip_on_launch]
+        unless subnet_desc[:map_public_ip_on_launch]
           converge_by "turn on automatic public IPs for subnet #{subnet.id}" do
             subnet.client.modify_subnet_attribute(subnet_id: subnet.id, map_public_ip_on_launch: { value: true })
           end
@@ -125,21 +121,20 @@ class Chef::Provider::AwsSubnet < Chef::Provisioning::AWSDriver::AWSProvider
     # subnet_id or with a default subnet (i.e by checking association.main == true & in that case
     # association.subnet_id is nil)
     current_route_table_association.each do |route_tbl|
-      if !route_tbl.associations.empty?
-        route_tbl.associations.each do |r|
-          if r.subnet_id == subnet.id
-            route_table_entry = r
-            do_break = true
-            break
-          elsif r.subnet_id.nil? && r.main == true
-            route_table_entry = r
-          end
+      next if route_tbl.associations.empty?
+      route_tbl.associations.each do |r|
+        if r.subnet_id == subnet.id
+          route_table_entry = r
+          do_break = true
+          break
+        elsif r.subnet_id.nil? && r.main == true
+          route_table_entry = r
         end
-        break if do_break
       end
+      break if do_break
     end
     if new_resource.route_table == :default_to_main
-      if !route_table_entry.main
+      unless route_table_entry.main
         converge_by "reset route table of subnet #{new_resource.name} to the VPC default" do
           subnet.client.disassociate_route_table(association_id: route_table_entry.route_table_association_id)
         end

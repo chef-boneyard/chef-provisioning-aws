@@ -8,7 +8,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :name, kind_of: String, name_attribute: true
 
-  attribute :machine,           kind_of: [ String, FalseClass, AwsInstance, ::Aws::EC2::Instance, ::Aws::EC2::Instance ]
+  attribute :machine,           kind_of: [String, FalseClass, AwsInstance, ::Aws::EC2::Instance, ::Aws::EC2::Instance]
 
   attribute :availability_zone, kind_of: String, default: "a"
   attribute :size,              kind_of: Integer, default: 8
@@ -16,7 +16,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
 
   attribute :iops,              kind_of: Integer
   attribute :volume_type,       kind_of: String
-  attribute :encrypted,         kind_of: [ TrueClass, FalseClass ]
+  attribute :encrypted,         kind_of: [TrueClass, FalseClass]
   attribute :device,            kind_of: String
 
   attribute :volume_id,         kind_of: String, aws_id_attribute: true, default: lazy {
@@ -26,7 +26,7 @@ class Chef::Resource::AwsEbsVolume < Chef::Provisioning::AWSDriver::AWSResourceW
   def aws_object
     driver, id = get_driver_and_id
     result = driver.ec2_resource.volume(id) if id
-    result && exists?(result) && ![:deleted, :deleting].include?(result.state) ? result : nil
+    result && exists?(result) && !%i{deleted deleting}.include?(result.state) ? result : nil
   end
 
   def exists?(result)

@@ -19,14 +19,13 @@ describe Chef::Resource::AwsCacheSubnetGroup do
         expect_recipe do
           aws_cache_subnet_group "test-subnet-group" do
             description "Test Subnet Group"
-            subnets [ "test_subnet" ]
+            subnets ["test_subnet"]
           end
         end.to create_an_aws_cache_subnet_group("test-subnet-group",
-          vpc_id: test_vpc.aws_object.id,
-          subnets: [
-            { subnet_identifier: test_subnet.aws_object.id }
-          ]
-        ).and be_idempotent
+                                                vpc_id: test_vpc.aws_object.id,
+                                                subnets: [
+                                                  { subnet_identifier: test_subnet.aws_object.id }
+                                                ]).and be_idempotent
       end
     end
   end

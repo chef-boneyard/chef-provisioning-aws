@@ -24,12 +24,11 @@ describe Chef::Resource::MachineImage do
               instance_type: "m3.medium"
             },
                             ssh_options: {
-              timeout: 60
-            }
+                              timeout: 60
+                            }
           end
         end.to create_an_aws_image("test_machine_image",
-          name: "test_machine_image"
-        ).and be_idempotent
+                                   name: "test_machine_image").and be_idempotent
       end
 
       describe "action :destroy", :super_slow do
@@ -42,8 +41,8 @@ describe Chef::Resource::MachineImage do
               instance_type: "m3.medium"
             },
                             ssh_options: {
-              timeout: 60
-            }
+                              timeout: 60
+                            }
           end
         end
 
@@ -53,12 +52,11 @@ describe Chef::Resource::MachineImage do
               action :destroy
             end
           end
-          expect(r).to destroy_an_aws_image("test_machine_image"
-          ).and be_idempotent
+          expect(r).to destroy_an_aws_image("test_machine_image").and be_idempotent
         end
 
         it "destroys the image if instance is gone long time ago" do
-          image = driver.ec2_resource.images({ filters: [ { name: "name", values: ["test_machine_image"] }] }).first
+          image = driver.ec2_resource.images(filters: [{ name: "name", values: ["test_machine_image"] }]).first
           image.create_tags(tags: [{ key: "from-instance", value: "i-12345678" }])
 
           r = recipe do
@@ -66,8 +64,7 @@ describe Chef::Resource::MachineImage do
               action :destroy
             end
           end
-          expect(r).to destroy_an_aws_image("test_machine_image"
-          ).and be_idempotent
+          expect(r).to destroy_an_aws_image("test_machine_image").and be_idempotent
         end
       end
 
@@ -79,16 +76,12 @@ describe Chef::Resource::MachineImage do
               instance_type: "m3.medium"
             },
                             ssh_options: {
-              timeout: 60
-            }
+                              timeout: 60
+                            }
             aws_tags key1: "value"
           end
-        end.to create_an_aws_image("test_machine_image"
-        ).and have_aws_image_tags("test_machine_image",
-          {
-            "key1" => "value"
-          }
-        ).and be_idempotent
+        end.to create_an_aws_image("test_machine_image").and have_aws_image_tags("test_machine_image",
+                                                                                 "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -98,8 +91,8 @@ describe Chef::Resource::MachineImage do
             instance_type: "m3.medium"
           },
                           ssh_options: {
-            timeout: 60
-          }
+                            timeout: 60
+                          }
           aws_tags key1: "value"
         end
 
@@ -109,11 +102,8 @@ describe Chef::Resource::MachineImage do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_image_tags("test_machine_image",
-            {
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                     "key1" => "value2",
+                                     "key2" => "").and be_idempotent
         end
 
         it "removes all aws_image tags", :super_slow do
@@ -122,11 +112,9 @@ describe Chef::Resource::MachineImage do
               aws_tags({})
             end
           end.to have_aws_image_tags("test_machine_image",
-            {}
-          ).and be_idempotent
+                                     {}).and be_idempotent
         end
       end
-
     end
   end
 end

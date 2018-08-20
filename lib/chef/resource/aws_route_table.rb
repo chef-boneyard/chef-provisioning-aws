@@ -33,7 +33,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   #
   # This is required for new route tables.
   #
-  attribute :vpc,    kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ], required: true
+  attribute :vpc,    kind_of: [String, AwsVpc, ::Aws::EC2::Vpc], required: true
 
   #
   # Enable route propagation from one or more virtual private gateways
@@ -43,7 +43,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # virtual_private_gateways ['vgw-abcd1234', 'vgw-abcd5678']
   # ```
   #
-  attribute :virtual_private_gateways, kind_of: [ String, Array ],
+  attribute :virtual_private_gateways, kind_of: [String, Array],
                                        coerce: proc { |v| [v].flatten }
 
   #
@@ -89,7 +89,7 @@ class Chef::Resource::AwsRouteTable < Chef::Provisioning::AWSDriver::AWSResource
   # ```ruby
   # ignore_route_targets ['^eni-']
   # ```
-  attribute :ignore_route_targets, kind_of: [ String, Array ], default: [],
+  attribute :ignore_route_targets, kind_of: [String, Array], default: [],
                                    coerce: proc { |v| [v].flatten }
 
   attribute :route_table_id, kind_of: String, aws_id_attribute: true, default: lazy {

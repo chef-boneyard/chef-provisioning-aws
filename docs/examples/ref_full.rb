@@ -16,7 +16,7 @@ aws_dhcp_options "ref-dhcp-options" do
   ntp_servers          %w{8.8.8.8 8.8.4.4}
   netbios_name_servers %w{8.8.8.8 8.8.4.4}
   netbios_node_type    2
-  aws_tags :chef_type => "aws_dhcp_options"
+  aws_tags chef_type: "aws_dhcp_options"
 end
 
 aws_vpc "ref-vpc" do
@@ -27,13 +27,13 @@ aws_vpc "ref-vpc" do
   dhcp_options "ref-dhcp-options"
   enable_dns_support true
   enable_dns_hostnames true
-  aws_tags :chef_type => "aws_vpc"
+  aws_tags chef_type: "aws_vpc"
 end
 
 aws_route_table "ref-main-route-table" do
   vpc "ref-vpc"
   routes "0.0.0.0/0" => :internet_gateway
-  aws_tags :chef_type => "aws_route_table"
+  aws_tags chef_type: "aws_route_table"
 end
 
 aws_vpc "ref-vpc" do
@@ -41,27 +41,27 @@ aws_vpc "ref-vpc" do
 end
 
 aws_key_pair "ref-key-pair" do
-  private_key_options({
-    :format => :pem,
-    :type => :rsa,
-    :regenerate_if_different => true
-  })
+  private_key_options(
+    format: :pem,
+    type: :rsa,
+    regenerate_if_different: true
+  )
   allow_overwrite true
 end
 
 aws_security_group "ref-sg1" do
   vpc "ref-vpc"
-  inbound_rules "0.0.0.0/0" => [ 22, 80 ]
+  inbound_rules "0.0.0.0/0" => [22, 80]
   outbound_rules [
-    { :port => 22..22, :protocol => :tcp, :destinations => ["0.0.0.0/0"] }
+    { port: 22..22, protocol: :tcp, destinations: ["0.0.0.0/0"] }
   ]
-  aws_tags :chef_type => "aws_security_group"
+  aws_tags chef_type: "aws_security_group"
 end
 
 aws_route_table "ref-public" do
   vpc "ref-vpc"
   routes "0.0.0.0/0" => :internet_gateway
-  aws_tags :chef_type => "aws_route_table"
+  aws_tags chef_type: "aws_route_table"
 end
 
 aws_network_acl "ref-acl" do
@@ -85,7 +85,7 @@ aws_subnet "ref-subnet" do
   availability_zone "us-west-1a"
   map_public_ip_on_launch true
   route_table "ref-public"
-  aws_tags :chef_type => "aws_subnet"
+  aws_tags chef_type: "aws_subnet"
   network_acl "ref-acl"
 end
 
@@ -95,7 +95,7 @@ ref_subnet_2 = aws_subnet "ref-subnet-2" do
   availability_zone "us-west-1b"
   map_public_ip_on_launch true
   route_table "ref-public"
-  aws_tags :chef_type => "aws_subnet"
+  aws_tags chef_type: "aws_subnet"
   network_acl "ref-acl"
 end
 
@@ -111,8 +111,8 @@ end
 machine_image "ref-machine_image3" do
   machine_options bootstrap_options: {
     # for some reason, sshing into this host takes 20+ seconds with these enabled
-    #subnet_id: 'ref-subnet',
-    #security_group_ids: 'ref-sg1',
+    # subnet_id: 'ref-subnet',
+    # security_group_ids: 'ref-sg1',
     image_id: "ref-machine_image1",
     instance_type: "t2.small"
   }
@@ -120,7 +120,7 @@ end
 
 machine_batch do
   machine "ref-machine1" do
-    machine_options bootstrap_options: { image_id: "ref-machine_image1", :availability_zone => "us-west-1a", instance_type: "m3.medium" }
+    machine_options bootstrap_options: { image_id: "ref-machine_image1", availability_zone: "us-west-1a", instance_type: "m3.medium" }
     ohai_hints "ec2" => { "a" => "b" }
     converge false
   end
@@ -128,14 +128,14 @@ machine_batch do
     from_image "ref-machine_image1"
     machine_options bootstrap_options: {
       key_name: "ref-key-pair",
-      #subnet_id: 'ref-subnet',
-      #security_group_ids: 'ref-sg1'
+      # subnet_id: 'ref-subnet',
+      # security_group_ids: 'ref-sg1'
     }
   end
 end
 
 load_balancer "ref-load-balancer" do
-  machines [ "ref-machine2" ]
+  machines ["ref-machine2"]
   load_balancer_options(
     attributes: {
       cross_zone_load_balancing: {
@@ -165,12 +165,12 @@ aws_ebs_volume "ref-volume" do
   machine "ref-machine1"
   availability_zone "a"
   size 100
-  #snapshot
+  # snapshot
   iops 3000
   volume_type "io1"
   encrypted true
   device "/dev/sda2"
-  aws_tags :chef_type => "aws_ebs_volume"
+  aws_tags chef_type: "aws_ebs_volume"
 end
 
 aws_eip_address "ref-elastic-ip" do
@@ -181,13 +181,13 @@ end
 
 aws_s3_bucket "ref-s3-bucket" do
   enable_website_hosting true
-  options({ :acl => "private" })
+  options(acl: "private")
 end
 
 # Options can be given from attribute parameter value.
 # Link :docs.aws.amazon.com/sdkforruby/api/Aws/SQS/Client.html#attributes
 aws_sqs_queue "ref-sqs-queue" do
-  options({ :DelaySeconds => "1", :ReceiveMessageWaitTimeSeconds => "1" })
+  options(DelaySeconds: "1", ReceiveMessageWaitTimeSeconds: "1")
 end
 
 aws_sns_topic "ref-sns-topic" do
@@ -200,7 +200,7 @@ end
 
 aws_rds_subnet_group "ref-db-subnet-group" do
   description "some_description"
-  subnets ["ref-subnet", lazy { ref_subnet_2.aws_object.id } ]
+  subnets ["ref-subnet", lazy { ref_subnet_2.aws_object.id }]
 end
 
 aws_rds_instance "ref-rds-instance" do
@@ -219,8 +219,8 @@ aws_cloudsearch_domain "ref-cs-domain" do
   instance_type "search.m1.small"
   partition_count 2
   replication_count 2
-  index_fields [{ :index_field_name => "foo",
-                  :index_field_type => "text" }]
+  index_fields [{ index_field_name: "foo",
+                  index_field_type: "text" }]
 end
 
 aws_elasticsearch_domain "ref-es-domain" do

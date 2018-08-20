@@ -36,11 +36,11 @@ aws_subnet "ref-subnet-eni" do
   route_table "ref-public-eni"
 end
 
-with_machine_options :bootstrap_options => {
-    :subnet_id => "ref-subnet-eni",
-    :key_name => "ref-key-pair-eni",
-    :security_group_ids => ["ref-sg1-eni", "ref-sg2-eni"]
-  }
+with_machine_options bootstrap_options: {
+  subnet_id: "ref-subnet-eni",
+  key_name: "ref-key-pair-eni",
+  security_group_ids: ["ref-sg1-eni", "ref-sg2-eni"]
+}
 
 ref_machine = machine "ref-machine-eni-1" do
   action :allocate
@@ -79,11 +79,10 @@ instance = nil
 ruby_block "get instance" do
   block do
     instance = Chef::Resource::AwsInstance.get_aws_object(ref_machine.name,
-      resource: ref_machine,
-      driver: run_context.chef_provisioning.current_driver,
-      run_context: run_context,
-      managed_entry_store: Chef::Provisioning.chef_managed_entry_store(ref_machine.chef_server)
-    )
+                                                          resource: ref_machine,
+                                                          driver: run_context.chef_provisioning.current_driver,
+                                                          run_context: run_context,
+                                                          managed_entry_store: Chef::Provisioning.chef_managed_entry_store(ref_machine.chef_server))
   end
 end
 
@@ -93,7 +92,7 @@ end
 
 ruby_block "wait for instance to terminate" do
   block do
-    Retryable.retryable(:tries => 60, :sleep => 2) do
+    Retryable.retryable(tries: 60, sleep: 2) do
       raise "instance never terminated" if instance.status != :terminated
     end
   end

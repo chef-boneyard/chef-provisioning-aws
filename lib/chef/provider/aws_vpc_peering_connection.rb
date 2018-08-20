@@ -36,15 +36,15 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
       vpc_peering_connection = vpc.request_vpc_peering_connection(options)
 
       retry_with_backoff(::Aws::EC2::Errors::ServiceError) do
-        ec2_resource.create_tags({
-          :resources => [vpc_peering_connection.id],
-          :tags => [
+        ec2_resource.create_tags(
+          resources: [vpc_peering_connection.id],
+          tags: [
             {
-              :key => "Name",
-              :value => new_resource.name
+              key: "Name",
+              value: new_resource.name
             }
           ]
-        })
+        )
       end
       vpc_peering_connection
     end

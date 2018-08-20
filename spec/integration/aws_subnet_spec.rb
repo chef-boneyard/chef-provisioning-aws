@@ -24,9 +24,8 @@ describe Chef::Resource::AwsSubnet do
             vpc "test_vpc"
           end
         end.to create_an_aws_subnet("test_subnet",
-          vpc_id: test_vpc.aws_object.id,
-          cidr_block: test_vpc.aws_object.cidr_block
-        ).and be_idempotent
+                                    vpc_id: test_vpc.aws_object.id,
+                                    cidr_block: test_vpc.aws_object.cidr_block).and be_idempotent
       end
 
       it "aws_subnet 'test_subnet' with all parameters creates a subnet" do
@@ -43,14 +42,11 @@ describe Chef::Resource::AwsSubnet do
             network_acl "test_network_acl"
           end
         end.to create_an_aws_subnet("test_subnet",
-          vpc_id: test_vpc.aws_object.id,
-          cidr_block: "10.0.0.0/24",
-          availability_zone: az
-        ).and match_an_aws_subnet("test_subnet",
-          subnet_id: driver.ec2_client.describe_route_tables(filters: [{ name: "route-table-id", values: [rt] }]).route_tables[0].associations[0].subnet_id
-        ).and match_an_aws_subnet("test_subnet",
-          subnet_id: driver.ec2_client.describe_network_acls(filters: [{ name: "network-acl-id", values: [na] }]).network_acls[0].associations[0].subnet_id
-        ).and be_idempotent
+                                    vpc_id: test_vpc.aws_object.id,
+                                    cidr_block: "10.0.0.0/24",
+                                    availability_zone: az).and match_an_aws_subnet("test_subnet",
+                                                                                   subnet_id: driver.ec2_client.describe_route_tables(filters: [{ name: "route-table-id", values: [rt] }]).route_tables[0].associations[0].subnet_id).and match_an_aws_subnet("test_subnet",
+                                                                                                                                                                                                                                                              subnet_id: driver.ec2_client.describe_network_acls(filters: [{ name: "network-acl-id", values: [na] }]).network_acls[0].associations[0].subnet_id).and be_idempotent
       end
 
       it "creates aws_subnet tags" do
@@ -60,12 +56,9 @@ describe Chef::Resource::AwsSubnet do
             aws_tags key1: "value"
           end
         end.to create_an_aws_subnet("test_subnet")
-        .and have_aws_subnet_tags("test_subnet",
-          {
-            "Name" => "test_subnet",
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_subnet_tags("test_subnet",
+                                    "Name" => "test_subnet",
+                                    "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -80,12 +73,9 @@ describe Chef::Resource::AwsSubnet do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_subnet_tags("test_subnet",
-            {
-              "Name" => "test_subnet",
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                      "Name" => "test_subnet",
+                                      "key1" => "value2",
+                                      "key2" => "").and be_idempotent
         end
 
         it "removes all aws_subnet tags except Name" do
@@ -94,13 +84,9 @@ describe Chef::Resource::AwsSubnet do
               aws_tags({})
             end
           end.to have_aws_subnet_tags("test_subnet",
-            {
-              "Name" => "test_subnet"
-            }
-          ).and be_idempotent
+                                      "Name" => "test_subnet").and be_idempotent
         end
       end
-
     end
   end
 end

@@ -5,12 +5,10 @@ describe Chef::Resource::AwsEipAddress do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       it "aws_eip_address 'test_eip' creates an elastic ip" do
         expect_recipe do
           aws_eip_address "test_eip"
-        end.to create_an_aws_eip_address("test_eip"
-        ).and be_idempotent
+        end.to create_an_aws_eip_address("test_eip").and be_idempotent
       end
 
       it "raises an error trying to reference an eip that does not exist" do
@@ -27,8 +25,7 @@ describe Chef::Resource::AwsEipAddress do
           expect_recipe do
             aws_eip_address test_eip.aws_object.public_ip
           end.to match_an_aws_eip_address(test_eip.aws_object.public_ip,
-            public_ip: test_eip.aws_object.public_ip
-          ).and be_idempotent
+                                          public_ip: test_eip.aws_object.public_ip).and be_idempotent
         end
 
         it "can reference the ip address in the public_ip field" do
@@ -37,8 +34,7 @@ describe Chef::Resource::AwsEipAddress do
               public_ip test_eip.aws_object.public_ip
             end
           end.to match_an_aws_eip_address("random_identifier",
-            public_ip: test_eip.aws_object.public_ip
-          ).and be_idempotent
+                                          public_ip: test_eip.aws_object.public_ip).and be_idempotent
         end
       end
 
@@ -46,7 +42,7 @@ describe Chef::Resource::AwsEipAddress do
         aws_eip_address "test_eip"
 
         it "deletes the elastic ip" do
-          # TODO all the `with_*` and `expect_*` methods from Cheffish
+          # TODO: all the `with_*` and `expect_*` methods from Cheffish
           # automatically converge the block - we don't want to do that,
           # we want to let the `destroy_an*` matcher do that
           r = recipe do
@@ -54,8 +50,7 @@ describe Chef::Resource::AwsEipAddress do
               action :destroy
             end
           end
-          expect(r).to destroy_an_aws_eip_address("test_eip"
-          ).and be_idempotent
+          expect(r).to destroy_an_aws_eip_address("test_eip").and be_idempotent
         end
       end
 
@@ -78,10 +73,8 @@ describe Chef::Resource::AwsEipAddress do
               machine "test_machine"
             end
           end.to create_an_aws_eip_address("test_eip",
-            instance_id: test_machine.aws_object.id
-          ).and be_idempotent
+                                           instance_id: test_machine.aws_object.id).and be_idempotent
         end
-
       end
     end
   end

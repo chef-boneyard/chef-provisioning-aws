@@ -7,8 +7,8 @@ class Chef::Resource::AwsInstance < Chef::Provisioning::AWSDriver::AWSResourceWi
   # The require needs to be inside this class otherwise it gets loaded before the rest of the SDK
   # and starts causing issues - AWS expects to load all this stuff itself
   aws_sdk_type ::Aws::EC2::Instance,
-    managed_entry_type: :machine,
-    managed_entry_id_name: "instance_id"
+               managed_entry_type: :machine,
+               managed_entry_id_name: "instance_id"
 
   attribute :name, kind_of: String, name_attribute: true
 

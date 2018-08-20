@@ -1,11 +1,11 @@
-$:.unshift(File.dirname(__FILE__) + "/lib")
+$LOAD_PATH.unshift(File.dirname(__FILE__) + "/lib")
 require "chef/provisioning/aws_driver/version"
 
 Gem::Specification.new do |s|
   s.name = "chef-provisioning-aws"
   s.version = Chef::Provisioning::AWSDriver::VERSION
   s.platform = Gem::Platform::RUBY
-  s.extra_rdoc_files = ["README.md", "LICENSE" ]
+  s.extra_rdoc_files = ["README.md", "LICENSE"]
   s.summary = "Provisioner for creating aws containers in Chef Provisioning."
   s.description = s.summary
   s.author = "Tyler Ball"
@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.add_dependency "ubuntu_ami", "~> 0.4", ">= 0.4.1"
 
   s.bindir       = "bin"
-  s.executables  = %w{ }
+  s.executables  = %w{}
 
   s.require_path = "lib"
   s.files = %w{Gemfile Rakefile LICENSE README.md} + Dir.glob("*.gemspec") +

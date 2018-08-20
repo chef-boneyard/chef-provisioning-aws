@@ -9,7 +9,6 @@ require "aws-sdk"
 
 doomed_zones = ARGV
 doomed_zones.each do |doomed_zone|
-
   zones = JSON.parse(`aws route53 list-hosted-zones`)["HostedZones"]
 
   # requires an exact match, including the trailing dot. not such a bad thing, given the level of unrecoverable
@@ -17,7 +16,7 @@ doomed_zones.each do |doomed_zone|
   winner = zones.find { |z| z["Name"] == doomed_zone }
 
   if winner.nil?
-    puts "Couldn't find zone '#{doomed_zone}'; candidates were #{zones.map { |z| z["Name"] }}"
+    puts "Couldn't find zone '#{doomed_zone}'; candidates were #{zones.map { |z| z['Name'] }}"
     exit
   end
 
@@ -34,18 +33,18 @@ doomed_zones.each do |doomed_zone|
         name: rr["Name"],
         type: rr["Type"],
         ttl: rr["TTL"],
-        resource_records: rr["ResourceRecords"].map { |o| { value: o["Value"] } },
+        resource_records: rr["ResourceRecords"].map { |o| { value: o["Value"] } }
       }
     }
   end
 
   req = {
     hosted_zone_id: winner["Id"],
-    change_batch: { changes: changes },
+    change_batch: { changes: changes }
   }
 
   client = Aws::Route53::Client.new
-  client.change_resource_record_sets(req) if rrsets.size > 0
+  client.change_resource_record_sets(req) unless rrsets.empty?
   client.delete_hosted_zone(id: zone_id)
 
   puts "Success! '#{doomed_zone}' deleted."

@@ -1,8 +1,8 @@
 require "retryable"
 
 module Chef::Provisioning::AWSDriver
-# Include this module on a class or instance that is responsible for tagging
-# itself.  Fill in the hook methods so it knows how to tag itself.
+  # Include this module on a class or instance that is responsible for tagging
+  # itself.  Fill in the hook methods so it knows how to tag itself.
   class AWSTagger
     extend Forwardable
 
@@ -35,9 +35,9 @@ module Chef::Provisioning::AWSDriver
 
       # Tagging frequently fails so we retry with an exponential backoff, a maximum of 10 seconds
       Retryable.retryable(
-        :tries => 20,
-        :sleep => lambda { |n| [2**n, 10].min },
-        :on => [::Aws::EC2::Errors, Aws::S3::Errors, ::Aws::S3::Errors::ServiceError,]
+        tries: 20,
+        sleep: ->(n) { [2**n, 10].min },
+        on: [::Aws::EC2::Errors, Aws::S3::Errors, ::Aws::S3::Errors::ServiceError]
       ) do |retries, exception|
         if retries > 0
           Chef::Log.info "Retrying the tagging, previous try failed with #{exception.inspect}"
@@ -56,6 +56,5 @@ module Chef::Provisioning::AWSDriver
         end
       end
     end
-
   end
 end

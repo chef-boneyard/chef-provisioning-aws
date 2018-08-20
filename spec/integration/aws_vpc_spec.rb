@@ -15,27 +15,24 @@ describe Chef::Resource::AwsVpc do
               cidr_block "10.0.0.0/24"
             end
           end.to create_an_aws_vpc("test_vpc",
-            cidr_block: "10.0.0.0/24",
-            instance_tenancy: "default",
-            state: "available",
-            internet_gateways_entries: nil
-          ).and be_idempotent
+                                   cidr_block: "10.0.0.0/24",
+                                   instance_tenancy: "default",
+                                   state: "available",
+                                   internet_gateways_entries: nil).and be_idempotent
         end
 
         it "aws_vpc 'vpc' with cidr_block '10.0.0.0/24' creates a VPC with tags" do
           expect_recipe do
             aws_vpc "test_vpc_2" do
               cidr_block "10.0.0.0/24"
-              aws_tags :foo => :bar
+              aws_tags foo: :bar
             end
           end.to create_an_aws_vpc("test_vpc_2",
-            cidr_block: "10.0.0.0/24",
-            instance_tenancy: "default",
-            state: "available",
-            internet_gateways_entries: nil
-          ).and have_aws_vpc_tags("test_vpc_2",
-                                  { "foo" => "bar" }
-          ).and be_idempotent
+                                   cidr_block: "10.0.0.0/24",
+                                   instance_tenancy: "default",
+                                   state: "available",
+                                   internet_gateways_entries: nil).and have_aws_vpc_tags("test_vpc_2",
+                                                                                         "foo" => "bar").and be_idempotent
         end
 
         it "aws_vpc 'vpc' with all attributes creates a VPC" do
@@ -50,26 +47,25 @@ describe Chef::Resource::AwsVpc do
               enable_dns_hostnames true
             end
           end.to create_an_aws_vpc("test_vpc",
-            cidr_block:       "10.0.0.0/24",
-            instance_tenancy: "dedicated",
-            dhcp_options_id:  test_dhcp_options.aws_object.id,
-            state:            "available",
-            routetables_entries_routes: [
-              {
-                destination_cidr_block: "10.0.0.0/24",
-                gateway_id: "local",
-                origin: "CreateRouteTable",
-                state: "active"
-              },
-              {
-                destination_cidr_block: "0.0.0.0/0",
-                gateway_id: (/igw-\w+/),
-                origin: "CreateRoute",
-                state: "active"
-              }
-            ],
-            internet_gateways_entries: an_instance_of(::Aws::EC2::InternetGateway)
-          ).and be_idempotent
+                                   cidr_block:       "10.0.0.0/24",
+                                   instance_tenancy: "dedicated",
+                                   dhcp_options_id:  test_dhcp_options.aws_object.id,
+                                   state:            "available",
+                                   routetables_entries_routes: [
+                                     {
+                                       destination_cidr_block: "10.0.0.0/24",
+                                       gateway_id: "local",
+                                       origin: "CreateRouteTable",
+                                       state: "active"
+                                     },
+                                     {
+                                       destination_cidr_block: "0.0.0.0/0",
+                                       gateway_id: /igw-\w+/,
+                                       origin: "CreateRoute",
+                                       state: "active"
+                                     }
+                                   ],
+                                   internet_gateways_entries: an_instance_of(::Aws::EC2::InternetGateway)).and be_idempotent
         end
       end
 
@@ -94,8 +90,7 @@ describe Chef::Resource::AwsVpc do
                 main_route_table "test_route_table"
               end
             end.to update_an_aws_vpc("test_vpc",
-              vpc_id: test_route_table.aws_object.vpc_id
-            ).and be_idempotent
+                                     vpc_id: test_route_table.aws_object.vpc_id).and be_idempotent
           end
 
           # Clean up the main route table association so we can cleanly delete
@@ -126,12 +121,9 @@ describe Chef::Resource::AwsVpc do
             aws_tags key1: "value"
           end
         end.to create_an_aws_vpc("test_vpc")
-        .and have_aws_vpc_tags("test_vpc",
-          {
-            "Name" => "test_vpc",
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_vpc_tags("test_vpc",
+                                 "Name" => "test_vpc",
+                                 "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -146,12 +138,9 @@ describe Chef::Resource::AwsVpc do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_vpc_tags("test_vpc",
-            {
-              "Name" => "test_vpc",
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                   "Name" => "test_vpc",
+                                   "key1" => "value2",
+                                   "key2" => "").and be_idempotent
         end
 
         it "removes all aws_vpc tags except Name" do
@@ -160,10 +149,7 @@ describe Chef::Resource::AwsVpc do
               aws_tags({})
             end
           end.to have_aws_vpc_tags("test_vpc",
-            {
-              "Name" => "test_vpc"
-            }
-          ).and be_idempotent
+                                   "Name" => "test_vpc").and be_idempotent
         end
       end
 
@@ -194,8 +180,7 @@ describe Chef::Resource::AwsVpc do
               action :purge
             end
           end.to match_an_aws_vpc_peering_connection("test_peering_connection",
-              :'status.code' => "deleted"
-          ).and be_idempotent
+                                                     'status.code': "deleted").and be_idempotent
         end
       end
 
@@ -223,8 +208,7 @@ describe Chef::Resource::AwsVpc do
             end
           end
           expect(r).to match_an_aws_nat_gateway("test_nat_gateway",
-            :state => "deleted"
-          ).and be_idempotent
+                                                state: "deleted").and be_idempotent
         end
       end
     end

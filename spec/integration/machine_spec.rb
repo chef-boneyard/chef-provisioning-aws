@@ -6,7 +6,6 @@ describe Chef::Resource::Machine do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "with a VPC and a public subnet" do
-
       before :all do
         chef_config[:log_level] = :warn
       end
@@ -19,8 +18,7 @@ describe Chef::Resource::Machine do
           machine "test_machine" do
             action :allocate
           end
-        end.to create_an_aws_instance("test_machine"
-        ).and be_idempotent
+        end.to create_an_aws_instance("test_machine").and be_idempotent
       end
 
       it "machine with few options allocates a machine", :super_slow do
@@ -32,8 +30,7 @@ describe Chef::Resource::Machine do
             }
             action :allocate
           end
-        end.to create_an_aws_instance("test_machine"
-        ).and be_idempotent
+        end.to create_an_aws_instance("test_machine").and be_idempotent
       end
 
       it "machine with options specified as node options allocates a machine", :super_slow do
@@ -51,7 +48,7 @@ describe Chef::Resource::Machine do
                     device_index: 0,
                     subnet_id: test_public_subnet.aws_object.id,
                     delete_on_termination: true,
-                    groups: [test_security_group.aws_object.id],
+                    groups: [test_security_group.aws_object.id]
                   }
                 ]
               }
@@ -59,8 +56,7 @@ describe Chef::Resource::Machine do
             machine_options node["aws_options"]
             action :allocate
           end
-        end.to create_an_aws_instance("test_machine"
-        ).and be_idempotent
+        end.to create_an_aws_instance("test_machine").and be_idempotent
       end
 
       it "machine with few options converges a machine", :super_slow do
@@ -71,11 +67,10 @@ describe Chef::Resource::Machine do
               key_name: "test_key_pair"
             },
                             convergence_options: {
-              chef_version: "12.5.1"
-            }
+                              chef_version: "12.5.1"
+                            }
           end
-        end.to create_an_aws_instance("test_machine"
-        ) #.and be_idempotent
+        end.to create_an_aws_instance("test_machine") # .and be_idempotent
         # Bug - machine resource with :converge action isn't idempotent
         # The non-idempotence is that it runs chef again, not that it unecessarily modifies the aws_object
       end
@@ -89,20 +84,19 @@ describe Chef::Resource::Machine do
             },
                             ssh_username: "ubuntu", # Username to use for ssh and WinRM
                             ssh_options: { # a list of options to Net::SSH.start
-              :auth_methods => [ "publickey" ], # DEFAULT
-              :keys_only => true, # DEFAULT
-              :forward_agent => true, # you may want your ssh-agent to be available on your provisioned machines
-              :remote_forwards => [
-                  # Give remote host access to private git server
-                  { :remote_port => 2222, :local_host => "git.example.com", :local_port => 22, },
-              ],
-              # You can send net-ssh log info to the Chef::Log if you are having
-              # trouble with ssh.
-              :logger => Chef::Log,
-            }
+                              auth_methods: ["publickey"], # DEFAULT
+                              keys_only: true, # DEFAULT
+                              forward_agent: true, # you may want your ssh-agent to be available on your provisioned machines
+                              remote_forwards: [
+                                # Give remote host access to private git server
+                                { remote_port: 2222, local_host: "git.example.com", local_port: 22 }
+                              ],
+                              # You can send net-ssh log info to the Chef::Log if you are having
+                              # trouble with ssh.
+                              logger: Chef::Log
+                            }
           end
-        end.to create_an_aws_instance("test_machine"
-        ) #.and be_idempotent
+        end.to create_an_aws_instance("test_machine") # .and be_idempotent
         # Bug - machine resource with :converge action isn't idempotent
         # The non-idempotence is that it runs chef again, not that it unecessarily modifies the aws_object
       end
@@ -117,8 +111,7 @@ describe Chef::Resource::Machine do
             action :allocate
           end
         end.to create_an_aws_instance("test_machine",
-          source_dest_check: false
-        ).and be_idempotent
+                                      source_dest_check: false).and be_idempotent
       end
 
       it "base64 encodes the user data", :super_slow do
@@ -132,8 +125,7 @@ describe Chef::Resource::Machine do
             }
             action :allocate
           end
-        end.to create_an_aws_instance("test_machine_#{uniq}"
-        ).and be_idempotent
+        end.to create_an_aws_instance("test_machine_#{uniq}").and be_idempotent
         expect(
           driver.ec2_client.describe_instance_attribute(
             instance_id: driver.ec2_resource.instances(filters: [{ name: "tag:Name", values: ["test_machine_#{uniq}"] }]).first.id,
@@ -143,7 +135,7 @@ describe Chef::Resource::Machine do
       end
 
       it "respects the network_interfaces block with maximum attributes", :super_slow do
-        private_ip_address_start = Random.rand(30) + 10
+        private_ip_address_start = Random.rand(10..39)
         expect_recipe do
           machine "test_machine" do
             machine_options bootstrap_options: {
@@ -170,7 +162,7 @@ describe Chef::Resource::Machine do
                     }
                   ],
                   # cannot specify both `private_ip_addresses` and `secondary_private_ip_address_count`
-                  #secondary_private_ip_address_count: 2,
+                  # secondary_private_ip_address_count: 2,
                   associate_public_ip_address: true
                 }
               ]
@@ -178,43 +170,42 @@ describe Chef::Resource::Machine do
             action :ready
           end
         end.to create_an_aws_instance("test_machine",
-          network_interfaces: [{
-            network_interface_id: /^eni-/,
-            subnet_id: test_public_subnet.aws_object.id,
-            vpc_id: test_vpc.aws_object.id,
-            description: "network interface description",
-            status: "in-use",
-            private_ip_address: "10.0.0.#{private_ip_address_start}",
-            groups: [{ group_name: "test_security_group" }],
-            attachment: {
-              device_index: 0,
-              delete_on_termination: true,
-              status: "attached"
-            },
-            private_ip_addresses: [
-              {
-                private_ip_address: "10.0.0.#{private_ip_address_start}",
-                primary: true,
-                # the action must be :ready to give the public ip time to be assigned
-                association: {
-                  public_ip: /\d+/
-                }
-              },
-              {
-                private_ip_address: "10.0.0.#{private_ip_address_start + 1}",
-                primary: false
-              },
-              {
-                private_ip_address: "10.0.0.#{private_ip_address_start + 2}",
-                primary: false
-              }
-            ]
-          }]
-        ).and be_idempotent
+                                      network_interfaces: [{
+                                        network_interface_id: /^eni-/,
+                                        subnet_id: test_public_subnet.aws_object.id,
+                                        vpc_id: test_vpc.aws_object.id,
+                                        description: "network interface description",
+                                        status: "in-use",
+                                        private_ip_address: "10.0.0.#{private_ip_address_start}",
+                                        groups: [{ group_name: "test_security_group" }],
+                                        attachment: {
+                                          device_index: 0,
+                                          delete_on_termination: true,
+                                          status: "attached"
+                                        },
+                                        private_ip_addresses: [
+                                          {
+                                            private_ip_address: "10.0.0.#{private_ip_address_start}",
+                                            primary: true,
+                                            # the action must be :ready to give the public ip time to be assigned
+                                            association: {
+                                              public_ip: /\d+/
+                                            }
+                                          },
+                                          {
+                                            private_ip_address: "10.0.0.#{private_ip_address_start + 1}",
+                                            primary: false
+                                          },
+                                          {
+                                            private_ip_address: "10.0.0.#{private_ip_address_start + 2}",
+                                            primary: false
+                                          }
+                                        ]
+                                      }]).and be_idempotent
       end
 
       it "converts associate_public_ip_address at the top level to the network interface", :super_slow do
-        private_ip_address_start = Random.rand(30) + 10
+        private_ip_address_start = Random.rand(10..39)
         expect_recipe do
           machine "test_machine" do
             machine_options bootstrap_options: {
@@ -228,38 +219,37 @@ describe Chef::Resource::Machine do
             action :ready
           end
         end.to create_an_aws_instance("test_machine",
-          network_interfaces: [{
-            network_interface_id: /^eni-/,
-            subnet_id: test_public_subnet.aws_object.id,
-            vpc_id: test_vpc.aws_object.id,
-            status: "in-use",
-            private_ip_address: "10.0.0.#{private_ip_address_start}",
-            groups: [{ group_name: "test_security_group" }],
-            attachment: {
-              device_index: 0,
-              delete_on_termination: true,
-              status: "attached"
-            },
-            private_ip_addresses: [
-              {
-                private_ip_address: "10.0.0.#{private_ip_address_start}",
-                primary: true,
-                association: {
-                  public_ip: /\d+/
-                }
-              }
-            ]
-          }]
-        ).and be_idempotent
+                                      network_interfaces: [{
+                                        network_interface_id: /^eni-/,
+                                        subnet_id: test_public_subnet.aws_object.id,
+                                        vpc_id: test_vpc.aws_object.id,
+                                        status: "in-use",
+                                        private_ip_address: "10.0.0.#{private_ip_address_start}",
+                                        groups: [{ group_name: "test_security_group" }],
+                                        attachment: {
+                                          device_index: 0,
+                                          delete_on_termination: true,
+                                          status: "attached"
+                                        },
+                                        private_ip_addresses: [
+                                          {
+                                            private_ip_address: "10.0.0.#{private_ip_address_start}",
+                                            primary: true,
+                                            association: {
+                                              public_ip: /\d+/
+                                            }
+                                          }
+                                        ]
+                                      }]).and be_idempotent
       end
 
       context "with a placement group" do
         before(:context) do
           begin
-            driver.ec2_client.create_placement_group({
+            driver.ec2_client.create_placement_group(
               group_name: "agroup",
               strategy: "cluster"
-            })
+            )
           rescue ::Aws::EC2::Errors::InvalidPlacementGroupDuplicate
             # We don't need to create it because it already exists
           end
@@ -285,14 +275,13 @@ describe Chef::Resource::Machine do
               action :allocate
             end
           end.to create_an_aws_instance("test_machine",
-            monitoring: { state: "disabled" },
-            placement: {
-              availability_zone: test_public_subnet.aws_object.availability_zone_name,
-              group_name: "agroup",
-              tenancy: "default",
-            },
-            subnet_id: test_public_subnet.aws_object.id
-          ).and be_idempotent
+                                        monitoring: { state: "disabled" },
+                                        placement: {
+                                          availability_zone: test_public_subnet.aws_object.availability_zone_name,
+                                          group_name: "agroup",
+                                          tenancy: "default"
+                                        },
+                                        subnet_id: test_public_subnet.aws_object.id).and be_idempotent
         end
       end
 
@@ -319,8 +308,7 @@ describe Chef::Resource::Machine do
               action :allocate
             end
           end.to create_an_aws_instance("test_machine",
-            iam_instance_profile: { arn: /machine_test_instance_profile/ }
-          ).and be_idempotent
+                                        iam_instance_profile: { arn: /machine_test_instance_profile/ }).and be_idempotent
         end
 
         it "looks up the iam_instance_profile from the arn", :super_slow do
@@ -334,14 +322,12 @@ describe Chef::Resource::Machine do
               action :allocate
             end
           end.to create_an_aws_instance("test_machine",
-            iam_instance_profile: { arn: /machine_test_instance_profile/ }
-          ).and be_idempotent
+                                        iam_instance_profile: { arn: /machine_test_instance_profile/ }).and be_idempotent
         end
       end
 
       it "machine with from_image option is created from correct image", :super_slow do
         expect_recipe do
-
           machine_image "test_machine_ami" do
             machine_options bootstrap_options: {
               subnet_id: "test_public_subnet",
@@ -358,10 +344,8 @@ describe Chef::Resource::Machine do
             action :allocate
           end
         end.to create_an_aws_instance("test_machine",
-          image_id: driver.ec2.images.filter("name", "test_machine_ami").first.image_id
-        ).and create_an_aws_image("test_machine_ami",
-          name: "test_machine_ami"
-        ).and be_idempotent
+                                      image_id: driver.ec2.images.filter("name", "test_machine_ami").first.image_id).and create_an_aws_image("test_machine_ami",
+                                                                                                                                             name: "test_machine_ami").and be_idempotent
       end
 
       context "with an existing machine", :super_slow do
@@ -379,8 +363,7 @@ describe Chef::Resource::Machine do
               action :stop
             end
           end.to update_an_aws_instance("test_machine",
-            state: { :name => "stopped" }
-          ).and be_idempotent
+                                        state: { name: "stopped" }).and be_idempotent
         end
 
         it "starts a machine that has been stopped" do
@@ -392,8 +375,7 @@ describe Chef::Resource::Machine do
               action :ready
             end
           end.to update_an_aws_instance("test_machine",
-            state: { :name => "running" }
-          )
+                                        state: { name: "running" })
         end
       end
 
@@ -451,16 +433,16 @@ describe Chef::Resource::Machine do
         let(:key_pair_name) { "test_key_pair_#{Random.rand(100)}" }
 
         before do
-          driver.ec2_client.import_key_pair({
+          driver.ec2_client.import_key_pair(
             key_name: key_pair_name, # required
             public_key_material: "#{public_key.ssh_type} #{[public_key.to_blob].pack('m0')}", # required
-          })
+          )
         end
 
         after do
-          driver.ec2_client.delete_key_pair({
+          driver.ec2_client.delete_key_pair(
             key_name: key_pair_name, # required
-          })
+          )
           Pathname.new(private_key_path).delete
         end
 
@@ -474,8 +456,7 @@ describe Chef::Resource::Machine do
               }
               action :ready
             end
-          end.to create_an_aws_instance("test_machine"
-          ).and be_idempotent
+          end.to create_an_aws_instance("test_machine").and be_idempotent
         end
 
         it "uses key_data from the ssh_options", :super_slow do
@@ -492,11 +473,9 @@ describe Chef::Resource::Machine do
               )
               action :ready
             end
-          end.to create_an_aws_instance("test_machine"
-          ).and be_idempotent
+          end.to create_an_aws_instance("test_machine").and be_idempotent
         end
       end
-
     end
   end
 end

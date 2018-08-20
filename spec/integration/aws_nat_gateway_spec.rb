@@ -11,7 +11,7 @@ describe Chef::Resource::AwsNatGateway do
 
       aws_eip_address "test_eip"
 
-      describe "action :create" do #, :super_slow do
+      describe "action :create" do # , :super_slow do
         it "creates an aws_nat_gateway in the specified subnet" do
           expect_recipe do
             sub_id = test_public_subnet.aws_object.id
@@ -20,8 +20,7 @@ describe Chef::Resource::AwsNatGateway do
               eip_address "test_eip"
             end
           end.to create_an_aws_nat_gateway("test_nat_gateway",
-            subnet_id: test_public_subnet.aws_object.id
-          ).and be_idempotent
+                                           subnet_id: test_public_subnet.aws_object.id).and be_idempotent
         end
       end
 
@@ -38,9 +37,7 @@ describe Chef::Resource::AwsNatGateway do
                 action :destroy
               end
             end
-            expect(r).to destroy_an_aws_nat_gateway("test_nat_gateway"
-            ).and match_an_aws_eip_address("test_eip"
-            ).and be_idempotent
+            expect(r).to destroy_an_aws_nat_gateway("test_nat_gateway").and match_an_aws_eip_address("test_eip").and be_idempotent
           end
         end
       end

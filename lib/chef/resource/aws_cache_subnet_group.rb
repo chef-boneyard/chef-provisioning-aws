@@ -26,14 +26,14 @@ class Chef::Resource::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSRe
   #
   # @param :subnets [ String, Array, AwsSubnet, ::Aws::EC2::Subnet ] One or more subnets in the subnet group.
   attribute :subnets,
-            kind_of: [ String, Array, AwsSubnet, ::Aws::EC2::Subnet ],
+            kind_of: [String, Array, AwsSubnet, ::Aws::EC2::Subnet],
             required: true,
             coerce: proc { |v| [v].flatten }
 
   def aws_object
     driver.elasticache
-      .describe_cache_subnet_groups(cache_subnet_group_name: group_name)
-      .data[:cache_subnet_groups].first
+          .describe_cache_subnet_groups(cache_subnet_group_name: group_name)
+          .data[:cache_subnet_groups].first
   rescue ::Aws::ElastiCache::Errors::CacheSubnetGroupNotFoundFault
     nil
   end

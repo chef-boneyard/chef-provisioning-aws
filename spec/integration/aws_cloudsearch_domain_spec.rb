@@ -4,7 +4,6 @@ describe Chef::Resource::AwsCloudsearchDomain do
   extend AWSSupport
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       # Cloudsearch can take forevvvver to delete so we need to randomize our names
       time = DateTime.now.strftime("%Q")
 
@@ -25,7 +24,6 @@ describe Chef::Resource::AwsCloudsearchDomain do
         end
         expect(r.aws_object).to eq(nil)
       end
-
     end
   end
 end

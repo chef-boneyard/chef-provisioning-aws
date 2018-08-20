@@ -5,9 +5,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       context "aws_route53_hosted_zone" do
-
         # for the occasional spec where the test zone won't be automatically deleted, the spec can set
         # @zone_to_delete to communicate the zone name to the 'after' block. (this can't be done just with
         # let-vars because attribute values in dependent RecordSet resources have to be hard-coded.)
@@ -40,7 +38,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 comment test_comment
               end
             end.to create_an_aws_route53_hosted_zone(zone_name,
-                                                   config: { comment: test_comment }).and be_idempotent
+                                                     config: { comment: test_comment }).and be_idempotent
           end
 
           # we don't want to go overboard testing all our validations, but this is the one that can cause the
@@ -62,7 +60,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 comment expected_comment
               end
             end.to create_an_aws_route53_hosted_zone(zone_name,
-                                                   config: { comment: expected_comment }).and be_idempotent
+                                                     config: { comment: expected_comment }).and be_idempotent
           end
 
           it "updates the zone comment when none is given" do
@@ -73,7 +71,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
               aws_route53_hosted_zone zone_name do
               end
             end.to create_an_aws_route53_hosted_zone(zone_name,
-                                                   config: { comment: nil }).and be_idempotent
+                                                     config: { comment: nil }).and be_idempotent
           end
         end
 
@@ -83,7 +81,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
               name: "some-host.feegle.com.", # AWS adds the trailing dot.
               type: "CNAME",
               ttl: 3600,
-              resource_records: [{ value: "some-other-host" }],
+              resource_records: [{ value: "some-other-host" }]
             }
           end
 
@@ -137,7 +135,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
+                                                     resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
             # the empty {} acts as a wildcard, and all zones have SOA and NS records we want to skip.
           end
 
@@ -153,7 +151,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
+                                                     resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
           end
 
           # AWS's error for this is "FATAL problem: DomainLabelEmpty encountered", so we help the user out.
@@ -172,7 +170,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
           end
 
           it "creates and updates a RecordSet" do
-            expected_rr = sdk_cname_rr.merge({ ttl: 1800 })
+            expected_rr = sdk_cname_rr.merge(ttl: 1800)
 
             expect_recipe do
               aws_route53_hosted_zone "feegle.com" do
@@ -197,7 +195,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}, expected_rr]).and be_idempotent
+                                                     resource_record_sets: [{}, {}, expected_rr]).and be_idempotent
           end
 
           it "creates and deletes a RecordSet" do
@@ -223,7 +221,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}]).and be_idempotent
+                                                     resource_record_sets: [{}, {}]).and be_idempotent
           end
 
           it "automatically uses the parent zone name in the RecordSet name" do
@@ -238,7 +236,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
+                                                     resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
           end
 
           it "raises the AWS exception when trying to delete a record using mismatched values" do
@@ -284,7 +282,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                 end
               end
             end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                   resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
+                                                     resource_record_sets: [{}, {}, sdk_cname_rr]).and be_idempotent
           end
 
           context "inheriting default property values" do
@@ -309,8 +307,8 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [{}, {},
-                                                      expected_a, sdk_cname_rr]).and be_idempotent
+                                                       resource_record_sets: [{}, {},
+                                                                              expected_a, sdk_cname_rr]).and be_idempotent
             end
 
             it "only provides defaults for certain properties" do
@@ -346,57 +344,58 @@ describe Chef::Resource::AwsRoute53HostedZone do
 
           context "individual RR types" do
             let(:expected) do
-               {
-              cname: {
-                name: "cname-host.feegle.com.",
-                type: "CNAME",
-                ttl: 1800,
-                resource_records: [{ value: "8.8.8.8" }],
-              },
-              a: {
-                name: "a-host.feegle.com.",
-                type: "A",
-                ttl: 1800,
-                resource_records: [{ value: "141.222.1.1" }, { value: "8.8.8.8" }],
-              },
-              aaaa: {
-                name: "aaaa-host.feegle.com.",
-                type: "AAAA",
-                ttl: 1800,
-                resource_records: [{ value: "2607:f8b0:4010:801::1001" },
-                                   { value: "2607:f8b9:4010:801::1001" }],
-              },
-              mx: {
-                name: "mx-host.feegle.com.",
-                type: "MX",
-                ttl: 1800,
-                # AWS does *not* append a dot to these.
-                resource_records: [{ value: "10 mail1.example.com" }, { value: "15 mail2.example.com." }],
-              },
-              txt: {
-                name: "txt-host.feegle.com.",
-                type: "TXT",
-                resource_records: [{ value: '"Very Important Data"' },
-                                   { value: '"Even More Important Data"' }],
-              },
-              srv: {
-                name: "srv-host.feegle.com.",
-                type: "SRV",
-                resource_records: [{ value: "10 50 8889 chef-server.example.com" },
-                                   { value: "20 70 80 narf.net" }],
-              },
-              soa: {
-                name: "feegle.com.",
-                type: "SOA",
-                resource_records: [{ value: "ns-1641.awsdns-13.co.uk. awsdns-hostmaster.amazon.com. 2 7200 900 1209600 86400" }],
-              },
-              ns: {
-                name: "feegle.com.",
-                type: "NS",
-                resource_records: [{ value: "ns1.amazon.com." },
-                                   { value: "ns2.amazon.org." }],
-              },
-            } end
+              {
+                cname: {
+                  name: "cname-host.feegle.com.",
+                  type: "CNAME",
+                  ttl: 1800,
+                  resource_records: [{ value: "8.8.8.8" }]
+                },
+                a: {
+                  name: "a-host.feegle.com.",
+                  type: "A",
+                  ttl: 1800,
+                  resource_records: [{ value: "141.222.1.1" }, { value: "8.8.8.8" }]
+                },
+                aaaa: {
+                  name: "aaaa-host.feegle.com.",
+                  type: "AAAA",
+                  ttl: 1800,
+                  resource_records: [{ value: "2607:f8b0:4010:801::1001" },
+                                     { value: "2607:f8b9:4010:801::1001" }]
+                },
+                mx: {
+                  name: "mx-host.feegle.com.",
+                  type: "MX",
+                  ttl: 1800,
+                  # AWS does *not* append a dot to these.
+                  resource_records: [{ value: "10 mail1.example.com" }, { value: "15 mail2.example.com." }]
+                },
+                txt: {
+                  name: "txt-host.feegle.com.",
+                  type: "TXT",
+                  resource_records: [{ value: '"Very Important Data"' },
+                                     { value: '"Even More Important Data"' }]
+                },
+                srv: {
+                  name: "srv-host.feegle.com.",
+                  type: "SRV",
+                  resource_records: [{ value: "10 50 8889 chef-server.example.com" },
+                                     { value: "20 70 80 narf.net" }]
+                },
+                soa: {
+                  name: "feegle.com.",
+                  type: "SOA",
+                  resource_records: [{ value: "ns-1641.awsdns-13.co.uk. awsdns-hostmaster.amazon.com. 2 7200 900 1209600 86400" }]
+                },
+                ns: {
+                  name: "feegle.com.",
+                  type: "NS",
+                  resource_records: [{ value: "ns1.amazon.com." },
+                                     { value: "ns2.amazon.org." }]
+                }
+              }
+            end
 
             it "handles CNAME records" do
               expect_recipe do
@@ -410,7 +409,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:cname] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:cname]]).and be_idempotent
 
               expect_converge do
                 aws_route53_hosted_zone "feegle.com" do
@@ -437,7 +436,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:a] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:a]]).and be_idempotent
 
               expect_converge do
                 aws_route53_hosted_zone "feegle.com" do
@@ -465,7 +464,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:aaaa] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:aaaa]]).and be_idempotent
             end
 
             it "handles MX records" do
@@ -480,7 +479,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:mx] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:mx]]).and be_idempotent
               expect_converge do
                 aws_route53_hosted_zone "feegle.com" do
                   record_sets do
@@ -507,7 +506,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, expected[:soa] ]).and be_idempotent
+                                                       resource_record_sets: [{}, expected[:soa]]).and be_idempotent
             end
 
             it "handles NS records" do
@@ -523,7 +522,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ expected[:ns], {} ]).and be_idempotent
+                                                       resource_record_sets: [expected[:ns], {}]).and be_idempotent
             end
 
             # we don't validate TXT values:
@@ -540,7 +539,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:txt] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:txt]]).and be_idempotent
             end
 
             it "handles SRV records" do
@@ -555,7 +554,7 @@ describe Chef::Resource::AwsRoute53HostedZone do
                   end
                 end
               end.to create_an_aws_route53_hosted_zone("feegle.com",
-                                                     resource_record_sets: [ {}, {}, expected[:srv] ]).and be_idempotent
+                                                       resource_record_sets: [{}, {}, expected[:srv]]).and be_idempotent
 
               expect_converge do
                 aws_route53_hosted_zone "feegle.com" do

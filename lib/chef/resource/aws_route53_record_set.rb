@@ -18,7 +18,7 @@
 class ::Aws::Route53::Types::ResourceRecordSet
   # removing AWS's trailing dots may not be the best thing, but otherwise our job gets much harder.
   def aws_key
-    "#{name.sub(/\.$/, '')}"
+    name.sub(/\.$/, "").to_s
   end
 
   # the API doesn't seem to provide any facility to convert these types into the data structures used by the
@@ -28,13 +28,12 @@ class ::Aws::Route53::Types::ResourceRecordSet
       name: name,
       type: type,
       ttl: ttl,
-      resource_records: resource_records.map { |r| { :value => r.value } },
+      resource_records: resource_records.map { |r| { value: r.value } }
     }
   end
 end
 
 class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::SuperLWRP
-
   actions :create, :destroy
   default_action :create
 
@@ -51,7 +50,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
   # this gets set internally and is not intended for DSL use in recipes.
   attribute :aws_route53_zone_name, kind_of: String, required: true,
-                                    is: lambda { |zone_name| validate_zone_name!(rr_name, zone_name) }
+                                    is: ->(zone_name) { validate_zone_name!(rr_name, zone_name) }
 
   attribute :aws_route53_hosted_zone, required: true
 
@@ -96,14 +95,14 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
   # because these resources can't actually converge themselves, we have to trigger the validations.
   def validate!
-    [:rr_name, :type, :ttl, :resource_records, :aws_route53_zone_name].each { |f| send(f) }
+    %i{rr_name type ttl resource_records aws_route53_zone_name}.each { |f| send(f) }
 
     # this was in an :is validator, but didn't play well with inheriting default values.
     validate_rr_type!(type, resource_records)
   end
 
   def aws_key
-    "#{fqdn}"
+    fqdn.to_s
   end
 
   def fqdn
@@ -119,7 +118,7 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
       name: fqdn,
       type: type,
       ttl: ttl,
-      resource_records: resource_records.map { |rr| { value: rr } },
+      resource_records: resource_records.map { |rr| { value: rr } }
     }
   end
 
@@ -137,8 +136,8 @@ class Chef::Resource::AwsRoute53RecordSet < Chef::Provisioning::AWSDriver::Super
 
     record_sets.each do |rs|
       key = rs.aws_key
-      if seen.has_key?(key)
-        raise Chef::Exceptions::ValidationFailed.new("Duplicate RecordSet found in resource: [#{key}]")
+      if seen.key?(key)
+        raise Chef::Exceptions::ValidationFailed, "Duplicate RecordSet found in resource: [#{key}]"
       else
         seen[key] = 1
       end

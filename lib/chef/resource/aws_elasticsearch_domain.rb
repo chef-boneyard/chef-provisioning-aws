@@ -36,7 +36,7 @@ class Chef::Resource::AwsElasticsearchDomain < Chef::Provisioning::AWSDriver::AW
 
   def aws_object
     driver.elasticsearch_client
-      .describe_elasticsearch_domains(domain_names: [domain_name])[:domain_status_list]
-      .find { |d| !d[:deleted] }
+          .describe_elasticsearch_domains(domain_names: [domain_name])[:domain_status_list]
+          .find { |d| !d[:deleted] }
   end
 end

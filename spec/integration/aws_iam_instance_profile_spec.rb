@@ -29,7 +29,6 @@ describe Chef::Resource::AwsIamRole do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "when connected to AWS" do
-
       let(:instance_name) do
         name_postfix = SecureRandom.hex(8)
         "cp_test_iam_instance_profile_#{name_postfix}"
@@ -41,8 +40,7 @@ describe Chef::Resource::AwsIamRole do
             path "/"
           end
         end.to create_an_aws_iam_instance_profile(instance_name,
-          path: "/"
-        ).and be_idempotent
+                                                  path: "/").and be_idempotent
       end
 
       context "with an existing aws_iam_role" do
@@ -76,9 +74,8 @@ describe Chef::Resource::AwsIamRole do
               role role_name
             end
           end.to create_an_aws_iam_instance_profile(instance_name,
-            path: "/",
-            roles: [{ name: role_name }]
-          ).and be_idempotent
+                                                    path: "/",
+                                                    roles: [{ name: role_name }]).and be_idempotent
         end
 
         context "with an existing aws_iam_instance_profile with an attached role" do
@@ -105,8 +102,7 @@ describe Chef::Resource::AwsIamRole do
                 action :destroy
               end
             end.to match_an_aws_iam_instance_profile(instance_name,
-              roles: []
-            ).and be_idempotent
+                                                     roles: []).and be_idempotent
           end
 
           it "removes the relationship when the instance_profile is deleted" do
@@ -115,8 +111,7 @@ describe Chef::Resource::AwsIamRole do
                 action :destroy
               end
             end.to match_an_aws_iam_role(role_name,
-              instance_profiles: []
-            ).and be_idempotent
+                                         instance_profiles: []).and be_idempotent
           end
 
           context "with a second aws_iam_role" do
@@ -144,16 +139,12 @@ describe Chef::Resource::AwsIamRole do
                   role "#{role_name}2"
                 end
               end.to update_an_aws_iam_instance_profile(instance_name,
-                path: "/",
-                roles: [{ name: "#{role_name}2" }]
-              ).and be_idempotent
+                                                        path: "/",
+                                                        roles: [{ name: "#{role_name}2" }]).and be_idempotent
             end
           end
-
         end
       end
-
     end
-
   end
 end

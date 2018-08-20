@@ -10,7 +10,7 @@ class Chef::Resource::AwsRdsSubnetGroup < Chef::Provisioning::AWSDriver::AWSRDSR
   attribute :name, kind_of: String, name_attribute: true
   attribute :description, kind_of: String, required: true
   attribute :subnets,
-            kind_of: [ String, Array, AwsSubnet, ::Aws::EC2::Subnet ],
+            kind_of: [String, Array, AwsSubnet, ::Aws::EC2::Subnet],
             required: true,
             coerce: proc { |v| [v].flatten }
 

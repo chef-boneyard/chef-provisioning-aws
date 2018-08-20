@@ -7,17 +7,17 @@ machine "ref-machine-1" do
 end
 
 machine "ref-machine-1" do
-  machine_options aws_tags: { :marco => "polo", :happyhappy => "joyjoy" }
+  machine_options aws_tags: { marco: "polo", happyhappy: "joyjoy" }
   converge false
 end
 
 machine "ref-machine-1" do
-  machine_options aws_tags: { :othercustomtags => "byebye" }
+  machine_options aws_tags: { othercustomtags: "byebye" }
   converge false
 end
 
 machine "ref-machine-1" do
-  machine_options aws_tags: { :Name => "new-name" }
+  machine_options aws_tags: { Name: "new-name" }
   converge false
 end
 
@@ -27,11 +27,11 @@ end
 
 machine_batch "ref-batch" do
   machine "ref-machine-2" do
-    machine_options aws_tags: { :marco => "polo", :happyhappy => "joyjoy" }
+    machine_options aws_tags: { marco: "polo", happyhappy: "joyjoy" }
     converge false
   end
   machine "ref-machine-3" do
-    machine_options aws_tags: { :othercustomtags => "byebye" }
+    machine_options aws_tags: { othercustomtags: "byebye" }
     converge false
   end
 end
@@ -41,11 +41,11 @@ load_balancer "ref-elb" do
 end
 
 load_balancer "ref-elb" do
-  load_balancer_options aws_tags: { :marco => "polo", :happyhappy => "joyjoy" }
+  load_balancer_options aws_tags: { marco: "polo", happyhappy: "joyjoy" }
 end
 
 load_balancer "ref-elb" do
-  load_balancer_options aws_tags: { :othercustomtags => "byebye" }
+  load_balancer_options aws_tags: { othercustomtags: "byebye" }
 end
 
 load_balancer "ref-elb" do
@@ -57,13 +57,13 @@ machine_batch "ref-batch" do
 end
 
 machine_image "ref-image" do
-  image_options aws_tags: { :marco => "polo", :happyhappy => "joyjoy" }
+  image_options aws_tags: { marco: "polo", happyhappy: "joyjoy" }
 end
 
 # There is a bug where machine_images do not update - so we cannot update
 # the tags on it
 machine_image "ref-image" do
-  image_options aws_tags: { :othercustomtags => "byebye" }
+  image_options aws_tags: { othercustomtags: "byebye" }
 end
 
 machine_image "ref-image" do

@@ -21,7 +21,6 @@ end
 
 module Chef::Provisioning::AWSDriver::TaggingStrategy
   class AutoScaling
-
     attr_reader :auto_scaling_client, :group_name, :desired_tags
 
     def initialize(auto_scaling_client, group_name, desired_tags)
@@ -32,20 +31,20 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
 
     def current_tags
       # http://docs.aws.amazon.com/sdkforruby/api/Aws/AutoScaling/Client.html#describe_tags-instance_method
-      resp = auto_scaling_client.describe_tags({
+      resp = auto_scaling_client.describe_tags(
         filters: [
           {
             name: "auto-scaling-group",
             values: [group_name]
           }
         ]
-      })
+      )
       Hash[resp.tags.map { |t| [t.key, t.value] }]
     end
 
     def set_tags(tags)
       # http://docs.aws.amazon.com/sdkforruby/api/Aws/AutoScaling/Client.html#create_or_update_tags-instance_method
-      auto_scaling_client.create_or_update_tags({
+      auto_scaling_client.create_or_update_tags(
         tags: tags.map do |k, v|
           {
             resource_id: group_name,
@@ -55,12 +54,12 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
             propagate_at_launch: false
           }
         end
-      })
+      )
     end
 
     def delete_tags(tag_keys)
       # http://docs.aws.amazon.com/sdkforruby/api/Aws/AutoScaling/Client.html#delete_tags-instance_method
-      auto_scaling_client.delete_tags({
+      auto_scaling_client.delete_tags(
         tags: tag_keys.map do |k|
           {
             resource_id: group_name,
@@ -70,8 +69,7 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
             propagate_at_launch: false
           }
         end
-      })
+      )
     end
-
   end
 end

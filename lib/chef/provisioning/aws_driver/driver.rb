@@ -37,8 +37,8 @@ AWS_V2_SERVICES = {
   "RDS" => "rds",
   "CloudWatch" => "cloudwatch",
   "AutoScaling" => "auto_scaling"
-}
-Aws.eager_autoload!(:services => AWS_V2_SERVICES.keys)
+}.freeze
+Aws.eager_autoload!(services: AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess
 # up AWS loading if they are loaded too early
@@ -70,7 +70,7 @@ class Chef
       # This is totally a hack until we move away from base resources
       def get_machine_spec!(machine_name)
         if machine_name =~ /^i-[0-9a-f]+/
-          Struct.new(:name, :reference).new(machine_name, { "instance_id" => machine_name })
+          Struct.new(:name, :reference).new(machine_name, "instance_id" => machine_name)
         else
           Chef::Log.debug "Getting machine spec for #{machine_name}"
           Provisioning.chef_managed_entry_store(new_resource.chef_server).get!(:machine, machine_name)
@@ -89,7 +89,6 @@ class Chef
     module AWSDriver
       # Provisions machines using the AWS SDK
       class Driver < Chef::Provisioning::Driver
-
         include Chef::Mixin::ShellOut
         include Chef::Mixin::DeepMerge
 
@@ -120,16 +119,16 @@ class Chef
             logger: Chef::Log.logger
           )
 
-          # TODO document how users could add something to the Aws.config themselves if they want to
+          # TODO: document how users could add something to the Aws.config themselves if they want to
           # Right now we are supporting both V1 and V2, so we create 2 config sets
-          credentials2 = Credentials2.new(:profile_name => profile_name)
+          credentials2 = Credentials2.new(profile_name: profile_name)
           Chef::Config.chef_provisioning ||= {}
           @aws_config_2 = {
             credentials: credentials2.get_credentials,
             region: region || ENV["AWS_DEFAULT_REGION"] || credentials[:region],
-            # TODO when we get rid of V1 replace the credentials class with something that knows how
+            # TODO: when we get rid of V1 replace the credentials class with something that knows how
             # to read ~/.aws/config
-            :http_proxy => credentials[:proxy_uri] || nil,
+            http_proxy: credentials[:proxy_uri] || nil,
             logger: Chef::Log.logger,
             retry_limit: Chef::Config.chef_provisioning[:aws_retry_limit] || 5
           }
@@ -164,7 +163,7 @@ class Chef
         end
 
         def self.canonicalize_url(driver_url, config)
-          [ driver_url, config ]
+          [driver_url, config]
         end
 
         def deep_symbolize_keys(hash_like)
@@ -178,11 +177,9 @@ class Chef
             return hash_like
           end
           # Otherwise return ourselves if not a hash
-          return hash_like if not hash_like.respond_to?(:values)
+          return hash_like unless hash_like.respond_to?(:values)
           # Otherwise we are hash like, push on through...
-          if hash_like.nil? || hash_like.empty?
-            return {}
-          end
+          return {} if hash_like.nil? || hash_like.empty?
           r = {}
           hash_like.each do |key, value|
             value = deep_symbolize_keys(value) if value.respond_to?(:values) || value.is_a?(Array)
@@ -221,7 +218,7 @@ class Chef
             perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
             Chef::Log.debug "AWS Load Balancer options: #{lb_options.inspect}"
 
-            updates = [ "create load balancer #{lb_spec.name} in #{region}" ]
+            updates = ["create load balancer #{lb_spec.name} in #{region}"]
             updates << "  enable availability zones #{lb_options[:availability_zones]}" if lb_options[:availability_zones]
             updates << "  attach subnets #{lb_options[:subnets].join(', ')}" if lb_options[:subnets]
             updates << "  with listeners #{lb_options[:listeners]}" if lb_options[:listeners]
@@ -232,7 +229,7 @@ class Chef
               # IAM says the server certificate exists, but ELB throws this error
               Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::ElasticLoadBalancing::Errors::CertificateNotFound) do
                 lb_options[:listeners].each do |listener|
-                  if listener.has_key?(:server_certificate)
+                  if listener.key?(:server_certificate)
                     listener[:ssl_certificate_id] = listener.delete(:server_certificate)
                     listener[:ssl_certificate_id] = listener[:ssl_certificate_id][:arn]
                   end
@@ -247,7 +244,7 @@ class Chef
 
               lb_spec.reference = {
                 "driver_version" => Chef::Provisioning::AWSDriver::VERSION,
-                "allocated_at" => Time.now.utc.to_s,
+                "allocated_at" => Time.now.utc.to_s
               }
               lb_spec.driver_url = driver_url
             end
@@ -255,12 +252,12 @@ class Chef
             # Header gets printed the first time we make an update
             perform_action = proc do |desc, &block|
               perform_action = proc { |desc, &block| action_handler.perform_action(desc, &block) }
-              action_handler.perform_action [ "Update load balancer #{lb_spec.name} in #{region}", desc ].flatten, &block
+              action_handler.perform_action ["Update load balancer #{lb_spec.name} in #{region}", desc].flatten, &block
             end
 
             # TODO: refactor this whole giant method into many smaller method calls
             if lb_options[:scheme] && lb_options[:scheme].downcase != actual_elb.scheme
-              # TODO CloudFormation automatically recreates the load_balancer, we should too
+              # TODO: CloudFormation automatically recreates the load_balancer, we should too
               raise "Scheme is immutable - you need to :destroy and :create the load_balancer to recreated it with the new scheme"
             end
 
@@ -305,10 +302,10 @@ class Chef
                   # AZ because this duplicates the create logic
                   zone = zone.downcase
                   filters = [
-                    { :name => "availabilityZone", :values => [zone] },
-                    { :name => "defaultForAz", :values => ["true"] }
+                    { name: "availabilityZone", values: [zone] },
+                    { name: "defaultForAz", values: ["true"] }
                   ]
-                  default_subnet = ec2_client.describe_subnets(:filters => filters)[:subnets]
+                  default_subnet = ec2_client.describe_subnets(filters: filters)[:subnets]
                   if default_subnet.size != 1
                     raise "Could not find default subnet in availability zone #{zone}"
                   end
@@ -317,7 +314,7 @@ class Chef
                 end
               end
               unless lb_options[:subnets].nil? || lb_options[:subnets].empty?
-                subnet_query = ec2_client.describe_subnets(:subnet_ids => lb_options[:subnets])[:subnets]
+                subnet_query = ec2_client.describe_subnets(subnet_ids: lb_options[:subnets])[:subnets]
                 # AWS raises an error on an unknown subnet, but not an unknown AZ
                 subnet_query.each do |subnet|
                   zone = subnet[:availability_zone].downcase
@@ -338,11 +335,11 @@ class Chef
                       subnets: attach_subnets
                     )
                   rescue ::Aws::ElasticLoadBalancing::Errors::InvalidConfigurationRequest => e
-                    Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " +
-                      "Amazon does not have an atomic operation which allows this.  You must create a new " +
-                      "ELB with the correct subnets and move instances into it.  Tried to attach subets " +
-                      "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " +
-                      "existing ELB named #{actual_elb.load_balancer_name}"
+                    Chef::Log.error "You cannot currently move from 1 subnet to another in the same availability zone. " \
+                                    "Amazon does not have an atomic operation which allows this.  You must create a new " \
+                                    "ELB with the correct subnets and move instances into it.  Tried to attach subets " \
+                                    "#{attach_subnets.join(', ')} (availability zones #{enable_zones.join(', ')}) to " \
+                                    "existing ELB named #{actual_elb.load_balancer_name}"
                     raise e
                   end
                 end
@@ -388,36 +385,36 @@ class Chef
 
                   if !immutable_updates.empty?
                     perform_action.call(immutable_updates) do
-                      elb.delete_load_balancer_listeners({ load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port] })
-                      elb.create_load_balancer_listeners({ listeners: [desired_listener], load_balancer_name: actual_elb.load_balancer_name })
+                      elb.delete_load_balancer_listeners(load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port])
+                      elb.create_load_balancer_listeners(listeners: [desired_listener], load_balancer_name: actual_elb.load_balancer_name)
                       # actual_elb.listeners.create(desired_listener)
                     end
-                  elsif listener.ssl_certificate_id && ! server_certificate_eql?(listener.ssl_certificate_id,
-                                                  server_cert_from_spec(desired_listener))
+                  elsif listener.ssl_certificate_id && !server_certificate_eql?(listener.ssl_certificate_id,
+                                                                                server_cert_from_spec(desired_listener))
                     # Server certificate is mutable - if no immutable changes required a full recreate, update cert
                     perform_action.call("    update server certificate from #{listener.ssl_certificate_id} to #{server_cert_from_spec(desired_listener)}") do
-                      elb.set_load_balancer_listener_ssl_certificate({
+                      elb.set_load_balancer_listener_ssl_certificate(
                         load_balancer_name: actual_elb.load_balancer_name,
                         load_balancer_port: listener.load_balancer_port,
                         ssl_certificate_id: server_cert_from_spec(desired_listener)
-                        })
+                      )
                     end
                   end
                 else
                   perform_action.call("  remove listener #{listener.load_balancer_port}") do
-                    elb.delete_load_balancer_listeners({ load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port] })
+                    elb.delete_load_balancer_listeners(load_balancer_name: actual_elb.load_balancer_name, load_balancer_ports: [listener.load_balancer_port])
                   end
                 end
               end
 
               add_listeners.values.each do |listener|
-                updates = [ "  add listener #{listener[:load_balancer_port]}" ]
+                updates = ["  add listener #{listener[:load_balancer_port]}"]
                 updates << "    set protocol to #{listener[:protocol].inspect}"
                 updates << "    set instance port to #{listener[:instance_port].inspect}"
                 updates << "    set instance protocol to #{listener[:instance_protocol].inspect}"
                 updates << "    set server certificate to #{server_cert_from_spec(listener)}" if server_cert_from_spec(listener)
                 perform_action.call(updates) do
-                  elb.create_load_balancer_listeners({ listeners: [listener], load_balancer_name: actual_elb.load_balancer_name })
+                  elb.create_load_balancer_listeners(listeners: [listener], load_balancer_name: actual_elb.load_balancer_name)
                 end
               end
             end
@@ -493,19 +490,17 @@ class Chef
             sticky_sessions[:ports].each do |ss_port|
               listener = listeners.detect { |ld| ld[:listener][:load_balancer_port] == ss_port }
 
-              unless listener.nil?
-                policy_names = listener[:policy_names]
+              next if listener.nil?
+              policy_names = listener[:policy_names]
 
-                unless policy_names.include?(policy_name)
-                  policy_names << policy_name
+              next if policy_names.include?(policy_name)
+              policy_names << policy_name
 
-                  elb.set_load_balancer_policies_of_listener(
-                    load_balancer_name: actual_elb.load_balancer_name,
-                    load_balancer_port: ss_port,
-                    policy_names: policy_names
-                  )
-                end
-              end
+              elb.set_load_balancer_policies_of_listener(
+                load_balancer_name: actual_elb.load_balancer_name,
+                load_balancer_port: ss_port,
+                policy_names: policy_names
+              )
             end
           end
 
@@ -513,39 +508,37 @@ class Chef
           if machine_specs
             instances_to_add = []
             if actual_elb.instances
-              assigned_instance_ids = actual_elb.instances.map { |i| i.instance_id }
-              instances_to_add = machine_specs.select { |s| !assigned_instance_ids.include?(s.reference["instance_id"]) }
+              assigned_instance_ids = actual_elb.instances.map(&:instance_id)
+              instances_to_add = machine_specs.reject { |s| assigned_instance_ids.include?(s.reference["instance_id"]) }
               instance_ids_to_remove = assigned_instance_ids - machine_specs.map { |s| s.reference["instance_id"] }
             end
 
-            if instances_to_add.size > 0
-              perform_action.call("  add machines #{instances_to_add.map { |s| s.name }.join(', ')}") do
+            unless instances_to_add.empty?
+              perform_action.call("  add machines #{instances_to_add.map(&:name).join(', ')}") do
                 instance_ids_to_add = instances_to_add.map { |s| s.reference["instance_id"] }
                 Chef::Log.debug("Adding instances #{instance_ids_to_add.join(', ')} to load balancer #{actual_elb.load_balancer_name} in region #{region}")
                 instances_to_add.each do |instance|
-                  elb.register_instances_with_load_balancer({ instances: [ { instance_id: instance.reference["instance_id"] }], load_balancer_name: actual_elb.load_balancer_name })
+                  elb.register_instances_with_load_balancer(instances: [{ instance_id: instance.reference["instance_id"] }], load_balancer_name: actual_elb.load_balancer_name)
                 end
               end
             end
 
-            if instance_ids_to_remove.size > 0
+            unless instance_ids_to_remove.empty?
               perform_action.call("  remove instances #{instance_ids_to_remove}") do
                 instances_to_remove = Hash[instance_ids_to_remove.map { |id| [:instance_id, id] }]
-                elb.deregister_instances_from_load_balancer({ instances: [instances_to_remove], load_balancer_name: actual_elb.load_balancer_name })
+                elb.deregister_instances_from_load_balancer(instances: [instances_to_remove], load_balancer_name: actual_elb.load_balancer_name)
               end
             end
           end
 
           # We have successfully switched all our instances to the (possibly) new LB
           # so it is safe to delete the old one.
-          unless old_elb.nil?
-            old_elb.delete
-          end
+          old_elb.delete unless old_elb.nil?
         ensure
           # Something went wrong before we could moved instances from the old ELB to the new one
           # Don't delete the old ELB, but warn users there could now be 2 ELBs with the same name
           unless old_elb.nil?
-            Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.load_balancer_name} and #{actual_elb.load_balancer_name}. " +
+            Chef::Log.warn("It is possible there are now 2 ELB instances - #{old_elb.load_balancer_name} and #{actual_elb.load_balancer_name}. " \
             "Determine which is correct and manually clean up the other.")
           end
         end
@@ -559,7 +552,7 @@ class Chef
         end
 
         def server_cert_to_string(cert)
-          if cert.is_a?(Hash) && cert.has_key?(:arn)
+          if cert.is_a?(Hash) && cert.key?(:arn)
             cert[:arn]
           else
             cert
@@ -573,13 +566,10 @@ class Chef
             spec[:server_certificate]
           elsif spec[:ssl_certificate_id]
             spec[:ssl_certificate_id]
-          else
-            nil
           end
         end
 
-        def ready_load_balancer(action_handler, lb_spec, lb_options, machine_spec)
-        end
+        def ready_load_balancer(action_handler, lb_spec, lb_options, machine_spec); end
 
         def destroy_load_balancer(action_handler, lb_spec, lb_options)
           lb_options = deep_symbolize_keys(lb_options)
@@ -589,7 +579,7 @@ class Chef
           if actual_elb
             # Remove ELB from AWS
             action_handler.perform_action "Deleting EC2 ELB #{lb_spec.id}" do
-              elb.delete_load_balancer({ load_balancer_name: actual_elb.load_balancer_name })
+              elb.delete_load_balancer(load_balancer_name: actual_elb.load_balancer_name)
             end
           end
 
@@ -642,7 +632,7 @@ class Chef
 
         def destroy_image(action_handler, image_spec, image_options)
           image_options = deep_symbolize_keys(image_options)
-          # TODO the driver should automatically be set by `inline_resource`
+          # TODO: the driver should automatically be set by `inline_resource`
           d = self
           Provisioning.inline_resource(action_handler) do
             aws_image image_spec.name do
@@ -728,7 +718,7 @@ EOD
         end
 
         def allocate_machines(action_handler, specs_and_options, parallelizer)
-          create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, server|
+          create_servers(action_handler, specs_and_options, parallelizer) do |machine_spec, _server|
             yield machine_spec
           end
           specs_and_options.keys
@@ -774,11 +764,11 @@ EOD
         end
 
         def connect_to_machine(name, chef_server = nil)
-          if name.is_a?(MachineSpec)
-            machine_spec = name
-          else
-            machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
-          end
+          machine_spec = if name.is_a?(MachineSpec)
+                           name
+                         else
+                           Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
+                         end
 
           machine_for(machine_spec, machine_spec.reference)
         end
@@ -809,7 +799,7 @@ EOD
             end
           end
 
-          # TODO move this into the aws_instance provider somehow
+          # TODO: move this into the aws_instance provider somehow
           strategy = convergence_strategy_for(machine_spec, machine_options)
           strategy.cleanup_convergence(action_handler, machine_spec)
         end
@@ -829,7 +819,7 @@ EOD
         @#{short_name}_resource ||= ::Aws::#{load_name}::Resource.new(**(aws_config_2.merge({client: #{short_name}_client})))
       end
 
-      META
+          META
         end
 
         def elb
@@ -849,7 +839,7 @@ EOD
         end
 
         def s3_client
-          @s3 ||= ::Aws::S3::Client.new( aws_config)
+          @s3 ||= ::Aws::S3::Client.new(aws_config)
         end
 
         def sns
@@ -890,7 +880,7 @@ EOD
             if e.to_s !~ /\b(arn:aws:iam::[0-9]{12}:\S*)/
               raise "IAM error response for GetUser did not include user ARN.  Can't retrieve account ID."
             end
-            arn = $1
+            arn = Regexp.last_match(1)
           end
           parse_arn(arn)[:account_id]
         end
@@ -901,7 +891,7 @@ EOD
         def machine_for(machine_spec, machine_options, instance = nil)
           instance ||= instance_for(machine_spec)
 
-          if !instance
+          unless instance
             raise "Instance for node #{machine_spec.name} has not been created!"
           end
 
@@ -914,16 +904,14 @@ EOD
 
         def bootstrap_options_for(action_handler, machine_spec, machine_options)
           bootstrap_options = deep_symbolize_keys(machine_options[:bootstrap_options])
-          if bootstrap_options.nil?
-            bootstrap_options = Hash({})
-          end
+          bootstrap_options = Hash({}) if bootstrap_options.nil?
           # These are hardcoded for now - only 1 machine at a time
           bootstrap_options[:min_count] = bootstrap_options[:max_count] = 1
           bootstrap_options[:instance_type] ||= default_instance_type
           image_id = machine_options[:from_image] || bootstrap_options[:image_id] || machine_options[:image_id] || default_ami_for_region(region)
           bootstrap_options[:image_id] = image_id
           bootstrap_options.delete(:key_path)
-          if !bootstrap_options[:key_name]
+          unless bootstrap_options[:key_name]
             Chef::Log.debug("No key specified, generating a default one...")
             bootstrap_options[:key_name] = default_aws_keypair(action_handler, machine_spec)
           end
@@ -945,9 +933,7 @@ EOD
           unless bootstrap_options.fetch(:dedicated_tenancy, nil).nil?
             placement[:tenancy] = bootstrap_options.delete(:dedicated_tenancy) ? "dedicated" : "default"
           end
-          unless placement.empty?
-            bootstrap_options[:placement] = placement
-          end
+          bootstrap_options[:placement] = placement unless placement.empty?
           if bootstrap_options[:subnet]
             bootstrap_options[:subnet_id] = bootstrap_options.delete(:subnet)
           end
@@ -958,12 +944,12 @@ EOD
           if machine_options[:is_windows]
             Chef::Log.debug "Setting Default windows userdata based on WinRM transport"
             if bootstrap_options[:user_data].nil?
-              case machine_options[:winrm_transport]
-              when "https"
-                data = https_user_data
-              else
-                data = user_data
-              end
+              data = case machine_options[:winrm_transport]
+                     when "https"
+                       https_user_data
+                     else
+                       user_data
+                     end
               bootstrap_options[:user_data] = Base64.encode64(data)
             end
           else
@@ -980,9 +966,9 @@ EOD
               raise "If you specify network_interfaces you must specify associate_public_ip_address in that list"
             end
             network_interface = {
-              :device_index => 0,
-              :associate_public_ip_address => bootstrap_options.delete(:associate_public_ip_address),
-              :delete_on_termination => true
+              device_index: 0,
+              associate_public_ip_address: bootstrap_options.delete(:associate_public_ip_address),
+              delete_on_termination: true
             }
             if bootstrap_options[:subnet_id]
               network_interface[:subnet_id] = bootstrap_options.delete(:subnet_id)
@@ -1016,7 +1002,7 @@ EOD
           if bootstrap_options[:key_name]
             keypair_name = bootstrap_options[:key_name]
             actual_key_pair = ec2_resource.key_pair(keypair_name)
-            if !actual_key_pair.exists?
+            unless actual_key_pair.exists?
               ec2_resource.key_pairs.create(keypair_name)
             end
             actual_key_pair
@@ -1163,14 +1149,14 @@ EOD
             false # disallow Basic auth by default
           no_ssl_peer_verification = machine_spec.reference["winrm_no_ssl_peer_verification"] ||
             machine_options[:winrm_no_ssl_peer_verification] ||
-            false #disallow MITM potential by default
+            false # disallow MITM potential by default
 
           winrm_options = {
             user: username,
             pass: password,
             disable_sspi: disable_sspi,
             basic_auth_only: basic_auth_only,
-            no_ssl_peer_verification: no_ssl_peer_verification,
+            no_ssl_peer_verification: no_ssl_peer_verification
           }
 
           if no_ssl_peer_verification || (type != :ssl)
@@ -1202,9 +1188,11 @@ EOD
             winrm_cert = ssl_connection.peer_cert_chain.first
 
             rdp_thumbprint = console_lines.grep(
-              /RDPCERTIFICATE-THUMBPRINT/)[-1].split(": ").last.chomp
+              /RDPCERTIFICATE-THUMBPRINT/
+            )[-1].split(": ").last.chomp
             rdp_subject = console_lines.grep(
-              /RDPCERTIFICATE-SUBJECTNAME/)[-1].split(": ").last.chomp
+              /RDPCERTIFICATE-SUBJECTNAME/
+            )[-1].split(": ").last.chomp
             winrm_subject = winrm_cert.subject.to_s.split("=").last.upcase
             winrm_thumbprint = OpenSSL::Digest::SHA1.new(winrm_cert.to_der).to_s.upcase
 
@@ -1227,26 +1215,26 @@ EOD
             winrm_options[:ssl_peer_fingerprint] = machine_spec.reference["winrm_ssl_thumbprint"]
           end
 
-          Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, winrm_options, {})
+          Chef::Provisioning::Transport::WinRM.new(endpoint.to_s, type, winrm_options, {})
         end
 
         def create_ssh_transport(machine_spec, machine_options, instance)
           ssh_options = ssh_options_for(machine_spec, machine_options, instance)
           username = machine_spec.reference["ssh_username"] || machine_options[:ssh_username] || default_ssh_username
-          if machine_options.has_key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.reference["ssh_username"]
+          if machine_options.key?(:ssh_username) && machine_options[:ssh_username] != machine_spec.reference["ssh_username"]
             Chef::Log.warn("Server #{machine_spec.name} was created with SSH username #{machine_spec.reference['ssh_username']} and machine_options specifies username #{machine_options[:ssh_username]}.  Using #{machine_spec.reference['ssh_username']}.  Please edit the node and change the chef_provisioning.reference.ssh_username attribute if you want to change it.")
           end
           options = {}
-          if machine_spec.reference[:sudo] || (!machine_spec.reference.has_key?(:sudo) && username != "root")
+          if machine_spec.reference[:sudo] || (!machine_spec.reference.key?(:sudo) && username != "root")
             options[:prefix] = "sudo "
           end
 
           remote_host = determine_remote_host(machine_spec, instance)
 
-          #Enable pty by default
+          # Enable pty by default
           options[:ssh_pty_enable] = true
 
-          if machine_spec.reference.has_key?("ssh_gateway")
+          if machine_spec.reference.key?("ssh_gateway")
             options[:ssh_gateway] = machine_spec.reference["ssh_gateway"]
           elsif machine_options[:ssh_gateway]
             options[:ssh_gateway] = machine_options[:ssh_gateway]
@@ -1297,23 +1285,23 @@ EOD
           elsif machine_options[:bootstrap_options] && machine_options[:bootstrap_options][:key_name]
             get_private_key(machine_options[:bootstrap_options][:key_name])
           else
-            # TODO make a way to suggest other keys to try ...
+            # TODO: make a way to suggest other keys to try ...
             raise "No key found to connect to #{machine_spec.name} (#{machine_spec.reference.inspect})!"
           end
         end
 
         def ssh_options_for(machine_spec, machine_options, instance)
           result = {
-            # TODO create a user known hosts file
+            # TODO: create a user known hosts file
             #          :user_known_hosts_file => vagrant_ssh_config['UserKnownHostsFile'],
             #          :paranoid => true,
-            :auth_methods => [ "publickey" ],
-            :keys_only => true,
-            :host_key_alias => "#{instance.id}.AWS"
+            auth_methods: ["publickey"],
+            keys_only: true,
+            host_key_alias: "#{instance.id}.AWS"
           }.merge(machine_options[:ssh_options] || {})
-          unless result.has_key?(:key_data)
+          unless result.key?(:key_data)
             result[:keys_only] = true
-            result[:key_data] = [ private_key_for(machine_spec, machine_options, instance) ]
+            result[:key_data] = [private_key_for(machine_spec, machine_options, instance)]
           end
           result
         end
@@ -1322,11 +1310,12 @@ EOD
           # Tell Ohai that this is an EC2 instance so that it runs the EC2 plugin
           convergence_options = Cheffish::MergedConfig.new(
             machine_options[:convergence_options] || {},
-            ohai_hints: { "ec2" => "" })
+            ohai_hints: { "ec2" => "" }
+          )
           convergence_options = deep_symbolize_keys(convergence_options)
 
           # Defaults
-          if !machine_spec.reference
+          unless machine_spec.reference
             return Chef::Provisioning::ConvergenceStrategy::NoConverge.new(convergence_options, config)
           end
 
@@ -1344,7 +1333,7 @@ EOD
           action_handler.report_progress "Image #{image_spec.name} is now ready"
         end
 
-        def wait_until_image(action_handler, image_spec, image = nil, &block)
+        def wait_until_image(action_handler, image_spec, image = nil)
           image ||= image_for(image_spec)
           sleep_time = 10
           unless yield(image)
@@ -1352,10 +1341,10 @@ EOD
               action_handler.report_progress "waiting for #{image_spec.name} (#{image.id} on #{driver_url}) to be ready ..."
               max_wait_time = Chef::Config.chef_provisioning[:image_max_wait_time] || 300
               Retryable.retryable(
-                :tries => (max_wait_time / sleep_time).to_i,
-                :sleep => sleep_time,
-                :matching => /did not become ready within/
-              ) do |retries, exception|
+                tries: (max_wait_time / sleep_time).to_i,
+                sleep: sleep_time,
+                matching: /did not become ready within/
+              ) do |retries, _exception|
                 action_handler.report_progress "been waiting #{retries * sleep_time}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{image_spec.name} (#{image.id} on #{driver_url}) to become ready ..."
                 # We have to manually reload the instance each loop, otherwise data is stale
                 image.reload
@@ -1373,7 +1362,7 @@ EOD
           end
         end
 
-        def wait_until_machine(action_handler, machine_spec, output_msg, instance = nil, &block)
+        def wait_until_machine(action_handler, machine_spec, output_msg, instance = nil)
           instance ||= instance_for(machine_spec)
           sleep_time = 10
           unless yield(instance)
@@ -1381,10 +1370,10 @@ EOD
               action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
               max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
               Retryable.retryable(
-                :tries => (max_wait_time / sleep_time).to_i,
-                :sleep => sleep_time,
-                :matching => /did not #{output_msg} within/
-              ) do |retries, exception|
+                tries: (max_wait_time / sleep_time).to_i,
+                sleep: sleep_time,
+                matching: /did not #{output_msg} within/
+              ) do |retries, _exception|
                 action_handler.report_progress "been waiting #{sleep_time * retries}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to #{output_msg} ..."
                 # We have to manually reload the instance each loop, otherwise data is stale
                 instance.reload
@@ -1405,10 +1394,10 @@ EOD
               action_handler.report_progress "waiting for #{machine_spec.name} (#{instance.id} on #{driver_url}) to be connectable (transport up and running) ..."
               max_wait_time = Chef::Config.chef_provisioning[:machine_max_wait_time] || 120
               Retryable.retryable(
-                :tries => (max_wait_time / sleep_time).to_i,
-                :sleep => sleep_time,
-                :matching => /did not become connectable within/
-              ) do |retries, exception|
+                tries: (max_wait_time / sleep_time).to_i,
+                sleep: sleep_time,
+                matching: /did not become connectable within/
+              ) do |retries, _exception|
                 action_handler.report_progress "been waiting #{sleep_time * retries}/#{max_wait_time} -- sleeping #{sleep_time} seconds for #{machine_spec.name} (#{instance.id} on #{driver_url}) to become connectable ..."
                 unless transport.available?
                   raise "Instance #{machine_spec.name} (#{instance.id} on #{driver_url}) did not become connectable within #{max_wait_time} seconds"
@@ -1478,15 +1467,14 @@ EOD
             machine_description = if machine_specs.size == 1
                                     "machine #{machine_specs.first.name}"
                                   else
-                                    "machines #{machine_specs.map { |s| s.name }.join(", ")}"
+                                    "machines #{machine_specs.map(&:name).join(', ')}"
             end
-            description = [ "creating #{machine_description} on #{driver_url}" ]
+            description = ["creating #{machine_description} on #{driver_url}"]
             bootstrap_options.each_pair { |key, value| description << "  #{key}: #{value.inspect}" }
             action_handler.report_progress description
             if action_handler.should_perform_actions
               # Actually create the servers
-              parallelizer.parallelize(1.upto(machine_specs.size)) do |i|
-
+              parallelizer.parallelize(1.upto(machine_specs.size)) do |_i|
                 # Assign each one to a machine spec
                 machine_spec = machine_specs.pop
                 machine_options = specs_and_options[machine_spec]
@@ -1500,7 +1488,7 @@ EOD
                 yield machine_spec, instance if block_given?
               end.to_a
 
-              if machine_specs.size > 0
+              unless machine_specs.empty?
                 raise "Not all machines were created by create_servers"
               end
             end
@@ -1532,11 +1520,11 @@ EOD
           # IAM says the instance profile is ready, but EC2 doesn't think it is
           # Not using retry_with_backoff here because we need to match on a string
           Retryable.retryable(
-            :tries => 10,
-            :sleep => lambda { |n| [2**n, 16].min },
-            :on => ::Aws::EC2::Errors::InvalidParameterValue,
-            :matching => /Invalid IAM Instance Profile name/
-          ) do |retries, exception|
+            tries: 10,
+            sleep: ->(n) { [2**n, 16].min },
+            on: ::Aws::EC2::Errors::InvalidParameterValue,
+            matching: /Invalid IAM Instance Profile name/
+          ) do |_retries, exception|
             Chef::Log.debug("Instance creation InvalidParameterValue exception is #{exception.inspect}")
             instance = ec2_resource.create_instances(bootstrap_options.to_hash)[0]
           end
@@ -1546,25 +1534,25 @@ EOD
 
           # Sometimes tagging fails even though the instance 'exists'
           Chef::Provisioning::AWSDriver::AWSProvider.retry_with_backoff(::Aws::EC2::Errors::InvalidInstanceIDNotFound) do
-            instance.create_tags({ tags: [{ key: "Name", value: machine_spec.name }] })
+            instance.create_tags(tags: [{ key: "Name", value: machine_spec.name }])
           end
-          if machine_options.has_key?(:source_dest_check)
-            instance.modify_attribute({
+          if machine_options.key?(:source_dest_check)
+            instance.modify_attribute(
               source_dest_check: {
                 value: machine_options[:source_dest_check]
               }
-            })
+            )
           end
           machine_spec.reference = {
-              "driver_version" => Chef::Provisioning::AWSDriver::VERSION,
-              "allocated_at" => Time.now.utc.to_s,
-              "host_node" => action_handler.host_node,
-              "image_id" => bootstrap_options[:image_id],
-              "instance_id" => instance.id
+            "driver_version" => Chef::Provisioning::AWSDriver::VERSION,
+            "allocated_at" => Time.now.utc.to_s,
+            "host_node" => action_handler.host_node,
+            "image_id" => bootstrap_options[:image_id],
+            "instance_id" => instance.id
           }
           machine_spec.driver_url = driver_url
           machine_spec.reference["key_name"] = bootstrap_options[:key_name] if bootstrap_options[:key_name]
-          # TODO 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
+          # TODO: 2.0 We no longer support `use_private_ip_for_ssh`, only `transport_address_location`
           if machine_options[:use_private_ip_for_ssh]
             unless @transport_address_location_warned
               Chef::Log.warn("The machine_option ':use_private_ip_for_ssh' has been deprecated, use ':transport_address_location'")
@@ -1595,7 +1583,7 @@ EOD
           when nil
             nil
           else
-            [ get_listener(listeners) ]
+            [get_listener(listeners)]
           end
         end
 
@@ -1640,17 +1628,16 @@ EOD
         end
 
         PORT_DEFAULTS = {
-          :http => 80,
-          :https => 443,
-        }
+          http: 80,
+          https: 443
+        }.freeze
         PROTOCOL_DEFAULTS = {
           25 => :tcp,
           80 => :http,
           443 => :https,
           465 => :ssl,
-          587 => :tcp,
-        }
-
+          587 => :tcp
+        }.freeze
       end
     end
   end

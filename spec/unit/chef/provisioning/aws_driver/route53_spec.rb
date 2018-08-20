@@ -6,7 +6,6 @@ describe ::Aws::Route53::Types::ResourceRecordSet do
 end
 
 describe Chef::Resource::AwsRoute53RecordSet do
-
   let(:resource_name) { "test_resource" }
   let(:zone_name) { "blerf.net" }
   let(:resource) do
@@ -27,16 +26,15 @@ describe Chef::Resource::AwsRoute53RecordSet do
     resource.type("A")
     resource.resource_records(["141.222.1.1", "8.8.8.8"])
 
-    expect(resource.to_aws_struct).to eq({ :name => "foo.blerf.net",
-                                           :type => "A",
-                                           :ttl => 900,
-                                           :resource_records => [{ :value => "141.222.1.1" }, { :value => "8.8.8.8" }]
-                                           })
+    expect(resource.to_aws_struct).to eq(name: "foo.blerf.net",
+                                         type: "A",
+                                         ttl: 900,
+                                         resource_records: [{ value: "141.222.1.1" }, { value: "8.8.8.8" }])
   end
 
   context "#validate_rr_type" do
     it "validates MX values" do
-      correct = 2.times.map { [rand(10000), rand(36**40).to_s(36)].join(" ") }
+      correct = 2.times.map { [rand(10_000), rand(36**40).to_s(36)].join(" ") }
       expect(resource.validate_rr_type!("MX", correct)).to be_truthy
 
       incorrect = ["string content doesn't matter without a number"]
@@ -45,7 +43,7 @@ describe Chef::Resource::AwsRoute53RecordSet do
     end
 
     it "validates SRV values" do
-      correct = 2.times.map { [rand(10000), rand(10000), rand(10000), rand(36**40).to_s(36)].join(" ") }
+      correct = 2.times.map { [rand(10_000), rand(10_000), rand(10_000), rand(36**40).to_s(36)].join(" ") }
       expect(resource.validate_rr_type!("MX", correct)).to be_truthy
 
       incorrect = ["string content doesn't matter without a number"]

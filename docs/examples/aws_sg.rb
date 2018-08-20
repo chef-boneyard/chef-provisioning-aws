@@ -58,7 +58,7 @@ end
 aws_security_group "test-sg" do
   vpc "test-vpc"
   inbound_rules "0.0.0.0/0" => 80,
-                "other-sg"  => [ 80, 1024..2048 ],
+                "other-sg"  => [80, 1024..2048],
                 "127.0.0.1" => 1024..2048,
                 { load_balancer: "other-lb" } => 1024..2048
 end
@@ -66,8 +66,8 @@ end
 # Add one outbound rule, change one outbound rule, add to one outbound rule
 aws_security_group "test-sg" do
   vpc "test-vpc"
-  outbound_rules 80                 => "0.0.0.0/0",
-                 [ 80, 2048..4096 ] => "other-sg",
+  outbound_rules 80 => "0.0.0.0/0",
+                 [80, 2048..4096] => "other-sg",
                  2048..4096         => "127.0.0.1",
                  1024..2048         => { load_balancer: "other-lb" }
 end
@@ -76,11 +76,11 @@ end
 aws_security_group "test-sg" do
   vpc "test-vpc"
   inbound_rules "0.0.0.0/0"                   => 80,
-                "other-sg"                    => [ 80, 1024..2048 ],
+                "other-sg"                    => [80, 1024..2048],
                 "127.0.0.1"                   => 1024..2048,
                 { load_balancer: "other-lb" } => 1024..2048
-  outbound_rules 80                 => "0.0.0.0/0",
-                 [ 80, 2048..4096 ] => "other-sg",
+  outbound_rules 80 => "0.0.0.0/0",
+                 [80, 2048..4096] => "other-sg",
                  2048..4096         => "127.0.0.1",
                  1024..2048         => { load_balancer: "other-lb" }
 end
@@ -88,14 +88,14 @@ end
 # Idempotence (alternate way of writing it)
 aws_security_group "test-sg" do
   vpc "test-vpc"
-  inbound_rules [{ port: 80, sources: [ "0.0.0.0/0" ] },
-                { port: [ 80, 1024..2048 ], sources: [ "other-sg" ] },
-                { port: 1024..2048, sources: [ "127.0.0.1" ] },
-                { port: 1024..2048, sources: [ { load_balancer: "other-lb" } ] }]
-  outbound_rules [{ port: 80, destinations: [ "0.0.0.0/0", "other-sg" ] },
-                 { port: [ 80, 2048..4096 ], destinations: [ "other-sg" ] },
-                 { port: 2048..4096, destinations: [ "other-sg", "127.0.0.1" ] },
-                 { port: 1024..2048, destinations: [ { load_balancer: "other-lb" } ] }]
+  inbound_rules [{ port: 80, sources: ["0.0.0.0/0"] },
+                 { port: [80, 1024..2048], sources: ["other-sg"] },
+                 { port: 1024..2048, sources: ["127.0.0.1"] },
+                 { port: 1024..2048, sources: [{ load_balancer: "other-lb" }] }]
+  outbound_rules [{ port: 80, destinations: ["0.0.0.0/0", "other-sg"] },
+                  { port: [80, 2048..4096], destinations: ["other-sg"] },
+                  { port: 2048..4096, destinations: ["other-sg", "127.0.0.1"] },
+                  { port: 1024..2048, destinations: [{ load_balancer: "other-lb" }] }]
 end
 
 load_balancer "other-lb" do

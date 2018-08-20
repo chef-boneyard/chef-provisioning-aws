@@ -5,7 +5,6 @@ describe Chef::Resource::AwsInternetGateway do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "with a VPC" do
-
       purge_all
       aws_vpc "test_vpc_igw_a" do
         cidr_block "10.0.0.0/24"
@@ -27,8 +26,7 @@ describe Chef::Resource::AwsInternetGateway do
             vpc test_vpc_igw_a.aws_object.id
           end
         end.to create_an_aws_internet_gateway("test_internet_gateway",
-          id: test_vpc_igw_a.aws_object.internet_gateways.first.id
-        ).and be_idempotent
+                                              id: test_vpc_igw_a.aws_object.internet_gateways.first.id).and be_idempotent
       end
 
       context "with the IGW attached to an existing VPC" do
@@ -42,8 +40,7 @@ describe Chef::Resource::AwsInternetGateway do
               vpc test_vpc_igw_b
             end
           end.to update_an_aws_internet_gateway("test_internet_gateway",
-            id: test_vpc_igw_b.aws_object.internet_gateways.first.id
-          ).and be_idempotent
+                                                id: test_vpc_igw_b.aws_object.internet_gateways.first.id).and be_idempotent
         end
       end
 
@@ -58,8 +55,7 @@ describe Chef::Resource::AwsInternetGateway do
               action :detach
             end
           end.to update_an_aws_internet_gateway("test_internet_gateway",
-            attachments: []
-          ).and be_idempotent
+                                                attachments: []).and be_idempotent
         end
       end
 
@@ -93,8 +89,7 @@ describe Chef::Resource::AwsInternetGateway do
                 vpc test_vpc_preexisting_igw.aws_object.id
               end
             end.to create_an_aws_internet_gateway("test_internet_gateway",
-              id: test_vpc_preexisting_igw.aws_object.internet_gateways.first.id
-            ).and be_idempotent
+                                                  id: test_vpc_preexisting_igw.aws_object.internet_gateways.first.id).and be_idempotent
 
             current_attached_igw = test_vpc_preexisting_igw.aws_object.internet_gateways.first.internet_gateway_id
             expect(current_attached_igw).not_to eq(old_attached_igw)
@@ -116,8 +111,7 @@ describe Chef::Resource::AwsInternetGateway do
                 internet_gateway true
               end
             end.to match_an_aws_vpc("test_vpc_preexisting_igw",
-              vpc_id: test_internet_gateway.aws_object.attachments.first.vpc_id
-            ).and be_idempotent
+                                    vpc_id: test_internet_gateway.aws_object.attachments.first.vpc_id).and be_idempotent
           end
 
           it "deletes the attachment if internet_gateway is set to false" do
@@ -127,8 +121,7 @@ describe Chef::Resource::AwsInternetGateway do
                 internet_gateway false
               end
             end.to match_an_aws_internet_gateway("test_internet_gateway",
-              attachments: []
-            ).and be_idempotent
+                                                 attachments: []).and be_idempotent
             expect(test_vpc_preexisting_igw.aws_object.internet_gateways.entries).to eq([])
           end
         end
@@ -148,15 +141,11 @@ describe Chef::Resource::AwsInternetGateway do
                 vpc "test_vpc_preexisting_igw"
               end
             end.to match_an_aws_internet_gateway("test_internet_gateway1",
-              attachments: []
-            ).and match_an_aws_internet_gateway("test_internet_gateway2",
-              id: test_vpc_preexisting_igw.aws_object.internet_gateways.first.id
-            ).and be_idempotent
+                                                 attachments: []).and match_an_aws_internet_gateway("test_internet_gateway2",
+                                                                                                    id: test_vpc_preexisting_igw.aws_object.internet_gateways.first.id).and be_idempotent
           end
-
         end
       end
     end
-
   end
 end

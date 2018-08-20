@@ -33,13 +33,13 @@ class Aws::EC2::NatGateway < ::Aws::Resources::Resource
   end
 
   def delete
-    @client.delete_nat_gateway({ nat_gateway_id: @id })
+    @client.delete_nat_gateway(nat_gateway_id: @id)
   end
 
   private
 
   def get_nat_gateway_struct
-    @client.describe_nat_gateways({ nat_gateway_ids: [@id] }).nat_gateways.first
+    @client.describe_nat_gateways(nat_gateway_ids: [@id]).nat_gateways.first
   end
 end
 
@@ -51,12 +51,11 @@ class Aws::EC2::Resource
   end
 
   def nat_gateway(nat_gateway_id)
-    ::Aws::EC2::NatGateway.new(nat_gateway_id, { client: client })
+    ::Aws::EC2::NatGateway.new(nat_gateway_id, client: client)
   end
 end
 
 class Chef::Resource::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSResourceWithEntry
-
   aws_sdk_type ::Aws::EC2::NatGateway, id: :nat_gateway_id, managed_entry_id_name: "nat_gateway_id"
 
   require "chef/resource/aws_subnet"
@@ -75,7 +74,7 @@ class Chef::Resource::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_subnet` resource.
   # - An Aws `Subnet` object.
   #
-  attribute :subnet, kind_of: [ String, AwsSubnet, ::Aws::EC2::Subnet ]
+  attribute :subnet, kind_of: [String, AwsSubnet, ::Aws::EC2::Subnet]
 
   #
   # A elastic ip address for the nat gateway.
@@ -85,7 +84,7 @@ class Chef::Resource::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_eip_address` resource.
   # - nil, meaning that no EIP exists yet and needs to be created.
   #
-  attribute :eip_address, kind_of: [ String, ::Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, nil ], default: nil
+  attribute :eip_address, kind_of: [String, ::Aws::OpsWorks::Types::ElasticIp, AwsEipAddress, nil], default: nil
 
   attribute :nat_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^nat-[A-Fa-f0-9]+$/ ? name : nil

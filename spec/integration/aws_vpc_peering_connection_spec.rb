@@ -5,7 +5,6 @@ describe Chef::Resource::AwsVpcPeeringConnection do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "with 2 VPCs" do
-
       aws_vpc "test_vpc" do
         cidr_block "10.0.0.0/24"
         internet_gateway false
@@ -36,10 +35,9 @@ describe Chef::Resource::AwsVpcPeeringConnection do
             peer_vpc "test_vpc_2"
           end
         end.to create_an_aws_vpc_peering_connection("test_peering_connection",
-          :'requester_vpc_info.vpc_id' => test_vpc.aws_object.id,
-          :'accepter_vpc_info.vpc_id' => test_vpc_2.aws_object.id,
-          :'status.code' => "active"
-        ).and be_idempotent
+                                                    'requester_vpc_info.vpc_id': test_vpc.aws_object.id,
+                                                    'accepter_vpc_info.vpc_id': test_vpc_2.aws_object.id,
+                                                    'status.code': "active").and be_idempotent
       end
 
       it "aws_peering_connection 'test_peering_connection' with peer_owner_id set to be the actual account id, creates an active peering" do
@@ -50,10 +48,9 @@ describe Chef::Resource::AwsVpcPeeringConnection do
             peer_owner_id driver.account_id
           end
         end.to create_an_aws_vpc_peering_connection("test_peering_connection",
-            :'requester_vpc_info.vpc_id' => test_vpc.aws_object.id,
-            :'accepter_vpc_info.vpc_id' => test_vpc_2.aws_object.id,
-            :'status.code' => "active"
-         ).and be_idempotent
+                                                    'requester_vpc_info.vpc_id': test_vpc.aws_object.id,
+                                                    'accepter_vpc_info.vpc_id': test_vpc_2.aws_object.id,
+                                                    'status.code': "active").and be_idempotent
       end
 
       it "aws_peering_connection 'test_peering_connection' with a false peer_owner_id, creates a failed peering connection" do
@@ -64,10 +61,9 @@ describe Chef::Resource::AwsVpcPeeringConnection do
             peer_owner_id "000000000000"
           end
         end.to create_an_aws_vpc_peering_connection("test_peering_connection",
-            :'requester_vpc_info.vpc_id' => test_vpc.aws_object.id,
-            :'accepter_vpc_info.vpc_id' => test_vpc_2.aws_object.id,
-            :'status.code' => "failed"
-        ).and be_idempotent
+                                                    'requester_vpc_info.vpc_id': test_vpc.aws_object.id,
+                                                    'accepter_vpc_info.vpc_id': test_vpc_2.aws_object.id,
+                                                    'status.code': "failed").and be_idempotent
       end
 
       it "aws_peering_connection 'test_peering_connection' with accept action, accepts a pending peering connection" do
@@ -78,20 +74,18 @@ describe Chef::Resource::AwsVpcPeeringConnection do
             block do
               test_vpc = Chef::Resource::AwsVpc.get_aws_object("test_vpc", run_context: run_context)
               test_vpc_2 = Chef::Resource::AwsVpc.get_aws_object("test_vpc_2", run_context: run_context)
-              pcx = ec2_resource.vpc(test_vpc.id).request_vpc_peering_connection({ :peer_vpc_id => test_vpc_2.id })
+              pcx = ec2_resource.vpc(test_vpc.id).request_vpc_peering_connection(peer_vpc_id: test_vpc_2.id)
             end
           end
         end.to match_an_aws_vpc_peering_connection(pcx.id,
-           :'status.code' => "pending-acceptance"
-        )
+                                                   'status.code': "pending-acceptance")
 
         expect_recipe do
           aws_vpc_peering_connection pcx.id do
             action :accept
           end
         end.to match_an_aws_vpc_peering_connection(pcx.id,
-          :'status.code' => "active"
-        )
+                                                   'status.code': "active")
       end
     end
   end

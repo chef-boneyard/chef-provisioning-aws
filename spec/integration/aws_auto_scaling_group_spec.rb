@@ -35,7 +35,8 @@ describe Chef::Resource::AwsAutoScalingGroup do
             max_size 2
           end
         end.to create_an_aws_auto_scaling_group(
-          "test_group").and be_idempotent
+          "test_group"
+        ).and be_idempotent
       end
 
       it "aws_auto_scaling_group 'test_group_with_policy' creates an auto scaling group" do
@@ -60,7 +61,8 @@ describe Chef::Resource::AwsAutoScalingGroup do
             )
           end
         end.to create_an_aws_auto_scaling_group(
-          "test_group_with_policy").and be_idempotent
+          "test_group_with_policy"
+        ).and be_idempotent
       end
 
       # test_public_subnet
@@ -74,13 +76,12 @@ describe Chef::Resource::AwsAutoScalingGroup do
               # availability_zones ["#{driver.region}a"]
               min_size 1
               max_size 2
-              options({
+              options(
                 subnets: "test_public_subnet"
-              })
+              )
             end
           end.to create_an_aws_auto_scaling_group("test_group",
-            vpc_zone_identifier: test_public_subnet.aws_object.id
-          ).and be_idempotent
+                                                  vpc_zone_identifier: test_public_subnet.aws_object.id).and be_idempotent
         end
       end
 
@@ -93,12 +94,8 @@ describe Chef::Resource::AwsAutoScalingGroup do
             max_size 2
             aws_tags key1: "value"
           end
-        end.to create_an_aws_auto_scaling_group("test_group_with_policy"
-        ).and have_aws_auto_scaling_group_tags("test_group_with_policy",
-          {
-            "key1" => "value"
-          }
-        ).and be_idempotent
+        end.to create_an_aws_auto_scaling_group("test_group_with_policy").and have_aws_auto_scaling_group_tags("test_group_with_policy",
+                                                                                                               "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -116,11 +113,8 @@ describe Chef::Resource::AwsAutoScalingGroup do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_auto_scaling_group_tags("test_group_with_policy",
-            {
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                                  "key1" => "value2",
+                                                  "key2" => "").and be_idempotent
         end
 
         it "removes all aws_network_acl tags" do
@@ -129,11 +123,9 @@ describe Chef::Resource::AwsAutoScalingGroup do
               aws_tags({})
             end
           end.to have_aws_auto_scaling_group_tags("test_group_with_policy",
-            {}
-          ).and be_idempotent
+                                                  {}).and be_idempotent
         end
       end
-
     end
   end
 end

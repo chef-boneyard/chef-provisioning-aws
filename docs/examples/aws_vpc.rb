@@ -39,12 +39,12 @@ end
 
 aws_security_group "provisioning-vpc-security-group" do
   inbound_rules [
-    { :port => 2223, :protocol => :tcp, :sources => ["10.0.0.0/24"] },
-    { :port => 80..100, :protocol => :udp, :sources => ["1.1.1.0/24"] }
+    { port: 2223, protocol: :tcp, sources: ["10.0.0.0/24"] },
+    { port: 80..100, protocol: :udp, sources: ["1.1.1.0/24"] }
   ]
   outbound_rules [
-    { :port => 2223, :protocol => :tcp, :destinations => ["1.1.1.0/16"] },
-    { :port => 8080, :protocol => :tcp, :destinations => ["2.2.2.0/24"] }
+    { port: 2223, protocol: :tcp, destinations: ["1.1.1.0/16"] },
+    { port: 8080, protocol: :tcp, destinations: ["2.2.2.0/24"] }
   ]
   vpc "provisioning-vpc"
 end

@@ -7,8 +7,7 @@ describe Chef::Resource::AwsRdsSubnetGroup do
 
   when_the_chef_12_server "exists", organization: "foo", server_scope: :context do
     with_aws "with a VPC with an internet gateway and subnet" do
-
-      #region = ENV['AWS_TEST_DRIVER'][5..-1]
+      # region = ENV['AWS_TEST_DRIVER'][5..-1]
 
       azs = []
       driver.ec2.describe_availability_zones.availability_zones.each do |az|
@@ -41,14 +40,13 @@ describe Chef::Resource::AwsRdsSubnetGroup do
             subnets ["test_subnet", test_subnet_2.aws_object.id]
           end
         end.to create_an_aws_rds_subnet_group("test-db-subnet-group",
-                                              :db_subnet_group_description => "some_description",
-                                              :subnets => Set.new([ { :subnet_status => "Active",
-                                                                      :subnet_identifier => test_subnet_2.aws_object.id,
-                                                                      :subnet_availability_zone => { :name => az_2 } },
-                                                                    { :subnet_status => "Active",
-                                                                      :subnet_identifier => test_subnet.aws_object.id,
-                                                                      :subnet_availability_zone => { :name => az_1 } }])
-                                           ).and be_idempotent
+                                              db_subnet_group_description: "some_description",
+                                              subnets: Set.new([{ subnet_status: "Active",
+                                                                  subnet_identifier: test_subnet_2.aws_object.id,
+                                                                  subnet_availability_zone: { name: az_2 } },
+                                                                { subnet_status: "Active",
+                                                                  subnet_identifier: test_subnet.aws_object.id,
+                                                                  subnet_availability_zone: { name: az_1 } }])).and be_idempotent
       end
 
       it "creates aws_rds_subnet_group tags" do
@@ -59,11 +57,8 @@ describe Chef::Resource::AwsRdsSubnetGroup do
             aws_tags key1: "value"
           end
         end.to create_an_aws_rds_subnet_group("test-db-subnet-group")
-        .and have_aws_rds_subnet_group_tags("test-db-subnet-group",
-          {
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_rds_subnet_group_tags("test-db-subnet-group",
+                                              "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -81,11 +76,8 @@ describe Chef::Resource::AwsRdsSubnetGroup do
               aws_tags key1: "value2", key2: ""
             end
           end.to have_aws_rds_subnet_group_tags("test-db-subnet-group",
-            {
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                                "key1" => "value2",
+                                                "key2" => "").and be_idempotent
         end
 
         it "removes all aws_rds_subnet_group tags" do
@@ -95,11 +87,9 @@ describe Chef::Resource::AwsRdsSubnetGroup do
               subnets ["test_subnet", test_subnet_2.aws_object.id]
               aws_tags({})
             end
-          end.to have_aws_rds_subnet_group_tags("test-db-subnet-group", {}
-          ).and be_idempotent
+          end.to have_aws_rds_subnet_group_tags("test-db-subnet-group", {}).and be_idempotent
         end
       end
-
     end
   end
 end

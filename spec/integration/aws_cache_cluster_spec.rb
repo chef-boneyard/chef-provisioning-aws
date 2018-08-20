@@ -35,7 +35,7 @@ describe Chef::Resource::AwsCacheCluster, :super_slow do
 
           aws_cache_subnet_group "test-subnet-group" do
             description "Test Subnet Group"
-            subnets [ "test_subnet" ]
+            subnets ["test_subnet"]
           end
 
           aws_security_group "test_sg" do
@@ -54,17 +54,16 @@ describe Chef::Resource::AwsCacheCluster, :super_slow do
             subnet_group_name "test-subnet-group"
           end
         end.to create_an_aws_cache_cluster("TestRedisCluster",
-          cache_cluster_id: "testrediscluster",
-          cache_node_type: "cache.t2.micro",
-          engine: "redis",
-          engine_version: "3.2.6",
-          num_cache_nodes: 1,
-          pending_modified_values: {},
-          cache_security_groups: [],
-          cache_parameter_group:
-            { cache_parameter_group_name: "default.redis3.2", parameter_apply_status: "in-sync", cache_node_ids_to_reboot: [] },
-          cache_subnet_group_name: "test-subnet-group"
-          ).and be_idempotent
+                                           cache_cluster_id: "testrediscluster",
+                                           cache_node_type: "cache.t2.micro",
+                                           engine: "redis",
+                                           engine_version: "3.2.6",
+                                           num_cache_nodes: 1,
+                                           pending_modified_values: {},
+                                           cache_security_groups: [],
+                                           cache_parameter_group:
+                                             { cache_parameter_group_name: "default.redis3.2", parameter_apply_status: "in-sync", cache_node_ids_to_reboot: [] },
+                                           cache_subnet_group_name: "test-subnet-group").and be_idempotent
       end
     end
   end

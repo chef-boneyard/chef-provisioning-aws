@@ -51,7 +51,6 @@ module AWSSupport
         provider = resource.provider_for_action(:create)
         provider.aws_tagger.current_tags
       end
-
     end
   end
 end

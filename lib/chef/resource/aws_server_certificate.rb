@@ -10,7 +10,7 @@ class Chef::Resource::AwsServerCertificate < Chef::Provisioning::AWSDriver::AWSR
   attribute :private_key, kind_of: String
 
   def aws_object
-    cert = ::Aws::IAM::ServerCertificate.new(name, { client: driver.iam } )
+    cert = ::Aws::IAM::ServerCertificate.new(name, client: driver.iam)
     cert.data
     cert
   rescue ::Aws::IAM::Errors::NoSuchEntity

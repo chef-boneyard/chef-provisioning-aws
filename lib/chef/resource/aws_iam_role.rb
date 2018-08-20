@@ -51,5 +51,4 @@ class Chef::Resource::AwsIamRole < Chef::Provisioning::AWSDriver::AWSResource
   rescue ::Aws::IAM::Errors::NoSuchEntity
     nil
   end
-
 end

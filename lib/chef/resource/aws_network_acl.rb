@@ -20,7 +20,7 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
 
   #
   # Accepts rules in the format:
@@ -34,11 +34,11 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   # However, if either is set to `[]` all respective current rules will be removed.
   #
   attribute :inbound_rules,
-            kind_of: [ Array, Hash ],
+            kind_of: [Array, Hash],
             coerce: proc { |v| v && [v].flatten }
 
   attribute :outbound_rules,
-            kind_of: [ Array, Hash ],
+            kind_of: [Array, Hash],
             coerce: proc { |v| v && [v].flatten }
 
   attribute :network_acl_id,
@@ -59,5 +59,4 @@ class Chef::Resource::AwsNetworkAcl < Chef::Provisioning::AWSDriver::AWSResource
   rescue ::Aws::EC2::Errors::InvalidNetworkAclIDNotFound
     false
   end
-
 end

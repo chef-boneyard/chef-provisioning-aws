@@ -48,7 +48,6 @@ end
 
 module Chef::Provisioning::AWSDriver::TaggingStrategy
   class RDS
-
     attr_reader :rds_client, :rds_object_arn, :desired_tags
 
     def initialize(rds_client, rds_object_arn, desired_tags)
@@ -59,9 +58,9 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
 
     def current_tags
       # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#list_tags_for_resource-instance_method
-      resp = rds_client.list_tags_for_resource({
+      resp = rds_client.list_tags_for_resource(
         resource_name: rds_object_arn
-      })
+      )
       Hash[resp.tag_list.map { |t| [t.key, t.value] }]
     end
 
@@ -75,19 +74,18 @@ module Chef::Provisioning::AWSDriver::TaggingStrategy
           { key: k, value: v }
         end
       end
-      rds_client.add_tags_to_resource({
+      rds_client.add_tags_to_resource(
         resource_name: rds_object_arn,
         tags: tags
-      })
+      )
     end
 
     def delete_tags(tag_keys)
       # http://docs.aws.amazon.com/sdkforruby/api/Aws/RDS/Client.html#remove_tags_from_resource-instance_method
-      rds_client.remove_tags_from_resource({
+      rds_client.remove_tags_from_resource(
         resource_name: rds_object_arn,
         tag_keys: tag_keys
-      })
+      )
     end
-
   end
 end

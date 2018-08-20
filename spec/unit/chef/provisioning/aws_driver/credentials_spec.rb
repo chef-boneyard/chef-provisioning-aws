@@ -6,16 +6,14 @@ describe Chef::Provisioning::AWSDriver::Credentials do
       { region: "us-west-2",
         aws_access_key_id: "AKIAPERSONALKEY",
         aws_secret_access_key: "personalsecretaccesskey",
-        name: "personal"
-      }
+        name: "personal" }
     end
 
     let(:work_iam_credentials) do
       { region: "us-east-1",
         aws_access_key_id: "AKIAWORKIAMKEY",
         aws_secret_access_key: "workiamsecretaccesskey",
-        name: "work_iam"
-      }
+        name: "work_iam" }
     end
 
     let(:config_ini_file) do
@@ -25,8 +23,7 @@ describe Chef::Provisioning::AWSDriver::Credentials do
           ["[profile personal]",
            "region = us-west-2",
            "[profile work_iam]",
-           "region = us-east-1"
-          ].join("\n")
+           "region = us-east-1"].join("\n")
         )
         ini.rewind
         ini
@@ -43,8 +40,7 @@ describe Chef::Provisioning::AWSDriver::Credentials do
            "aws_secret_access_key = personalsecretaccesskey",
            "[work_iam]",
            "aws_access_key_id = AKIAWORKIAMKEY",
-           "aws_secret_access_key = workiamsecretaccesskey"
-          ].join("\n")
+           "aws_secret_access_key = workiamsecretaccesskey"].join("\n")
         )
         ini.rewind
         ini
@@ -63,8 +59,7 @@ describe Chef::Provisioning::AWSDriver::Credentials do
            "[profile work_iam]",
            "region = us-east-1",
            "aws_access_key_id = AKIAWORKIAMKEY",
-           "aws_secret_access_key = workiamsecretaccesskey"
-          ].join("\n")
+           "aws_secret_access_key = workiamsecretaccesskey"].join("\n")
         )
         ini.rewind
         ini
@@ -85,8 +80,7 @@ describe Chef::Provisioning::AWSDriver::Credentials do
            "[profile work_iam]",
            "region = us-east-1",
            "aws_access_key_id = AKIAWORKIAMKEY",
-           "aws_secret_access_key = workiamsecretaccesskey"
-          ].join("\n")
+           "aws_secret_access_key = workiamsecretaccesskey"].join("\n")
         )
         ini.rewind
         ini
@@ -171,6 +165,5 @@ describe Chef::Provisioning::AWSDriver::Credentials do
         end
       end
     end
-
   end
 end

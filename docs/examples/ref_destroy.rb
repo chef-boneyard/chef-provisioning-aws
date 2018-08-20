@@ -99,7 +99,7 @@ end
 # and finally delete the VPC (which deletes the main route table)
 aws_vpc "ref-vpc" do
   main_route_table lazy {
-    rt = aws_object.route_tables.select { |r| !r.main? }.first
+    rt = aws_object.route_tables.reject(&:main?).first
     rt.id if rt
   }
   only_if { !aws_object.nil? }

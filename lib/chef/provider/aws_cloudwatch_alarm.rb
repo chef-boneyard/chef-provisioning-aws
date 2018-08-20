@@ -41,7 +41,7 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
       if !new_resource.dimensions.nil?
         opts[:dimensions] = new_resource.dimensions
       elsif aws_object && !aws_object.dimensions.nil?
-        opts[:dimensions] = aws_object.dimensions.map! { |d| d.to_h }
+        opts[:dimensions] = aws_object.dimensions.map!(&:to_h)
       end
       # Normally we would just use `lookup_options` here but because these parameters
       # don't necessarily sound like sns topics we manually do it
@@ -49,7 +49,7 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
         if !new_resource.public_send(opt).nil?
           opts[opt] = new_resource.public_send(opt)
           opts[opt].map! do |action|
-            if action.kind_of?(String) && !(action =~ /^arn:/)
+            if action.is_a?(String) && action !~ /^arn:/
               aws_object = Chef::Resource::AwsSnsTopic.get_aws_object(action, resource: new_resource)
               action = aws_object.attributes["TopicArn"] if aws_object
             end
@@ -67,11 +67,9 @@ class Chef::Provider::AwsCloudwatchAlarm < Chef::Provisioning::AWSDriver::AWSPro
     %i{namespace metric_name comparison_operator
        evaluation_periods period statistic threshold
        actions_enabled alarm_description unit}.each do |opt|
-      if alarm.public_send(opt) != desired_options[opt]
-        return true
-      end
+      return true if alarm.public_send(opt) != desired_options[opt]
     end
-    unless (Set.new(alarm.dimensions.map { |d| d.to_h }) ^ Set.new(desired_options[:dimensions])).empty?
+    unless (Set.new(alarm.dimensions.map(&:to_h)) ^ Set.new(desired_options[:dimensions])).empty?
       return true
     end
     %i{insufficient_data_actions ok_actions alarm_actions}.each do |opt|

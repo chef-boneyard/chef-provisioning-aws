@@ -9,7 +9,6 @@ module AWSSupport
     # end
     #
     module FuzzyMatchObjects
-
       require "rspec/support/fuzzy_matcher"
       require "aws_support/deep_matcher/matchable_object"
       require "aws_support/deep_matcher/matchable_array"
@@ -45,7 +44,7 @@ module AWSSupport
             end
           end
 
-          return false if !values_match?(expected, actual)
+          return false unless values_match?(expected, actual)
         end
 
         true

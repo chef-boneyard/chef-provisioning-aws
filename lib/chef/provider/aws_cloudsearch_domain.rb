@@ -17,7 +17,7 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     create_index_fields
   end
 
-  def destroy_aws_object(domain)
+  def destroy_aws_object(_domain)
     converge_by "delete CloudSearch domain #{new_resource.name}" do
       cs_client.delete_domain(domain_name: new_resource.name)
     end
@@ -79,10 +79,10 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
     end
   end
 
-  def update_index_fields?(domain)
-    if ! new_resource.index_fields.nil?
+  def update_index_fields?(_domain)
+    if !new_resource.index_fields.nil?
       index_fields.each do |index_field|
-        if ! new_resource.index_fields.include?(index_field.to_h[:options])
+        unless new_resource.index_fields.include?(index_field.to_h[:options])
           return true
         end
       end
@@ -168,12 +168,8 @@ class Chef::Provider::AwsCloudsearchDomain < Chef::Provisioning::AWSDriver::AWSP
 
   def get_option(option_name, key = nil)
     opt = cs_client.send("describe_#{option_name}".to_sym,
-                         { domain_name: new_resource.name })[key || option_name]
-    if ! opt[:status][:pending_deletion]
-      opt[:options]
-    else
-      nil
-    end
+                         domain_name: new_resource.name)[key || option_name]
+    opt[:options] unless opt[:status][:pending_deletion]
   end
 
   def cs_client

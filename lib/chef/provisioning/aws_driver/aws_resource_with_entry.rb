@@ -3,7 +3,6 @@ require "chef/provisioning/aws_driver/resources"
 
 # Common AWS resource - contains metadata that all AWS resources will need
 class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::AWSDriver::AWSResource
-
   #
   # Dissociate the ID of this object from Chef.
   #
@@ -33,9 +32,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
       managed_entry = existing_entry ||
         managed_entry_store.new_entry(self.class.managed_entry_type, name)
       updated = update_managed_entry(aws_object, managed_entry)
-      if updated || !existing_entry
-        managed_entry.save(action_handler)
-      end
+      managed_entry.save(action_handler) if updated || !existing_entry
     end
   end
 
@@ -45,11 +42,11 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
       if entry
         driver = self.driver
         if entry.driver_url != driver.driver_url
-          # TODO some people don't send us run_context (like Drivers).  We might need
+          # TODO: some people don't send us run_context (like Drivers).  We might need
           # to exit early here if the driver_url doesn't match the provided driver.
           driver = run_context.chef_provisioning.driver_for(entry.driver_url)
         end
-        [ driver, entry.reference[self.class.managed_entry_id_name], entry ]
+        [driver, entry.reference[self.class.managed_entry_id_name], entry]
       end
     end
   end
@@ -57,7 +54,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   # Formatted output for logging statements - contains resource type, resource name and aws object id (if available)
   def to_s
     id = get_driver_and_id[1]
-    "#{declared_type}[#{@name}] (#{id ? id : 'no AWS object id'})"
+    "#{declared_type}[#{@name}] (#{id || 'no AWS object id'})"
   end
 
   protected
@@ -83,8 +80,11 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
   def get_driver_and_id
     driver, id, entry = get_id_from_managed_entry
     # If the value isn't already stored, look up the user-specified public_ip
-    driver, id = driver, public_send(self.class.aws_id_attribute) if !id
-    [ driver, id ]
+    unless id
+      driver = driver
+      id = public_send(self.class.aws_id_attribute)
+    end
+    [driver, id]
   end
 
   def self.aws_sdk_type(sdk_class,
@@ -101,12 +101,12 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
     end
   end
 
-  def self.managed_entry_type
-    @managed_entry_type
+  class << self
+    attr_reader :managed_entry_type
   end
 
-  def self.managed_entry_id_name
-    @managed_entry_id_name
+  class << self
+    attr_reader :managed_entry_id_name
   end
 
   def should_have_managed_entry?

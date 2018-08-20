@@ -34,7 +34,7 @@ class Chef::Resource::AwsInternetGateway < Chef::Provisioning::AWSDriver::AWSRes
   # - An actual `aws_vpc` resource.
   # - An AWS `VPC` object.
   #
-  attribute :vpc, kind_of: [ String, AwsVpc, ::Aws::EC2::Vpc ]
+  attribute :vpc, kind_of: [String, AwsVpc, ::Aws::EC2::Vpc]
 
   attribute :internet_gateway_id, kind_of: String, aws_id_attribute: true, default: lazy {
     name =~ /^igw-[a-f0-9]+$/ ? name : nil

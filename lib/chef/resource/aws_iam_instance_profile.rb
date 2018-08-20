@@ -13,7 +13,7 @@ require "chef/provisioning/aws_driver/aws_resource"
 class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWSResource
   # We don't want any lookup_options to try and build a resource from a :iam_instance_profile string,
   # its either a name or an ARN
-  aws_sdk_type ::Aws::IAM::InstanceProfile, :option_names => []
+  aws_sdk_type ::Aws::IAM::InstanceProfile, option_names: []
 
   #
   # The name of the instance profile to create.
@@ -25,11 +25,10 @@ class Chef::Resource::AwsIamInstanceProfile < Chef::Provisioning::AWSDriver::AWS
   #
   attribute :path,    kind_of: String
 
-  attribute :role,    kind_of: [ String, AwsIamRole, ::Aws::IAM::Role]
+  attribute :role,    kind_of: [String, AwsIamRole, ::Aws::IAM::Role]
 
   def aws_object
     result = driver.iam_resource.instance_profile(name)
     result && result.exists? ? result : nil
   end
-
 end

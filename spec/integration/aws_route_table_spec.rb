@@ -18,10 +18,9 @@ describe Chef::Resource::AwsRouteTable do
             vpc "test_vpc"
           end
         end.to create_an_aws_route_table("test_route_table",
-          routes: [
-            { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" }
-          ]
-        ).and be_idempotent
+                                         routes: [
+                                           { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" }
+                                         ]).and be_idempotent
       end
 
       it "aws_route_table 'test_route_table' with routes creates a route table" do
@@ -31,11 +30,10 @@ describe Chef::Resource::AwsRouteTable do
             routes "0.0.0.0/0" => :internet_gateway
           end
         end.to create_an_aws_route_table("test_route_table",
-          routes: Set[
-            { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
-            { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" }
-          ]
-        ).and be_idempotent
+                                         routes: Set[
+                                           { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
+                                           { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" }
+                                         ]).and be_idempotent
       end
 
       it "ignores routes whose target matches ignore_route_targets" do
@@ -54,12 +52,11 @@ describe Chef::Resource::AwsRouteTable do
             ignore_route_targets ["^eni-"]
           end
         end.to create_an_aws_route_table("test_route_table",
-            routes: Set[
-              { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
-              { destination_cidr_block: "172.31.0.0/16", network_interface_id: test_network_interface.aws_object.id, state: "blackhole" },
-              { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
-            ]
-          ).and be_idempotent
+                                         routes: Set[
+                                           { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
+                                           { destination_cidr_block: "172.31.0.0/16", network_interface_id: test_network_interface.aws_object.id, state: "blackhole" },
+                                           { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
+                                         ]).and be_idempotent
       end
 
       context "with an existing routing table" do
@@ -77,12 +74,11 @@ describe Chef::Resource::AwsRouteTable do
                      "2.0.0.0/8" => :internet_gateway
             end
           end.to update_an_aws_route_table("test_route_table",
-            routes: Set[
-              { destination_cidr_block: "2.0.0.0/8", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
-              { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
-              { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
-            ]
-          ).and be_idempotent
+                                           routes: Set[
+                                             { destination_cidr_block: "2.0.0.0/8", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
+                                             { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
+                                             { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
+                                           ]).and be_idempotent
         end
       end
 
@@ -100,11 +96,10 @@ describe Chef::Resource::AwsRouteTable do
               routes "0.0.0.0/0" => test_nat_gateway
             end
           end.to create_an_aws_route_table("test_route_table",
-            routes: Set[
-                { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
-                { destination_cidr_block: "0.0.0.0/0", nat_gateway_id: test_nat_gateway.aws_object.nat_gateway_id, state: "active" },
-              ]
-          ).and be_idempotent
+                                           routes: Set[
+                                               { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
+                                               { destination_cidr_block: "0.0.0.0/0", nat_gateway_id: test_nat_gateway.aws_object.nat_gateway_id, state: "active" },
+                                             ]).and be_idempotent
         end
       end
 
@@ -124,14 +119,12 @@ describe Chef::Resource::AwsRouteTable do
               routes "0.0.0.0/0" => :internet_gateway,
                      "11.0.0.0/8" => "test_machine"
             end
-
           end.to create_an_aws_route_table("test_route_table",
-            routes: Set[
-                { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
-                { destination_cidr_block: "11.0.0.0/8", instance_id: test_machine.aws_object.id, state: "active" },
-                { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
-              ]
-          ).and be_idempotent
+                                           routes: Set[
+                                               { destination_cidr_block: "10.0.0.0/16", gateway_id: "local", state: "active" },
+                                               { destination_cidr_block: "11.0.0.0/8", instance_id: test_machine.aws_object.id, state: "active" },
+                                               { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc.aws_object.internet_gateways.first.id, state: "active" },
+                                             ]).and be_idempotent
         end
       end
 
@@ -142,12 +135,9 @@ describe Chef::Resource::AwsRouteTable do
             aws_tags key1: "value"
           end
         end.to create_an_aws_route_table("test_route_table")
-        .and have_aws_route_table_tags("test_route_table",
-          {
-            "Name" => "test_route_table",
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_route_table_tags("test_route_table",
+                                         "Name" => "test_route_table",
+                                         "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -163,12 +153,9 @@ describe Chef::Resource::AwsRouteTable do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_route_table_tags("test_route_table",
-            {
-              "Name" => "test_route_table",
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                           "Name" => "test_route_table",
+                                           "key1" => "value2",
+                                           "key2" => "").and be_idempotent
         end
 
         it "removes all aws_route_table tags except Name" do
@@ -178,13 +165,9 @@ describe Chef::Resource::AwsRouteTable do
               aws_tags({})
             end
           end.to have_aws_route_table_tags("test_route_table",
-            {
-              "Name" => "test_route_table"
-            }
-          ).and be_idempotent
+                                           "Name" => "test_route_table").and be_idempotent
         end
       end
-
     end
 
     with_aws "with two VPC's with an internet gateway" do
@@ -209,17 +192,16 @@ describe Chef::Resource::AwsRouteTable do
           aws_route_table "test_route_table" do
             vpc "test_vpc_1"
             routes(
-                "100.100.0.0/16" => pcx,
-                "0.0.0.0/0" => :internet_gateway
+              "100.100.0.0/16" => pcx,
+              "0.0.0.0/0" => :internet_gateway
             )
           end
         end.to create_an_aws_route_table("test_route_table",
-          routes: Set[
-            { destination_cidr_block: "10.0.0.0/24", gateway_id: "local", state: "active" },
-            { destination_cidr_block: "100.100.0.0/16", vpc_peering_connection_id: pcx.aws_object.id, state: "active" },
-            { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc_1.aws_object.internet_gateways.first.id, state: "active" }
-          ]
-        ).and be_idempotent
+                                         routes: Set[
+                                           { destination_cidr_block: "10.0.0.0/24", gateway_id: "local", state: "active" },
+                                           { destination_cidr_block: "100.100.0.0/16", vpc_peering_connection_id: pcx.aws_object.id, state: "active" },
+                                           { destination_cidr_block: "0.0.0.0/0", gateway_id: test_vpc_1.aws_object.internet_gateways.first.id, state: "active" }
+                                         ]).and be_idempotent
       end
     end
   end

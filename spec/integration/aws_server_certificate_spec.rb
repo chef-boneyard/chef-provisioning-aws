@@ -27,7 +27,7 @@ IUpfB2NibP9G5LhtxFY1fa+MLp9mJ+yI3hg0x+6xBPTiPDGVpFdJ+LH/mKWxsaWT
 agCh4aCsjczD2YeBVl6idws/InYbSwhz7x9zXz2qB3BbI3psgBfJQQcJukulVGza
 RkD993U+CJpJMDbpIGRe9lXe33R3tGbbvfa4FaXZlZgoKCrE21SCb2hxlNG2+w==
 -----END CERTIFICATE-----
-CERT
+      CERT
 
       private_key_string = <<-KEY
 -----BEGIN RSA PRIVATE KEY-----
@@ -57,7 +57,7 @@ DNbJssECgYBIAFB3J66cZH3zBfyanHwYMPlTupxUBTsN19UCAK7MZqA5kbqG7b7Q
 cKPrgR7gibLvaxj22lvD8uEICMGy6g8s3+PyDwcw5PNrKOdIkRrYQxTFtfs1JRCa
 6kM8q32f1I3qd31zbpoDBHq+Se2RSaLbmoIAFqDSCWyeUHydALo2kw==
 -----END RSA PRIVATE KEY-----
-KEY
+      KEY
 
       certificate_chain_string = <<-CHAIN
 -----BEGIN CERTIFICATE-----
@@ -77,7 +77,7 @@ jFNHTa/YFrlDXXupmI8HCYKwXrcooNcLuIkEmZIPX99s1vjFVT8oRdYLwFGt7AVC
 ufkpMTlf/J9WjsabI5O+fzJYgdVm7QUq8Dg3tiM0RcZtO2cWus4DZl/KQkZx84f1
 WGXzC2zbuS6DI9QPgkLeQ11O2kaeMqkNy6Tzr88XfA==
 -----END CERTIFICATE-----
-CHAIN
+      CHAIN
 
       it "creates a cert" do
         expect_recipe do
@@ -87,9 +87,8 @@ CHAIN
             certificate_chain certificate_chain_string
           end
         end.to create_an_aws_server_certificate("test-cert",
-                                              :certificate_body => cert_string.strip,
-                                              :certificate_chain => certificate_chain_string.strip
-                                             ).and be_idempotent
+                                                certificate_body: cert_string.strip,
+                                                certificate_chain: certificate_chain_string.strip).and be_idempotent
       end
 
       it "creates a cert without a certificate_chain" do
@@ -99,9 +98,8 @@ CHAIN
             private_key private_key_string
           end
         end.to create_an_aws_server_certificate("test-cert",
-                                              :certificate_body => cert_string.strip,
-                                              :certificate_chain => nil
-                                             ).and be_idempotent
+                                                certificate_body: cert_string.strip,
+                                                certificate_chain: nil).and be_idempotent
       end
     end
   end

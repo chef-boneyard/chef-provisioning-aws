@@ -49,7 +49,7 @@ class Chef::Provider::AwsCacheSubnetGroup < Chef::Provisioning::AWSDriver::AWSPr
 
   def update_required?(cache_subnet_group)
     current_subnet_ids = cache_subnet_group[:subnets]
-                           .map { |subnet| subnet[:subnet_identifier] }.sort
+                         .map { |subnet| subnet[:subnet_identifier] }.sort
     current_description = cache_subnet_group[:cache_subnet_group_description]
     if new_resource.description != current_description ||
         desired_options[:subnet_ids].sort != current_subnet_ids

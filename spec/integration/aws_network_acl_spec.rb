@@ -16,8 +16,7 @@ describe Chef::Resource::AwsNetworkAcl do
             vpc "test_vpc"
           end
         end.to create_an_aws_network_acl("test_network_acl",
-          vpc_id: test_vpc.aws_object.id
-        ).and be_idempotent
+                                         vpc_id: test_vpc.aws_object.id).and be_idempotent
       end
 
       it "aws_network_acl 'test_network_acl' with all parameters creates a network acl" do
@@ -33,8 +32,8 @@ describe Chef::Resource::AwsNetworkAcl do
                   protocol: "6",
                   port_range:
                     {
-                      :from => 22,
-                      :to => 23
+                      from: 22,
+                      to: 23
                     },
                   cidr_block: "172.31.0.0/22" }
               ]
@@ -46,17 +45,16 @@ describe Chef::Resource::AwsNetworkAcl do
             )
           end
         end.to create_an_aws_network_acl("test_network_acl",
-          vpc_id: test_vpc.aws_object.id,
-          entries:
-            [
-              { :rule_number => 500, :protocol => "-1", :rule_action => "allow", :egress => true, :cidr_block => "0.0.0.0/0" },
-              { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => true, :cidr_block => "0.0.0.0/0" },
-              { :rule_number => 100, :protocol => "-1", :rule_action => "deny", :egress => false, :cidr_block => "10.0.0.0/24" },
-              { :rule_number => 200, :protocol => "-1", :rule_action => "allow", :egress => false, :cidr_block => "0.0.0.0/0" },
-              { :rule_number => 300, :protocol => "6", :rule_action => "allow", :egress => false, :cidr_block => "172.31.0.0/22", :port_range => { :from => 22, :to => 23 } },
-              { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => false, :cidr_block => "0.0.0.0/0" }
-            ]
-        ).and be_idempotent
+                                         vpc_id: test_vpc.aws_object.id,
+                                         entries:
+                                           [
+                                             { rule_number: 500, protocol: "-1", rule_action: "allow", egress: true, cidr_block: "0.0.0.0/0" },
+                                             { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: true, cidr_block: "0.0.0.0/0" },
+                                             { rule_number: 100, protocol: "-1", rule_action: "deny", egress: false, cidr_block: "10.0.0.0/24" },
+                                             { rule_number: 200, protocol: "-1", rule_action: "allow", egress: false, cidr_block: "0.0.0.0/0" },
+                                             { rule_number: 300, protocol: "6", rule_action: "allow", egress: false, cidr_block: "172.31.0.0/22", port_range: { from: 22, to: 23 } },
+                                             { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: false, cidr_block: "0.0.0.0/0" }
+                                           ]).and be_idempotent
       end
 
       context "when rules are empty" do
@@ -74,13 +72,12 @@ describe Chef::Resource::AwsNetworkAcl do
               outbound_rules []
             end
           end.to create_an_aws_network_acl("test_network_acl",
-            vpc_id: test_vpc.aws_object.id,
-            entries:
-              [
-                { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => true, :cidr_block => "0.0.0.0/0" },
-                { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => false, :cidr_block => "0.0.0.0/0" }
-              ]
-          ).and be_idempotent
+                                           vpc_id: test_vpc.aws_object.id,
+                                           entries:
+                                             [
+                                               { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: true, cidr_block: "0.0.0.0/0" },
+                                               { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: false, cidr_block: "0.0.0.0/0" }
+                                             ]).and be_idempotent
         end
       end
 
@@ -99,15 +96,14 @@ describe Chef::Resource::AwsNetworkAcl do
               outbound_rules nil
             end
           end.to match_an_aws_network_acl("test_network_acl",
-            vpc_id: test_vpc.aws_object.id,
-            entries:
-              [
-                { :rule_number => 500, :protocol => "-1", :rule_action => "allow", :egress => true, :cidr_block => "0.0.0.0/0" },
-                { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => true, :cidr_block => "0.0.0.0/0" },
-                { :rule_number => 100, :protocol => "-1", :rule_action => "deny", :egress => false, :cidr_block => "10.0.0.0/24" },
-                { :rule_number => 32767, :protocol => "-1", :rule_action => "deny", :egress => false, :cidr_block => "0.0.0.0/0" }
-              ]
-          ).and be_idempotent
+                                          vpc_id: test_vpc.aws_object.id,
+                                          entries:
+                                            [
+                                              { rule_number: 500, protocol: "-1", rule_action: "allow", egress: true, cidr_block: "0.0.0.0/0" },
+                                              { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: true, cidr_block: "0.0.0.0/0" },
+                                              { rule_number: 100, protocol: "-1", rule_action: "deny", egress: false, cidr_block: "10.0.0.0/24" },
+                                              { rule_number: 32_767, protocol: "-1", rule_action: "deny", egress: false, cidr_block: "0.0.0.0/0" }
+                                            ]).and be_idempotent
         end
       end
 
@@ -118,12 +114,9 @@ describe Chef::Resource::AwsNetworkAcl do
             aws_tags key1: "value"
           end
         end.to create_an_aws_network_acl("test_network_acl")
-        .and have_aws_network_acl_tags("test_network_acl",
-          {
-            "Name" => "test_network_acl",
-            "key1" => "value"
-          }
-        ).and be_idempotent
+          .and have_aws_network_acl_tags("test_network_acl",
+                                         "Name" => "test_network_acl",
+                                         "key1" => "value").and be_idempotent
       end
 
       context "with existing tags" do
@@ -139,12 +132,9 @@ describe Chef::Resource::AwsNetworkAcl do
               aws_tags key1: "value2", key2: nil
             end
           end.to have_aws_network_acl_tags("test_network_acl",
-            {
-              "Name" => "test_network_acl",
-              "key1" => "value2",
-              "key2" => ""
-            }
-          ).and be_idempotent
+                                           "Name" => "test_network_acl",
+                                           "key1" => "value2",
+                                           "key2" => "").and be_idempotent
         end
 
         it "removes all aws_network_acl tags except Name" do
@@ -154,13 +144,9 @@ describe Chef::Resource::AwsNetworkAcl do
               aws_tags({})
             end
           end.to have_aws_network_acl_tags("test_network_acl",
-            {
-              "Name" => "test_network_acl"
-            }
-          ).and be_idempotent
+                                           "Name" => "test_network_acl").and be_idempotent
         end
       end
-
     end
   end
 end

@@ -21,10 +21,10 @@ class Chef::Provider::AwsInstance < Chef::Provisioning::AWSDriver::AWSProvider
       # When purging, we must wait until the instance is fully terminated - thats the only way
       # to delete the network interface that I can see
       instance.wait_until_terminated do |w|
-        # TODO look at `wait_for_status` - delay and max_attempts should be configurable
+        # TODO: look at `wait_for_status` - delay and max_attempts should be configurable
         w.delay = 5
         w.max_attempts = 60
-        w.before_wait do |attempts, response|
+        w.before_wait do |attempts, _response|
           action_handler.report_progress "waited #{(attempts - 1) * 5}/#{60 * 5}s for #{instance.id} status to terminate..."
         end
       end

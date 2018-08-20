@@ -73,7 +73,7 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
   end
 
   def updatable_options(options)
-    updatable = [:security_groups, :num_cache_nodes, :engine_version]
+    updatable = %i{security_groups num_cache_nodes engine_version}
     options.delete_if { |option, _value| !updatable.include?(option) }
   end
 
@@ -92,7 +92,7 @@ class Chef::Provider::AwsCacheCluster < Chef::Provisioning::AWSDriver::AWSProvid
   def wait_for_cache_cluster_state(aws_object, expected_status, tries = 60, sleep = 5)
     query_method = :cache_cluster_status
 
-    Retryable.retryable(:tries => tries, :sleep => sleep) do |retries, exception|
+    Retryable.retryable(tries: tries, sleep: sleep) do |retries, exception|
       action_handler.report_progress "waited #{retries * sleep}/#{tries * sleep}s for <#{aws_object.class}:#{aws_object.cache_cluster_id}>##{query_method} state to change to #{expected_status}..."
       Chef::Log.debug("Current exception in wait_for is #{exception.inspect}") if exception
       cache_cluster = new_resource.driver.elasticache.describe_cache_clusters(cache_cluster_id: aws_object.cache_cluster_id)

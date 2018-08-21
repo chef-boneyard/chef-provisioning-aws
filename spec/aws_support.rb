@@ -20,7 +20,21 @@ module AWSSupport
   require "aws_support/aws_resource_run_wrapper"
 
   # Add AWS to the list of objects which can be matched against a Hash or Array
-  require "aws-sdk"
+  # Parts of AWS we support - for now this is scattershot, later this will get cleaned up
+  require "aws-sdk-s3"
+  require "aws-sdk-ec2"
+  require "aws-sdk-rds"
+  require "aws-sdk-route53"
+  require "aws-sdk-autoscaling"
+  require "aws-sdk-cloudwatch"
+  require "aws-sdk-cloudsearch"
+  require "aws-sdk-cloudsearchdomain"
+  require "aws-sdk-elasticache"
+  require "aws-sdk-iam"
+  require "aws-sdk-opsworks"
+  require "aws-sdk-sns"
+  require "aws-sdk-sqs"
+
   require "aws_support/deep_matcher/matchable_object"
   require "aws_support/deep_matcher/matchable_array"
   DeepMatcher::MatchableObject.matchable_classes << proc { |o| o.class.name =~ /^(AWS|Aws)::(AutoScaling|EC2|ELB|IAM|S3|RDS|CloudSearch|CloudWatch|Route53|ElasticsearchService)($|::)/ }

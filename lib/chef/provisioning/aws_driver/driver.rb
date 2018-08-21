@@ -20,13 +20,26 @@ require "chef/provisioning/aws_driver/credentials2"
 require "chef/provisioning/aws_driver/aws_tagger"
 
 require "yaml"
-require "aws-sdk"
 require "retryable"
 require "ubuntu_ami"
 require "base64"
 
+# Parts of AWS we support - for now this is scattershot, later this will get cleaned up
+require "aws-sdk-s3"
+require "aws-sdk-ec2"
+require "aws-sdk-rds"
+require "aws-sdk-route53"
+require "aws-sdk-autoscaling"
+require "aws-sdk-cloudwatch"
+require "aws-sdk-cloudsearch"
+require "aws-sdk-cloudsearchdomain"
+require "aws-sdk-elasticache"
+require "aws-sdk-iam"
+require "aws-sdk-opsworks"
+require "aws-sdk-sns"
+require "aws-sdk-sqs"
+
 # loads the entire aws-sdk
-Aws.eager_autoload!
 AWS_V2_SERVICES = {
   "EC2" => "ec2",
   "Route53" => "route53",
@@ -38,7 +51,6 @@ AWS_V2_SERVICES = {
   "CloudWatch" => "cloudwatch",
   "AutoScaling" => "auto_scaling"
 }.freeze
-Aws.eager_autoload!(services: AWS_V2_SERVICES.keys)
 
 # Need to load the resources after the SDK because `aws_sdk_types` can mess
 # up AWS loading if they are loaded too early

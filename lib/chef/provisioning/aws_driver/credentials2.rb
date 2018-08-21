@@ -1,4 +1,3 @@
-require "aws-sdk"
 require "aws-sdk-core/credentials"
 require "aws-sdk-core/shared_credentials"
 require "aws-sdk-core/instance_profile_credentials"

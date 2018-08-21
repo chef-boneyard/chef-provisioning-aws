@@ -2,7 +2,7 @@
 
 require "json"
 require "pp"
-require "aws-sdk"
+require "aws-sdk-route53"
 
 # it happens that you end up with a HostedZone with no Chef Server entry, and destroying it manually is
 # tedious, because you have to delete all the ResourceRecordSets. this script will handle that for you.

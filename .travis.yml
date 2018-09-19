@@ -1,5 +1,10 @@
 sudo: false
 language: ruby
+cache: bundler
+branches:
+  only:
+    - master
+
 rvm:
   - 2.4.4
 env:

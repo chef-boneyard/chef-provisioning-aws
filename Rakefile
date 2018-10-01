@@ -52,6 +52,13 @@ RSpec::Core::RakeTask.new(:machine_image) do |spec|
   spec.rspec_opts = "-b -t super_slow -e 'machine_image can create an image in the VPC'"
 end
 
+task :console do
+  require "irb"
+  require "irb/completion"
+  ARGV.clear
+  IRB.start
+end
+
 begin
   require "chefstyle"
   require "rubocop/rake_task"

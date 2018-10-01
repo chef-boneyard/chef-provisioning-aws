@@ -1,18 +1,22 @@
 # Change Log
 
-<!-- latest_release 3.0.5 -->
-## [3.0.5](https://github.com/chef/chef-provisioning-aws/tree/3.0.5) (2018-08-20)
+<!-- latest_release -->
+<!-- latest_release -->
+<!-- release_rollup since=3.0.6 -->
+### Changes not yet released to rubygems.org
+<!-- release_rollup -->
+<!-- latest_stable_release -->
+## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
+<!-- latest_stable_release -->
+
+## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
+
+## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
 
 #### Merged Pull Requests
 - Chefstyle autofix + run chefstyle in Travis [#574](https://github.com/chef/chef-provisioning-aws/pull/574) ([tas50](https://github.com/tas50))
-<!-- latest_release -->
-<!-- release_rollup since=3.0.4 -->
-### Changes not yet released to rubygems.org
+- replace driver with self.driver in get_driver_and_id [#575](https://github.com/chef/chef-provisioning-aws/pull/575) ([jjlimepoint](https://github.com/jjlimepoint))
 
-#### Merged Pull Requests
-- Chefstyle autofix + run chefstyle in Travis [#574](https://github.com/chef/chef-provisioning-aws/pull/574) ([tas50](https://github.com/tas50)) <!-- 3.0.5 -->
-<!-- release_rollup -->
-<!-- latest_stable_release -->
 ## [3.0.4](https://github.com/chef/chef-provisioning-aws/tree/3.0.4) (2018-08-20)
 
 #### Merged Pull Requests
@@ -20,7 +24,6 @@
 - Test on Ruby 2.4.3 and resolve Fixnum deprecation warning [#565](https://github.com/chef/chef-provisioning-aws/pull/565) ([tas50](https://github.com/tas50))
 - specs for dynamic options in machine_batch, per chef-provisioning#438 [#326](https://github.com/chef/chef-provisioning-aws/pull/326) ([redterror](https://github.com/redterror))
 - Allow arbitarily Long resource IDs [#571](https://github.com/chef/chef-provisioning-aws/pull/571) ([jjlimepoint](https://github.com/jjlimepoint))
-<!-- latest_stable_release -->
 
 ## [3.0.2](https://github.com/chef/chef-provisioning-aws/tree/3.0.2) (2018-02-14)
 [Full Changelog](https://github.com/chef/chef-provisioning-aws/compare/v3.0.1...3.0.2)

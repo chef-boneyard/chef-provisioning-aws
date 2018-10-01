@@ -81,7 +81,7 @@ class Chef::Provisioning::AWSDriver::AWSResourceWithEntry < Chef::Provisioning::
     driver, id, entry = get_id_from_managed_entry
     # If the value isn't already stored, look up the user-specified public_ip
     unless id
-      driver = driver
+      driver = self.driver
       id = public_send(self.class.aws_id_attribute)
     end
     [driver, id]

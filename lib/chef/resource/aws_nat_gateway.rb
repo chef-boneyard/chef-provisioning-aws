@@ -15,7 +15,7 @@
 # We provide this class because the AWS SDK V2 does not provide it (as of
 # May 2016). We copied the pattern in their SDK so when they do add a real
 # resource there shouldn't be a need for much translation.
-class Aws::EC2::NatGateway < ::Aws::Resources::Resource
+class Aws::EC2::NatGateway # < ::Aws::Resources::Resource
   attr_reader :resource, :id, :nat_gateway_id, :vpc_id, :subnet_id, :nat_gateway_addresses
 
   def initialize(id, options = {})

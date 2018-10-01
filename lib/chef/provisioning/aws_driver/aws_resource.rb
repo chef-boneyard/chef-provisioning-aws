@@ -1,4 +1,18 @@
-require "aws-sdk"
+# Parts of AWS we support - for now this is scattershot, later this will get cleaned up
+require "aws-sdk-s3"
+require "aws-sdk-ec2"
+require "aws-sdk-rds"
+require "aws-sdk-route53"
+require "aws-sdk-autoscaling"
+require "aws-sdk-cloudwatch"
+require "aws-sdk-cloudsearch"
+require "aws-sdk-cloudsearchdomain"
+require "aws-sdk-elasticache"
+require "aws-sdk-iam"
+require "aws-sdk-opsworks"
+require "aws-sdk-sns"
+require "aws-sdk-sqs"
+
 require "chef/provisioning/aws_driver/super_lwrp"
 require "chef/provisioning/chef_managed_entry_store"
 # Enough resources will eventually require this that we put 1 require in here

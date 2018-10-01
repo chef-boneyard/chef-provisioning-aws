@@ -1,6 +1,6 @@
 require "chef/provider/lwrp_base"
 require "chef/provisioning/aws_driver/aws_provider"
-require "aws-sdk"
+require "aws-sdk-ec2"
 
 class Chef::Provider::AwsKeyPair < Chef::Provisioning::AWSDriver::AWSProvider
   provides :aws_key_pair

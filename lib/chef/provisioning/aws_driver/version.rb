@@ -1,7 +1,7 @@
 class Chef
   module Provisioning
     module AWSDriver
-      VERSION = "3.0.6".freeze
+      VERSION = "4.0.0".freeze
     end
   end
 end

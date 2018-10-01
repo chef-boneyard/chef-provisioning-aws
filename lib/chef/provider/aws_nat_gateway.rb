@@ -1,4 +1,4 @@
-# require 'chef/provisioning/aws_driver/aws_provider'
+# require "chef/provisioning/aws_driver/aws_provider"
 require "retryable"
 
 class Chef::Provider::AwsNatGateway < Chef::Provisioning::AWSDriver::AWSProvider

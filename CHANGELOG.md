@@ -14,15 +14,11 @@
 <!-- release_rollup -->
 <!-- latest_stable_release -->
 ## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
-<!-- latest_stable_release -->
-
-## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
-
-## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)
 
 #### Merged Pull Requests
 - Chefstyle autofix + run chefstyle in Travis [#574](https://github.com/chef/chef-provisioning-aws/pull/574) ([tas50](https://github.com/tas50))
 - replace driver with self.driver in get_driver_and_id [#575](https://github.com/chef/chef-provisioning-aws/pull/575) ([jjlimepoint](https://github.com/jjlimepoint))
+<!-- latest_stable_release -->
 
 ## [3.0.4](https://github.com/chef/chef-provisioning-aws/tree/3.0.4) (2018-08-20)
 

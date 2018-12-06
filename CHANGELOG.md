@@ -1,9 +1,16 @@
 # Change Log
 
-<!-- latest_release -->
+<!-- latest_release 3.0.7 -->
+## [3.0.7](https://github.com/chef/chef-provisioning-aws/tree/3.0.7) (2018-12-06)
+
+#### Merged Pull Requests
+- Don&#39;t ship the readme or changelog in the gem artifact [#576](https://github.com/chef/chef-provisioning-aws/pull/576) ([tas50](https://github.com/tas50))
 <!-- latest_release -->
 <!-- release_rollup since=3.0.6 -->
 ### Changes not yet released to rubygems.org
+
+#### Merged Pull Requests
+- Don&#39;t ship the readme or changelog in the gem artifact [#576](https://github.com/chef/chef-provisioning-aws/pull/576) ([tas50](https://github.com/tas50)) <!-- 3.0.7 -->
 <!-- release_rollup -->
 <!-- latest_stable_release -->
 ## [3.0.6](https://github.com/chef/chef-provisioning-aws/tree/3.0.6) (2018-09-12)

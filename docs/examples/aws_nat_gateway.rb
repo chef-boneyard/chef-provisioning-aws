@@ -13,7 +13,6 @@ aws_route_table "public_route" do
   routes "0.0.0.0/0" => :internet_gateway
 end
 
-
 aws_subnet "public_subnet" do
   vpc "test-vpc"
   cidr_block "10.0.1.0/24"
@@ -22,16 +21,15 @@ aws_subnet "public_subnet" do
   route_table "public_route"
 end
 
+aws_eip_address "nat-elastic-ip"
 
-aws_eip_address 'nat-elastic-ip'
-
-nat = aws_nat_gateway 'nat-gateway' do
+nat = aws_nat_gateway "nat-gateway" do
   subnet "public_subnet"
   eip_address "nat-elastic-ip"
 end
 
 aws_route_table "private_route" do
-  routes '0.0.0.0/0' =>  nat.aws_object.id
+  routes "0.0.0.0/0" => nat.aws_object.id
   vpc "test-vpc"
 end
 

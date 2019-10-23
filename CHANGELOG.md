@@ -1,15 +1,16 @@
 # Change Log
 
-<!-- latest_release 3.0.8 -->
-## [3.0.8](https://github.com/chef/chef-provisioning-aws/tree/3.0.8) (2019-03-13)
+<!-- latest_release 3.0.9 -->
+## [3.0.9](https://github.com/chef/chef-provisioning-aws/tree/3.0.9) (2019-10-23)
 
 #### Merged Pull Requests
-- Adding nat gateway example to associate in private route and subnet [#578](https://github.com/chef/chef-provisioning-aws/pull/578) ([mattyait](https://github.com/mattyait))
+- EOL Notice [#580](https://github.com/chef/chef-provisioning-aws/pull/580) ([kagarmoe](https://github.com/kagarmoe))
 <!-- latest_release -->
 <!-- release_rollup since=3.0.7 -->
 ### Changes not yet released to rubygems.org
 
 #### Merged Pull Requests
+- EOL Notice [#580](https://github.com/chef/chef-provisioning-aws/pull/580) ([kagarmoe](https://github.com/kagarmoe)) <!-- 3.0.9 -->
 - Adding nat gateway example to associate in private route and subnet [#578](https://github.com/chef/chef-provisioning-aws/pull/578) ([mattyait](https://github.com/mattyait)) <!-- 3.0.8 -->
 <!-- release_rollup -->
 <!-- latest_stable_release -->

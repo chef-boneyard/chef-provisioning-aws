@@ -27,7 +27,15 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
     options[:vpc_id] = new_resource.vpc
     options[:peer_vpc_id] = new_resource.peer_vpc
     options[:peer_owner_id] = new_resource.peer_owner_id unless new_resource.peer_owner_id.nil?
-    options = AWSResource.lookup_options(options, resource: new_resource)
+
+    ## for vpc and peer_vpc, don't use a lookup if they're a string that is an actual VPC identifier - it's entirely possible we dont know about it in our scope (ie, 3rd party account or manage by separate tools)
+    unless new_resource.vpc.class == String && new_resource.vpc.to_s =~ /^vpc-.*/
+      options[:vpc_id] = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
+    end
+    unless new_resource.peer_vpc.class == String && new_resource.peer_vpc.to_s =~ /^vpc-.*/
+      options[:peer_vpc_id] = Chef::Resource::AwsVpc.get_aws_object_id(
+        new_resource.peer_vpc, resource: new_resource)
+    end
 
     ec2_resource = new_resource.driver.ec2_resource
     vpc = ec2_resource.vpc(options[:vpc_id])
@@ -55,8 +63,19 @@ class Chef::Provider::AwsVpcPeeringConnection < Chef::Provisioning::AWSDriver::A
     peer_vpc_id = vpc_peering_connection.accepter_vpc_info.vpc_id
     peer_owner_id = vpc_peering_connection.accepter_vpc_info.owner_id
 
-    desired_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
-    desired_peer_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.peer_vpc, resource: new_resource)
+    ## for vpc and peer_vpc, don't use a lookup if they're a string that is an actual VPC identifier - it's entirely possible we dont know about it in our scope (ie, 3rd party account or manage by separate tools)
+    if new_resource.vpc.class == String && new_resource.vpc.to_s =~ /^vpc-.*/
+      desired_vpc_id = new_resource.vpc
+    else
+      desired_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(new_resource.vpc, resource: new_resource)
+    end
+    if new_resource.peer_vpc.class == String && new_resource.peer_vpc.to_s =~ /^vpc-.*/
+      desired_peer_vpc_id = new_resource.peer_vpc
+    else
+      desired_peer_vpc_id = Chef::Resource::AwsVpc.get_aws_object_id(
+        new_resource.peer_vpc, resource: new_resource)
+    end
+
     desired_peer_owner_id = new_resource.peer_owner_id
 
     if desired_vpc_id && vpc_id != desired_vpc_id
